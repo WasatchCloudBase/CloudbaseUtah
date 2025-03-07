@@ -1,0 +1,6 @@
+framework module Pods_CloudbaseUtah_CloudbaseUtahUITests {
+  umbrella header "Pods-CloudbaseUtah-CloudbaseUtahUITests-umbrella.h"
+
+  export *
+  module * { export * }
+}

@@ -1,0 +1,745 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		85DEF3A7792939CF8F3E781D /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B230A66054A288D59DB916C /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework */; };
+		9B49846FE83472CBAD3279FF /* Pods_CloudbaseUtahTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A11BF600A46CB5D2FDDD6C4 /* Pods_CloudbaseUtahTests.framework */; };
+		CF7EC554CE2E110231E21E75 /* Pods_CloudbaseUtah.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5A3DE006FF57B90665038B54 /* Pods_CloudbaseUtah.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		4572B67B2D7A8B5300B2723D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4572B65E2D7A8B5200B2723D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4572B6652D7A8B5200B2723D;
+			remoteInfo = CloudbaseUtah;
+		};
+		4572B6852D7A8B5300B2723D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4572B65E2D7A8B5200B2723D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4572B6652D7A8B5200B2723D;
+			remoteInfo = CloudbaseUtah;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1A11BF600A46CB5D2FDDD6C4 /* Pods_CloudbaseUtahTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CloudbaseUtahTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F8D3B4BE52EC7CAB933230A /* Pods-CloudbaseUtahTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtahTests.debug.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtahTests/Pods-CloudbaseUtahTests.debug.xcconfig"; sourceTree = "<group>"; };
+		430C5D8F2041BE5E8731A2EB /* Pods-CloudbaseUtahTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtahTests.release.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtahTests/Pods-CloudbaseUtahTests.release.xcconfig"; sourceTree = "<group>"; };
+		4572B6662D7A8B5200B2723D /* CloudbaseUtah.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudbaseUtah.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4572B67A2D7A8B5300B2723D /* CloudbaseUtahTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CloudbaseUtahTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4572B6842D7A8B5300B2723D /* CloudbaseUtahUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CloudbaseUtahUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A3DE006FF57B90665038B54 /* Pods_CloudbaseUtah.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CloudbaseUtah.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6B230A66054A288D59DB916C /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CloudbaseUtah_CloudbaseUtahUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		96A4F9D6A4C48C650F194A7B /* Pods-CloudbaseUtah-CloudbaseUtahUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtah-CloudbaseUtahUITests.debug.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtah-CloudbaseUtahUITests/Pods-CloudbaseUtah-CloudbaseUtahUITests.debug.xcconfig"; sourceTree = "<group>"; };
+		B44620476C61C7F6A4DDC1A9 /* Pods-CloudbaseUtah-CloudbaseUtahUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtah-CloudbaseUtahUITests.release.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtah-CloudbaseUtahUITests/Pods-CloudbaseUtah-CloudbaseUtahUITests.release.xcconfig"; sourceTree = "<group>"; };
+		DBC98148D2BBD8381FF74C85 /* Pods-CloudbaseUtah.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtah.debug.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtah/Pods-CloudbaseUtah.debug.xcconfig"; sourceTree = "<group>"; };
+		FA2B04445723F38EFC3E08D3 /* Pods-CloudbaseUtah.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtah.release.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtah/Pods-CloudbaseUtah.release.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4572B68C2D7A8B5300B2723D /* Exceptions for "CloudbaseUtah" folder in "CloudbaseUtah" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 4572B6652D7A8B5200B2723D /* CloudbaseUtah */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		4572B6682D7A8B5200B2723D /* CloudbaseUtah */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4572B68C2D7A8B5300B2723D /* Exceptions for "CloudbaseUtah" folder in "CloudbaseUtah" target */,
+			);
+			path = CloudbaseUtah;
+			sourceTree = "<group>";
+		};
+		4572B67D2D7A8B5300B2723D /* CloudbaseUtahTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CloudbaseUtahTests;
+			sourceTree = "<group>";
+		};
+		4572B6872D7A8B5300B2723D /* CloudbaseUtahUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CloudbaseUtahUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4572B6632D7A8B5200B2723D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF7EC554CE2E110231E21E75 /* Pods_CloudbaseUtah.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4572B6772D7A8B5300B2723D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B49846FE83472CBAD3279FF /* Pods_CloudbaseUtahTests.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4572B6812D7A8B5300B2723D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85DEF3A7792939CF8F3E781D /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3EC680C61F0E12078FF40138 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5A3DE006FF57B90665038B54 /* Pods_CloudbaseUtah.framework */,
+				6B230A66054A288D59DB916C /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework */,
+				1A11BF600A46CB5D2FDDD6C4 /* Pods_CloudbaseUtahTests.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		4572B65D2D7A8B5200B2723D = {
+			isa = PBXGroup;
+			children = (
+				4572B6682D7A8B5200B2723D /* CloudbaseUtah */,
+				4572B67D2D7A8B5300B2723D /* CloudbaseUtahTests */,
+				4572B6872D7A8B5300B2723D /* CloudbaseUtahUITests */,
+				4572B6672D7A8B5200B2723D /* Products */,
+				AF1577B90C02598404842417 /* Pods */,
+				3EC680C61F0E12078FF40138 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		4572B6672D7A8B5200B2723D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4572B6662D7A8B5200B2723D /* CloudbaseUtah.app */,
+				4572B67A2D7A8B5300B2723D /* CloudbaseUtahTests.xctest */,
+				4572B6842D7A8B5300B2723D /* CloudbaseUtahUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AF1577B90C02598404842417 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				DBC98148D2BBD8381FF74C85 /* Pods-CloudbaseUtah.debug.xcconfig */,
+				FA2B04445723F38EFC3E08D3 /* Pods-CloudbaseUtah.release.xcconfig */,
+				96A4F9D6A4C48C650F194A7B /* Pods-CloudbaseUtah-CloudbaseUtahUITests.debug.xcconfig */,
+				B44620476C61C7F6A4DDC1A9 /* Pods-CloudbaseUtah-CloudbaseUtahUITests.release.xcconfig */,
+				3F8D3B4BE52EC7CAB933230A /* Pods-CloudbaseUtahTests.debug.xcconfig */,
+				430C5D8F2041BE5E8731A2EB /* Pods-CloudbaseUtahTests.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4572B6652D7A8B5200B2723D /* CloudbaseUtah */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4572B68D2D7A8B5300B2723D /* Build configuration list for PBXNativeTarget "CloudbaseUtah" */;
+			buildPhases = (
+				3A6E2D147D717732E1F4882B /* [CP] Check Pods Manifest.lock */,
+				4572B6622D7A8B5200B2723D /* Sources */,
+				4572B6632D7A8B5200B2723D /* Frameworks */,
+				4572B6642D7A8B5200B2723D /* Resources */,
+				8F12A06ADDFB058BF0749CA9 /* [CP] Embed Pods Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4572B6682D7A8B5200B2723D /* CloudbaseUtah */,
+			);
+			name = CloudbaseUtah;
+			productName = CloudbaseUtah;
+			productReference = 4572B6662D7A8B5200B2723D /* CloudbaseUtah.app */;
+			productType = "com.apple.product-type.application";
+		};
+		4572B6792D7A8B5300B2723D /* CloudbaseUtahTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4572B6922D7A8B5300B2723D /* Build configuration list for PBXNativeTarget "CloudbaseUtahTests" */;
+			buildPhases = (
+				9CED150684FD9CA856577A51 /* [CP] Check Pods Manifest.lock */,
+				4572B6762D7A8B5300B2723D /* Sources */,
+				4572B6772D7A8B5300B2723D /* Frameworks */,
+				4572B6782D7A8B5300B2723D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4572B67C2D7A8B5300B2723D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				4572B67D2D7A8B5300B2723D /* CloudbaseUtahTests */,
+			);
+			name = CloudbaseUtahTests;
+			productName = CloudbaseUtahTests;
+			productReference = 4572B67A2D7A8B5300B2723D /* CloudbaseUtahTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		4572B6832D7A8B5300B2723D /* CloudbaseUtahUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4572B6952D7A8B5300B2723D /* Build configuration list for PBXNativeTarget "CloudbaseUtahUITests" */;
+			buildPhases = (
+				C1446FAB74FC109E2BB0DAB3 /* [CP] Check Pods Manifest.lock */,
+				4572B6802D7A8B5300B2723D /* Sources */,
+				4572B6812D7A8B5300B2723D /* Frameworks */,
+				4572B6822D7A8B5300B2723D /* Resources */,
+				2C00AC4FF21509B6990AB590 /* [CP] Embed Pods Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4572B6862D7A8B5300B2723D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				4572B6872D7A8B5300B2723D /* CloudbaseUtahUITests */,
+			);
+			name = CloudbaseUtahUITests;
+			productName = CloudbaseUtahUITests;
+			productReference = 4572B6842D7A8B5300B2723D /* CloudbaseUtahUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4572B65E2D7A8B5200B2723D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					4572B6652D7A8B5200B2723D = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					4572B6792D7A8B5300B2723D = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 4572B6652D7A8B5200B2723D;
+					};
+					4572B6832D7A8B5300B2723D = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 4572B6652D7A8B5200B2723D;
+					};
+				};
+			};
+			buildConfigurationList = 4572B6612D7A8B5200B2723D /* Build configuration list for PBXProject "CloudbaseUtah" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4572B65D2D7A8B5200B2723D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				45F059E12D835DFE00ACB0DA /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 4572B6672D7A8B5200B2723D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4572B6652D7A8B5200B2723D /* CloudbaseUtah */,
+				4572B6792D7A8B5300B2723D /* CloudbaseUtahTests */,
+				4572B6832D7A8B5300B2723D /* CloudbaseUtahUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4572B6642D7A8B5200B2723D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4572B6782D7A8B5300B2723D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4572B6822D7A8B5300B2723D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		2C00AC4FF21509B6990AB590 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah-CloudbaseUtahUITests/Pods-CloudbaseUtah-CloudbaseUtahUITests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah-CloudbaseUtahUITests/Pods-CloudbaseUtah-CloudbaseUtahUITests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah-CloudbaseUtahUITests/Pods-CloudbaseUtah-CloudbaseUtahUITests-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		3A6E2D147D717732E1F4882B /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-CloudbaseUtah-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		8F12A06ADDFB058BF0749CA9 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah/Pods-CloudbaseUtah-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah/Pods-CloudbaseUtah-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah/Pods-CloudbaseUtah-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		9CED150684FD9CA856577A51 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-CloudbaseUtahTests-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		C1446FAB74FC109E2BB0DAB3 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-CloudbaseUtah-CloudbaseUtahUITests-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4572B6622D7A8B5200B2723D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4572B6762D7A8B5300B2723D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4572B6802D7A8B5300B2723D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4572B67C2D7A8B5300B2723D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4572B6652D7A8B5200B2723D /* CloudbaseUtah */;
+			targetProxy = 4572B67B2D7A8B5300B2723D /* PBXContainerItemProxy */;
+		};
+		4572B6862D7A8B5300B2723D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4572B6652D7A8B5200B2723D /* CloudbaseUtah */;
+			targetProxy = 4572B6852D7A8B5300B2723D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		4572B68E2D7A8B5300B2723D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = DBC98148D2BBD8381FF74C85 /* Pods-CloudbaseUtah.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CloudbaseUtah/CloudbaseUtah.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"CloudbaseUtah/Preview Content\"";
+				DEVELOPMENT_TEAM = 2764B72323;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CloudbaseUtah/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtah;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4572B68F2D7A8B5300B2723D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = FA2B04445723F38EFC3E08D3 /* Pods-CloudbaseUtah.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CloudbaseUtah/CloudbaseUtah.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"CloudbaseUtah/Preview Content\"";
+				DEVELOPMENT_TEAM = 2764B72323;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CloudbaseUtah/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtah;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		4572B6902D7A8B5300B2723D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		4572B6912D7A8B5300B2723D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		4572B6932D7A8B5300B2723D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3F8D3B4BE52EC7CAB933230A /* Pods-CloudbaseUtahTests.debug.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2764B72323;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtahTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CloudbaseUtah.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CloudbaseUtah";
+			};
+			name = Debug;
+		};
+		4572B6942D7A8B5300B2723D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 430C5D8F2041BE5E8731A2EB /* Pods-CloudbaseUtahTests.release.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2764B72323;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtahTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CloudbaseUtah.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CloudbaseUtah";
+			};
+			name = Release;
+		};
+		4572B6962D7A8B5300B2723D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 96A4F9D6A4C48C650F194A7B /* Pods-CloudbaseUtah-CloudbaseUtahUITests.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2764B72323;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtahUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = CloudbaseUtah;
+			};
+			name = Debug;
+		};
+		4572B6972D7A8B5300B2723D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B44620476C61C7F6A4DDC1A9 /* Pods-CloudbaseUtah-CloudbaseUtahUITests.release.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2764B72323;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtahUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = CloudbaseUtah;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4572B6612D7A8B5200B2723D /* Build configuration list for PBXProject "CloudbaseUtah" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4572B6902D7A8B5300B2723D /* Debug */,
+				4572B6912D7A8B5300B2723D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4572B68D2D7A8B5300B2723D /* Build configuration list for PBXNativeTarget "CloudbaseUtah" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4572B68E2D7A8B5300B2723D /* Debug */,
+				4572B68F2D7A8B5300B2723D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4572B6922D7A8B5300B2723D /* Build configuration list for PBXNativeTarget "CloudbaseUtahTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4572B6932D7A8B5300B2723D /* Debug */,
+				4572B6942D7A8B5300B2723D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4572B6952D7A8B5300B2723D /* Build configuration list for PBXNativeTarget "CloudbaseUtahUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4572B6962D7A8B5300B2723D /* Debug */,
+				4572B6972D7A8B5300B2723D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		45F059E12D835DFE00ACB0DA /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.7;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+	};
+	rootObject = 4572B65E2D7A8B5200B2723D /* Project object */;
+}
