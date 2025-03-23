@@ -23,7 +23,6 @@ struct LinkItem: Identifiable {
 class GoogleSheetViewModel: ObservableObject {
     @Published var groupedLinks: [String: [LinkItem]] = [:]
     private var cancellable: AnyCancellable?
-
     func fetchLinks() {
         let rangeName = "Links"
         let urlString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
@@ -48,6 +47,9 @@ class GoogleSheetViewModel: ObservableObject {
 
 struct LinkView: View {
     @StateObject private var viewModel = GoogleSheetViewModel()
+    @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
+    @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
+    @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
     var body: some View {
         List {
             ForEach(viewModel.groupedLinks.keys.sorted(), id: \.self) { category in
@@ -59,7 +61,8 @@ struct LinkView: View {
                     ForEach(viewModel.groupedLinks[category] ?? []) { item in
                         Button(action: {
                             if let url = URL(string: item.link) {
-                                UIApplication.shared.open(url)
+                                externalURL = url
+                                showWebView = true
                             }
                         }) {
                             VStack(alignment: .leading) {
@@ -75,12 +78,10 @@ struct LinkView: View {
                 }
             }
         }
-        .onAppear {
-            viewModel.fetchLinks()
-        }
+        .onAppear { viewModel.fetchLinks() }
+        // Used to open URL links as an in-app sheet using Safari
+        .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }
     }
-}
-
-#Preview {
-    LinkView()
+    // Used to open URL links as an in-app sheet using Safari
+    func openLink(_ url: URL) { externalURL = url; showWebView = true }
 }

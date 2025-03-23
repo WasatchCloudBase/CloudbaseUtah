@@ -1,13 +1,6 @@
-//
 //  DevUtilView.swift
 //  CloudbaseUtah
-//
 //  Created by Brown, Mike on 3/15/25.
-//
-
-// Change CloudbaseUtahApp to call this view for development purposes
-
-// Code to look up UDOT camera views using API
 
 import SwiftUI
 import MapKit

@@ -1,9 +1,6 @@
-//
 //  CloudbaseUtahApp.swift
 //  CloudbaseUtah
-//
 //  Created by Brown, Mike on 3/6/25.
-//
 
 import SwiftUI
 
@@ -14,13 +11,9 @@ struct CloudbaseUtahApp: App {
     var body: some Scene {
         WindowGroup {
             
-            // This is the view for the production app
+//            SkewTChartView()
+            
             BaseAppView()
-            
-            // Alternate views for development utilities
-            // (comment out for production)
-            //UDOTCameraListView()
-            
             // Check for date changes to force app reload
                 .environmentObject(appState)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in

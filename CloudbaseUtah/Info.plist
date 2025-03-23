@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
-    <string>Cloudbase Utah</string>
+        <string>Cloudbase Utah</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

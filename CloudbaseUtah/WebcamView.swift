@@ -9,8 +9,55 @@ import SDWebImageSwiftUI
 
 var webcamLastUpdate: Date = Date.distantPast
 
+struct WeatherCam: Identifiable {
+    let id = UUID()
+    let category: String
+    let name: String
+    let linkURL: String
+    let imageURL: String
+}
+
+class WeatherCamsViewModel: ObservableObject {
+    @Published var weatherCams: [WeatherCam] = []
+    @Published var groupedWeatherCams: [String: [WeatherCam]] = [:]
+    
+    func fetchWeatherCams() {
+        let rangeName = "WeatherCams"
+        let urlString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
+        guard let url = URL(string: urlString) else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data, error == nil else {
+                print("Failed to fetch data")
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(GoogleSheetResponse.self, from: data)
+                let cams = response.values.dropFirst().map { row in
+                    return WeatherCam(category: row[0], name: row[1], linkURL: row[2], imageURL: row[3])
+                }
+                
+                DispatchQueue.main.async {
+                    self.weatherCams = cams
+                    self.groupedWeatherCams = Dictionary(grouping: cams, by: { $0.category })
+                }
+            } catch {
+                print("Failed to decode JSON")
+            }
+        }.resume()
+    }
+}
+
+struct GoogleSheetResponse: Codable {
+    let values: [[String]]
+}
+
 struct WebcamView: View {
     @StateObject private var viewModel = WeatherCamsViewModel()
+    @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
+    @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
+    @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
     var ipCamURL: String = "https://apps.apple.com/us/app/ip-camera-viewer-ipcams/id1045600272"
     var UHGPGAcamsURL: String = "https://www.uhgpga.org/webcams"
     var body: some View {
@@ -67,7 +114,7 @@ struct WebcamView: View {
                         }
                         .onTapGesture {
                             if let url = URL(string: cam.linkURL) {
-                                UIApplication.shared.open(url)
+                                openLink(url)
                             }
                         }
                     }
@@ -83,49 +130,9 @@ struct WebcamView: View {
             }
             viewModel.fetchWeatherCams()
         }
+        // Used to open URL links as an in-app sheet using Safari
+        .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }
     }
-}
-
-struct WeatherCam: Identifiable {
-    let id = UUID()
-    let category: String
-    let name: String
-    let linkURL: String
-    let imageURL: String
-}
-
-class WeatherCamsViewModel: ObservableObject {
-    @Published var weatherCams: [WeatherCam] = []
-    @Published var groupedWeatherCams: [String: [WeatherCam]] = [:]
-    
-    func fetchWeatherCams() {
-        let rangeName = "WeatherCams"
-        let urlString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
-        guard let url = URL(string: urlString) else { return }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            guard let data = data, error == nil else {
-                print("Failed to fetch data")
-                return
-            }
-            
-            do {
-                let response = try JSONDecoder().decode(GoogleSheetResponse.self, from: data)
-                let cams = response.values.dropFirst().map { row in
-                    return WeatherCam(category: row[0], name: row[1], linkURL: row[2], imageURL: row[3])
-                }
-                
-                DispatchQueue.main.async {
-                    self.weatherCams = cams
-                    self.groupedWeatherCams = Dictionary(grouping: cams, by: { $0.category })
-                }
-            } catch {
-                print("Failed to decode JSON")
-            }
-        }.resume()
-    }
-}
-
-struct GoogleSheetResponse: Codable {
-    let values: [[String]]
+    // Used to open URL links as an in-app sheet using Safari
+    func openLink(_ url: URL) { externalURL = url; showWebView = true }
 }

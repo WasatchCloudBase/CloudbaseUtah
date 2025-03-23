@@ -2,27 +2,10 @@
 //  CloudbaseUtah
 //  Created by Brown, Mike on 3/6/25.
 
-//  Preview:  Option + Command + Enter
-
 import SwiftUI
-
-// Set global constants
-enum NavBarSelectedView:Int {
-    case site = 0
-    case weather = 1
-    case alerts = 2
-    case webcam = 3
-    case link = 4
-    case dev = 9
-}
-let GoogleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
-let GoogleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
-let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
-let sunriseLongitude: Double = -111.9801
 
 struct BaseAppView: View {
     @State private var isActive = false
-
     var body: some View {
         VStack {
             if isActive {
@@ -43,9 +26,13 @@ struct BaseAppView: View {
 
 struct SplashScreenView: View {
     var body: some View {
-        Image("ParagliderUtah")
+        Image("UtahPGicon8")
             .resizable()
             .scaledToFit()
+        Text("Cloudbase Utah")
+            .bold()
+            .foregroundColor(titleFontColor)
+            .padding(.top, 2)
     }
 }
 
@@ -84,7 +71,7 @@ struct MainView: View {
                     LinkView()
                 }
                 if selectedView == .dev {
-                    DevView()
+                    AboutView()
                 }
                 Spacer()
                   
@@ -247,8 +234,4 @@ struct MainView: View {
             }
         }
     }
-}
-
-#Preview {
-    MainView()
 }

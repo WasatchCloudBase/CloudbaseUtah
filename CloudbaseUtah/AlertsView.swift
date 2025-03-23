@@ -70,97 +70,18 @@ struct ApiResponse: Decodable {
 
 struct AlertsView: View {
     @StateObject private var viewModel = TFRViewModel()
+    @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
+    @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
+    @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
     @State private var weatherAlerts: [WeatherAlert] = []
     @State private var noWeatherAlerts = false
     @State private var isLoadingWeatherAlerts = true
     @State private var isLoadingTFRs = true
 
-    var body: some View {
-        VStack {
-            
-            // TFRs for Utah
-            if viewModel.isLoading {
-                ProgressView("TFRs loading...")
-            } else if viewModel.tfrs.isEmpty {
-                Text("There are no current TFRs for Utah")
-                    .font(.headline)
-                    .foregroundColor(sectionHeaderColor)
-                    .bold()
-                    .padding(.vertical, 10)
-                Spacer()
-            } else {
-                List {
-                    Section(header: Text("Temporary Flight Restrictions")
-                        .font(.headline)
-                        .foregroundColor(sectionHeaderColor)
-                        .bold()) {
-                            ForEach(viewModel.tfrs) { tfr in
-                                VStack(alignment: .leading) {
-                                    Text(tfr.type.capitalized)
-                                        .font(.headline)
-                                        .foregroundColor(rowHeaderColor)
-                                    Text(tfr.description)
-                                        .font(.subheadline)
-                                }
-                                .onTapGesture {
-                                    if let url = URL(string: "https://tfr.faa.gov/tfr3/?page=detail_\(tfr.notam_id.replacingOccurrences(of: "/", with: "_"))") {
-                                        UIApplication.shared.open(url)
-                                    }
-                                }
-                            }
-                        }
-                
-                }
-            }
-
-            // Weather alerts for Utah
-            if isLoadingWeatherAlerts {
-                ProgressView("Weather alerts loading...")
-            } else if noWeatherAlerts {
-                Text("There are no current weather alerts")
-                    .font(.headline)
-                    .foregroundColor(sectionHeaderColor)
-                    .bold()
-                    .padding(.vertical, 10)
-                Spacer()
-            } else {
-                List {
-                    Section(header: Text("Weather Alerts")
-                        .font(.headline)
-                        .foregroundColor(sectionHeaderColor)
-                        .bold()) {
-                            ForEach(weatherAlerts) { alert in
-                                VStack(alignment: .leading) {
-                                    Text(alert.event)
-                                        .font(.headline)
-                                        .foregroundColor(rowHeaderColor)
-                                    Text(alert.headline)
-                                        .font(.subheadline)
-                                    Text(alert.areaDesc)
-                                        .font(.footnote)
-                                        .foregroundColor(infoFontColor)
-                                }
-                                .padding(.vertical, 2)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    if let url = URL(string: "https://www.weather.gov/slc/WWA") {
-                                        UIApplication.shared.open(url)
-                                    }
-                                }
-                            }
-                        }
-                }
-            }
-        }
-        .onAppear (perform: fetchWeatherAlerts)
-        .onAppear {viewModel.fetchTFRs()}
-    }
-
     func fetchWeatherAlerts() {
         guard let url = URL(string: "https://api.weather.gov/alerts/active?area=UT") else {
             return
         }
-
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let data = data {
                 do {
@@ -186,8 +107,78 @@ struct AlertsView: View {
             }
         }.resume()
     }
-}
-
-#Preview {
-    AlertsView()
+    
+    var body: some View {
+        List {
+            // TFRs for Utah
+            Section(header: Text("Temporary Flight Restrictions")
+                .font(.headline)
+                .foregroundColor(sectionHeaderColor)
+                .bold())
+            {
+                if viewModel.isLoading {
+                    ProgressView("TFRs loading...")
+                } else if viewModel.tfrs.isEmpty {
+                    Text("There are no current TFRs for Utah")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                } else {
+                    ForEach(viewModel.tfrs) { tfr in
+                        VStack(alignment: .leading) {
+                            Text(tfr.type.capitalized)
+                                .font(.headline)
+                                .foregroundColor(warningFontColor)
+                            Text(tfr.description)
+                                .font(.subheadline)
+                        }
+                        .onTapGesture {
+                            if let url = URL(string: "https://tfr.faa.gov/tfr3/?page=detail_\(tfr.notam_id.replacingOccurrences(of: "/", with: "_"))") {
+                                openLink(url)
+                            }
+                        }
+                    }
+                }
+            }
+            // Weather alerts for Utah
+            Section(header: Text("Weather Alerts")
+                .font(.headline)
+                .foregroundColor(sectionHeaderColor)
+                .bold())
+            {
+                if isLoadingWeatherAlerts {
+                    ProgressView("Weather alerts loading...")
+                } else if noWeatherAlerts {
+                    Text("There are no current weather alerts for Utah")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                } else {
+                    ForEach(weatherAlerts) { alert in
+                        VStack(alignment: .leading) {
+                            Text(alert.event)
+                                .font(.headline)
+                                .foregroundColor(warningFontColor)
+                            Text(alert.headline)
+                                .font(.subheadline)
+                            Text(alert.areaDesc)
+                                .font(.footnote)
+                                .foregroundColor(infoFontColor)
+                        }
+                        .padding(.vertical, 2)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if let url = URL(string: "https://www.weather.gov/slc/WWA") {
+                                openLink(url)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear (perform: fetchWeatherAlerts)
+        .onAppear {viewModel.fetchTFRs()}
+        // Used to open URL links as an in-app sheet using Safari
+        .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }
+    }
+    // Used to open URL links as an in-app sheet using Safari
+    func openLink(_ url: URL) { externalURL = url; showWebView = true }
 }
