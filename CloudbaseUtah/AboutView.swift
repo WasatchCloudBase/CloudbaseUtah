@@ -14,19 +14,17 @@ struct AboutView: View {
                 .bold())
             {
                 VStack(alignment: .leading) {
-                    Text("Contact info: ")
+                    Text("Contact info")
                         .font(.headline)
                         .foregroundColor(rowHeaderColor)
                     Text("mike.del.brown@gmail.com")
                         .font(.subheadline)
                 }
                 VStack(alignment: .leading) {
-                    Text("Thanks to:")
+                    Text("Cloudbase Utah github repository")
                         .font(.headline)
                         .foregroundColor(rowHeaderColor)
-                    Text("Matt Hansen for the Wasatch Wind site that was the origin for this app")
-                        .font(.subheadline)
-                    Text("https://wasatchwind.github.io/")
+                    Text("https://github.com/WasatchCloudBase/CloudbaseUtah")
                         .font(.footnote)
                 }
 
@@ -36,10 +34,19 @@ struct AboutView: View {
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
-                VStack(alignment: .leading) {
-                    NavigationLink(destination: UDOTCameraListView()) {
-                        Text("UDOT cameras map")
+                Button(action: {
+                    if let url = URL(string: "https://docs.google.com/spreadsheets/d/1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls/edit?gid=0#gid=0") {
+                        UIApplication.shared.open(url)
                     }
+                }) {
+                    Text("Cloudbase Utah Metadata")
+                        .font(.headline)
+                        .foregroundColor(rowHeaderColor)
+                }
+                NavigationLink(destination: UDOTCameraListView()) {
+                    Text("UDOT cameras map")
+                        .font(.headline)
+                        .foregroundColor(rowHeaderColor)
                 }
             }
         }

@@ -34,8 +34,16 @@ class WeatherCamsViewModel: ObservableObject {
             
             do {
                 let response = try JSONDecoder().decode(GoogleSheetResponse.self, from: data)
-                let cams = response.values.dropFirst().map { row in
-                    return WeatherCam(category: row[0], name: row[1], linkURL: row[2], imageURL: row[3])
+                
+                // Define the condition to skip rows that should be excluded from app (e.g., cam is not active)
+                let skipCondition: ([Any]) -> Bool = { row in
+                    if let skipRow = row.first as? String {
+                        return skipRow == "Yes"
+                    }
+                    return false
+                }
+                let cams = response.values.dropFirst().filter {!skipCondition($0)}.map { row in
+                    return WeatherCam(category: row[1], name: row[2], linkURL: row[3], imageURL: row[4])
                 }
                 
                 DispatchQueue.main.async {

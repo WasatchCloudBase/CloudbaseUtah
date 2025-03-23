@@ -59,23 +59,25 @@ class SiteViewModel: ObservableObject {
                 if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                    let values = json["values"] as? [[String]] {
                     var sites = [Site]()
-                    let headers = values[0]
+                    // Skip first row, which contains headers
                     for row in values.dropFirst() {
-                        let site = Site(
-                            area: row[0],
-                            siteName: row[1],
-                            readingsNote: row[2],
-                            forecastNote: row[3],
-                            siteType: row[4],
-                            readingsAlt: row[5],
-                            readingsSource: row[6],
-                            readingsStation: row[7],
-                            includeIn5DayForecast: row[8],
-                            pressureZoneReadingTime: row[9],
-                            forecastLat: row[10],
-                            forecastLon: row[11]
-                        )
-                        sites.append(site)
+                        if row[0] != "Yes" {    // Excludes sites marked in metadata as 'Exclude from App'
+                            let site = Site(
+                                area: row[1],
+                                siteName: row[2],
+                                readingsNote: row[3],
+                                forecastNote: row[4],
+                                siteType: row[5],
+                                readingsAlt: row[6],
+                                readingsSource: row[7],
+                                readingsStation: row[8],
+                                includeIn5DayForecast: row[9],
+                                pressureZoneReadingTime: row[10],
+                                forecastLat: row[11],
+                                forecastLon: row[12]
+                            )
+                            sites.append(site)
+                        }
                     }
                     completion(sites)
                 } else {
@@ -89,7 +91,7 @@ class SiteViewModel: ObservableObject {
     }
     
     func fetchMesonetData() {
-        let mesonetSites = sites.filter { $0.readingsSource == "Mesonet" }
+        let mesonetSites = sites.filter { $0.readingsSource == "Mesonet" && $0.readingsStation != "" }
         guard !mesonetSites.isEmpty else { return }
         let baseURL = "https://api.mesowest.net/v2/station/latest?"
         let parameters = mesonetSites.map { "&stid=\($0.readingsStation)" }.joined()
@@ -146,67 +148,95 @@ class SiteViewModel: ObservableObject {
 
 struct SiteView: View {
     @ObservedObject var viewModel = SiteViewModel()
+    @State private var selectedSite: Site?
     
     var body: some View {
-        List {
-            ForEach(Dictionary(grouping: viewModel.sites) { $0.area }.sorted(by: { $0.key < $1.key }), id: \.key) { area, sites in
-                // Split is used to strip the order sequence number from the front of the category on display
-                Section(header: Text(area.split(separator: " ", maxSplits: 1)[1])
-                    .font(.headline)
-                    .foregroundColor(sectionHeaderColor)
-                    .bold())
-                {
-                    ForEach(sites) { site in
-                        VStack(alignment: .leading) {
-                            HStack {
-                                Text(site.siteName)
-                                    .font(.headline)
-                                    .foregroundColor(rowHeaderColor)
-                                Text("\(site.readingsAlt) ft")
-                                    .font(.caption)
-                                    .foregroundColor(infoFontColor)
-                                Spacer()
-                                HStack {
-                                    if let windTime = site.windTime {
-                                        // Split keeps hh:mm and strips the trailing "  %p" the JSON parser is creating
-                                        Text(windTime.split(separator: " ", maxSplits: 1)[0])
-                                            .font(.caption)
-                                            .foregroundColor(infoFontColor)
-                                    }
-                                    if let windSpeed = site.windSpeed {
-                                        if windSpeed == "0" {
-                                            Text("calm")
-                                                .font(.subheadline)
-                                        } else {
-                                            Text(windSpeed)
-                                                .font(.title3)
-                                                .foregroundColor(site.windColor)
-                                        }
-                                    } else {
-                                        Text ("Station down")
-                                            .font(.caption)
-                                            .foregroundColor(infoFontColor)
-                                    }
-                                    if let windGust = site.windGust {
-                                        if windGust == "0" || windGust == "" {
-                                        }
-                                        else {
-                                            Text("g" + windGust)
-                                                .font(.title3)
-                                                .foregroundColor(site.windGustColor)
-                                        }
-                                    }
-                                    if let windDirectionAngle = site.windDirectionAngle {
-                                        Image(systemName: "arrow.up")
-                                            .rotationEffect(windDirectionAngle)
-                                            .font(.title3)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        VStack {
+            Text("Tap on a site for forecast and readings history")
+                .font(.caption)
+                .foregroundColor(infoFontColor)
+                .padding(.top, 8)
+            List {
+                let groupedSites = Dictionary(grouping: viewModel.sites) { $0.area }
+                 let sortedGroupedSites = groupedSites.sorted(by: { $0.key < $1.key })
+                 
+                 ForEach(sortedGroupedSites, id: \.key) { area, sites in
+                     // Split is used to strip the order sequence number from the front of the category on display
+                     let areaName = area.split(separator: " ", maxSplits: 1).dropFirst().joined(separator: " ")
+                     
+                     Section(header: Text(areaName)
+                         .font(.headline)
+                         .foregroundColor(sectionHeaderColor)
+                         .bold())
+                     {
+                         ForEach(sites) { site in
+                             VStack(alignment: .leading) {
+                                 HStack {
+                                     Text(site.siteName)
+                                         .font(.headline)
+                                         .foregroundColor(rowHeaderColor)
+                                     if site.readingsAlt != "" {
+                                         Text("\(site.readingsAlt) ft")
+                                             .font(.caption)
+                                             .foregroundColor(infoFontColor)
+                                     }
+                                     Spacer()
+                                     HStack {
+                                         if let windTime = site.windTime {
+                                             // Split keeps hh:mm and strips the trailing "  %p" the JSON parser is creating
+                                             let windTimeText = windTime.split(separator: " ", maxSplits: 1)[0]
+                                             Text(windTimeText)
+                                                 .font(.caption)
+                                                 .foregroundColor(infoFontColor)
+                                         }
+                                         if let windSpeed = site.windSpeed {
+                                             if windSpeed == "0" {
+                                                 Text("calm")
+                                                     .font(.subheadline)
+                                             } else {
+                                                 Text(windSpeed)
+                                                     .font(.title3)
+                                                     .foregroundColor(site.windColor)
+                                             }
+                                         } else {
+                                             Text ("Station down")
+                                                 .font(.caption)
+                                                 .foregroundColor(infoFontColor)
+                                         }
+                                         if let windGust = site.windGust {
+                                             if windGust != "0" && windGust != "" {
+                                                 Text("g" + windGust)
+                                                     .font(.title3)
+                                                     .foregroundColor(site.windGustColor)
+                                             }
+                                         }
+                                         if let windDirectionAngle = site.windDirectionAngle {
+                                             Image(systemName: "arrow.up")
+                                                 .rotationEffect(windDirectionAngle)
+                                                 .font(.title3)
+                                         }
+                                     }
+                                 }
+                                 .onTapGesture { openSiteDetail(site) }
+                             }
+                         }
+                     }
+                 }
+                 VStack(alignment: .leading) {
+                     Text("Readings data aggregated by Synoptic")
+                         .font(.caption)
+                         .foregroundColor(infoFontColor)
+                     Text("https://synopticdata.com")
+                         .font(.caption)
+                         .foregroundColor(infoFontColor)
+                 }
+             }
+         }
+        .sheet(item: $selectedSite) { site in
+            SiteDetailView(site: site)
         }
-    }
-}
+     }
+     func openSiteDetail(_ site: Site) {
+         selectedSite = site
+     }
+ }
