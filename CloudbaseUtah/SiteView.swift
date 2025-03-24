@@ -205,9 +205,14 @@ struct SiteView: View {
                                          }
                                          if let windGust = site.windGust {
                                              if windGust != "0" && windGust != "" {
-                                                 Text("g" + windGust)
-                                                     .font(.title3)
-                                                     .foregroundColor(site.windGustColor)
+                                                 HStack {
+                                                     Text("g")
+                                                         .font(.subheadline)
+                                                         .foregroundColor(infoFontColor)
+                                                     Text(windGust)
+                                                         .font(.title3)
+                                                         .foregroundColor(site.windGustColor)
+                                                 }
                                              }
                                          }
                                          if let windDirectionAngle = site.windDirectionAngle {
