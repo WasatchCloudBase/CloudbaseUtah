@@ -26,39 +26,39 @@ func windSpeedColor(windSpeed: Int, siteType: String) -> Color {
     case "Aloft", "Mountain":
         switch windSpeed {
         case 0...11:
-            return .green
+            return windSpeedGreen
         case 12...17:
-            return .yellow
+            return windSpeedYellow
         case 18...23:
-            return .orange
+            return windSpeedOrange
         case 24...:
-            return .red
+            return windSpeedRed
         default:
             return .clear
         }
     case "Soaring":
         switch windSpeed {
         case 0...19:
-            return .green
+            return windSpeedGreen
         case 20...24:
-            return .yellow
+            return windSpeedYellow
         case 25...29:
-            return .orange
+            return windSpeedOrange
         case 30...:
-            return .red
+            return windSpeedRed
         default:
             return .clear
         }
     default:
         switch windSpeed {
         case 0...13:
-            return .green
+            return windSpeedGreen
         case 14...21:
-            return .yellow
+            return windSpeedYellow
         case 22...27:
-            return .orange
+            return windSpeedOrange
         case 28...:
-            return .red
+            return windSpeedRed
         default:
             return .clear
         }
@@ -71,15 +71,29 @@ func convertKnotsToMPH(_ knots: Int) -> Int {
 func convertCelsiusToFahrenheit(_ celsius: Int) -> Int {
     return Int(((Double(celsius) * 9/5) + 32).rounded())
 }
+func convertMetersToFeet(_ meters: Double) -> Int {
+    return Int((meters * 3.28084).rounded())
+}
 func formatAltitude(_ altitudeData: String) -> String {
     let numberFormatter = NumberFormatter()
      numberFormatter.numberStyle = .decimal
-    if let altitudeData = Int(altitudeData) {
+    if let altitudeData = Int(altitudeData.replacingOccurrences(of: ",", with: "")) {
         let formattedAltitude = numberFormatter.string(from: NSNumber(value: altitudeData))
         return "\(formattedAltitude ?? "0") ft"
      } else {
          return altitudeData
      }
+}
+func buildReferenceNote(Alt: String, Note: String) -> String {
+    var NoteString: String = ""
+    if Alt != "" {
+        let formattedAlt = formatAltitude(Alt)
+        NoteString = "At \(formattedAlt)"
+    }
+    if Note != "" {
+        NoteString = NoteString + " (\(Note))"
+    }
+    return NoteString
 }
 func extractSection(from data: Substring, start: String, end: String) -> String? {
     guard let startRange = data.range(of: start)?.upperBound,

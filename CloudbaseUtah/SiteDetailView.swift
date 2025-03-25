@@ -8,17 +8,6 @@ import SwiftUI
 import Combine
 import Charts
 
-func buildReferenceNote(Alt: String, Note: String) -> String {
-    var NoteString: String = ""
-    if Alt != "" {
-        NoteString = "At \(Alt) ft"
-    }
-    if Note != "" {
-        NoteString = NoteString + " (\(Note))"
-    }
-    return NoteString
-}
-
 struct WindData: Codable {
     let STATION: [Station]
 }
@@ -57,6 +46,14 @@ class WindDataViewModel: ObservableObject {
         
         cancellable = URLSession.shared.dataTaskPublisher(for: url)
             .map { $0.data }
+            .map { data in
+                // Convert data to string, replace "null" with "0.0", and convert back to data
+                if var jsonString = String(data: data, encoding: .utf8) {
+                    jsonString = jsonString.replacingOccurrences(of: "null", with: "0.0")
+                    return Data(jsonString.utf8)
+                }
+                return data
+            }
             .decode(type: WindData.self, decoder: JSONDecoder())
             .replaceError(with: WindData(STATION: []))
             .receive(on: DispatchQueue.main)
@@ -137,12 +134,7 @@ struct SiteDetailView: View {
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
-                    VStack (alignment: .leading ) {
-                        Text(buildReferenceNote(Alt: "TBD", Note: site.forecastNote))
-                            .font(.footnote)
-                            .foregroundColor(infoFontColor)
-                        Text("....under construction")
-                    }
+                    SiteForecastView(forecastLat: site.forecastLat, forecastLon: site.forecastLon, forecastNote: site.forecastNote)
                 }
             }
             Spacer() // Push the content to the top of the sheet
@@ -178,9 +170,11 @@ struct WindReadingsBarChartView: View {
                         Text("\(Int(windSpeed))")
                             .font(.caption)
                             .foregroundColor(windColor)
+                            .bold()
                         Image(systemName: "arrow.up")
                             .rotationEffect(.degrees(Double(windDirection + 180)))
                             .foregroundColor(.white)
+                            .bold()
                         // Replace x-axis values with hh:mm and strip the am/pm
                         Text(String(time).split(separator: " ", maxSplits: 1).first ?? "")
                             .font(.caption)
@@ -200,6 +194,7 @@ struct WindReadingsBarChartView: View {
                             Text("\(Int(windGust))")
                                 .font(.caption)
                                 .foregroundColor(gustColor)
+                                .bold()
                         }
                     }
                 }

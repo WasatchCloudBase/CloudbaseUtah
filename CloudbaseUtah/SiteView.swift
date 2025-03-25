@@ -197,6 +197,7 @@ struct SiteView: View {
                                                  Text(windSpeed)
                                                      .font(.title3)
                                                      .foregroundColor(site.windColor)
+                                                     .bold()
                                              }
                                          } else {
                                              Text ("Station down")
@@ -212,6 +213,7 @@ struct SiteView: View {
                                                      Text(windGust)
                                                          .font(.title3)
                                                          .foregroundColor(site.windGustColor)
+                                                         .bold()
                                                  }
                                              }
                                          }
@@ -219,6 +221,7 @@ struct SiteView: View {
                                              Image(systemName: "arrow.up")
                                                  .rotationEffect(windDirectionAngle)
                                                  .font(.title3)
+                                                 .bold()
                                          }
                                      }
                                  }
