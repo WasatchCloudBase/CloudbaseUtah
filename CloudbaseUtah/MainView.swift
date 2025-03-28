@@ -4,6 +4,47 @@
 
 import SwiftUI
 
+// Sunrise and sunset URL fetch response structure
+struct SunriseSunsetResponse: Codable {
+    let results: Results
+    let status: String
+}
+// Sunrise and sunset JSON decode for Results portion of URL response
+struct Results: Codable {
+    let sunrise: String
+    let sunset: String
+}
+// Get sunrise / sunset for SLC airport
+func fetchSunriseSunset(forLatitude latitude: Double, longitude: Double, completion: @escaping (String, String) -> Void) {
+    let urlString = "https://api.sunrise-sunset.org/json?lat=\(latitude)&lng=\(longitude)&formatted=0"
+    guard let url = URL(string: urlString) else {
+        print("Invalid URL")
+        return
+    }
+    let task = URLSession.shared.dataTask(with: url) { data, response, error in
+        if let error = error {
+            print("Error: \(error.localizedDescription)")
+            return
+        }
+        guard let data = data else {
+            print("No data received")
+            return
+        }
+        do {
+            let decoder = JSONDecoder()
+            let response = try decoder.decode(SunriseSunsetResponse.self, from: data)
+            let sunrise = convertISODateToLocalTime(isoDateString: response.results.sunrise)
+            let sunset = convertISODateToLocalTime(isoDateString: response.results.sunset)
+            DispatchQueue.main.async {
+                completion(sunrise, sunset)
+            }
+        } catch {
+            print("Error decoding JSON: \(error.localizedDescription)")
+        }
+    }
+    task.resume()
+}
+
 struct BaseAppView: View {
     @State private var isActive = false
     var body: some View {

@@ -23,9 +23,13 @@ let rowHeaderColor: Color = .sky
 let sectionHeaderColor: Color = .white
 let infoFontColor: Color = .titanium
 let warningFontColor: Color = .warning
+let tableBackgroundColor: Color = .gunmetal
 
-// Wind speed colors
-let windSpeedGreen: Color = .windSpeedGreen
-let windSpeedYellow: Color = .windSpeedYellow
-let windSpeedOrange: Color = .windSpeedOrange
-let windSpeedRed: Color = .windSpeedRed
+// Colors of forecast and reading values
+let displayValueBlue: Color = .displayValueBlue
+let displayValueTeal: Color = .displayValueTeal
+let displayValueGreen: Color = .displayValueGreen
+let displayValueYellow: Color = .displayValueYellow
+let displayValueOrange: Color = .displayValueOrange
+let displayValueRed: Color = .displayValueRed
+let repeatDateTimeColor: Color = .titanium

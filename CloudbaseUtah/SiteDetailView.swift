@@ -134,7 +134,7 @@ struct SiteDetailView: View {
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
-                    SiteForecastView(forecastLat: site.forecastLat, forecastLon: site.forecastLon, forecastNote: site.forecastNote)
+                    SiteForecastView(forecastLat: site.forecastLat, forecastLon: site.forecastLon, forecastNote: site.forecastNote, siteType: site.siteType)
                 }
             }
             Spacer() // Push the content to the top of the sheet
@@ -188,7 +188,7 @@ struct WindReadingsBarChartView: View {
                     )
                     .foregroundStyle(gustColor)
                     .annotation(position: .top) {
-                        HStack {
+                        HStack(spacing: 4) {
                             Text("g")
                                 .font(.caption)
                             Text("\(Int(windGust))")

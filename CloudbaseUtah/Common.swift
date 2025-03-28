@@ -21,44 +21,104 @@ let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
 let sunriseLongitude: Double = -111.9801
 
 // Common utility functions
+func tempColor(_ tempF: Int) -> Color {
+    switch tempF {
+    case ...32:
+        return displayValueBlue
+    case 33...59:
+        return displayValueTeal
+    case 59...79:
+        return displayValueGreen
+    case 80...89:
+        return displayValueYellow
+    case 90...99:
+        return displayValueOrange
+    case 100...:
+        return displayValueRed
+    default:
+        return .clear
+    }
+}
+func cloudCoverColor(_ cloudCoverPct: Int) -> Color {
+    switch cloudCoverPct {
+    case ...39:
+        return displayValueGreen
+    case 39...59:
+        return displayValueYellow
+    case 60...79:
+        return displayValueOrange
+    case 80...:
+        return displayValueRed
+    default:
+        return .clear
+    }
+}
+func precipColor(_ precipPct: Int) -> Color {
+    switch precipPct {
+    case ...19:
+        return displayValueGreen
+    case 20...39:
+        return displayValueYellow
+    case 40...59:
+        return displayValueOrange
+    case 60...:
+        return displayValueRed
+    default:
+        return .clear
+    }
+}
+func CAPEColor(_ CAPEvalue: Int) -> Color {
+    switch CAPEvalue {
+    case 0...299:
+        return displayValueGreen
+    case 300...599:
+        return displayValueYellow
+    case 600...799:
+        return displayValueOrange
+    case 800...:
+        return displayValueRed
+    default:
+        return .clear
+    }
+}
 func windSpeedColor(windSpeed: Int, siteType: String) -> Color {
     switch siteType {
     case "Aloft", "Mountain":
         switch windSpeed {
         case 0...11:
-            return windSpeedGreen
+            return displayValueGreen
         case 12...17:
-            return windSpeedYellow
+            return displayValueYellow
         case 18...23:
-            return windSpeedOrange
+            return displayValueOrange
         case 24...:
-            return windSpeedRed
+            return displayValueRed
         default:
             return .clear
         }
     case "Soaring":
         switch windSpeed {
         case 0...19:
-            return windSpeedGreen
+            return displayValueGreen
         case 20...24:
-            return windSpeedYellow
+            return displayValueYellow
         case 25...29:
-            return windSpeedOrange
+            return displayValueOrange
         case 30...:
-            return windSpeedRed
+            return displayValueRed
         default:
             return .clear
         }
     default:
         switch windSpeed {
         case 0...13:
-            return windSpeedGreen
+            return displayValueGreen
         case 14...21:
-            return windSpeedYellow
+            return displayValueYellow
         case 22...27:
-            return windSpeedOrange
+            return displayValueOrange
         case 28...:
-            return windSpeedRed
+            return displayValueRed
         default:
             return .clear
         }
@@ -129,47 +189,6 @@ struct SafariView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {
         // No updates needed
     }
-}
-
-// Sunrise and sunset URL fetch response structure
-struct SunriseSunsetResponse: Codable {
-    let results: Results
-    let status: String
-}
-// Sunrise and sunset JSON decode for Results portion of URL response
-struct Results: Codable {
-    let sunrise: String
-    let sunset: String
-}
-// Get sunrise / sunset for SLC airport
-func fetchSunriseSunset(forLatitude latitude: Double, longitude: Double, completion: @escaping (String, String) -> Void) {
-    let urlString = "https://api.sunrise-sunset.org/json?lat=\(latitude)&lng=\(longitude)&formatted=0"
-    guard let url = URL(string: urlString) else {
-        print("Invalid URL")
-        return
-    }
-    let task = URLSession.shared.dataTask(with: url) { data, response, error in
-        if let error = error {
-            print("Error: \(error.localizedDescription)")
-            return
-        }
-        guard let data = data else {
-            print("No data received")
-            return
-        }
-        do {
-            let decoder = JSONDecoder()
-            let response = try decoder.decode(SunriseSunsetResponse.self, from: data)
-            let sunrise = convertISODateToLocalTime(isoDateString: response.results.sunrise)
-            let sunset = convertISODateToLocalTime(isoDateString: response.results.sunset)
-            DispatchQueue.main.async {
-                completion(sunrise, sunset)
-            }
-        } catch {
-            print("Error decoding JSON: \(error.localizedDescription)")
-        }
-    }
-    task.resume()
 }
 
 // Convert ISO dates to local time zone and extract hh:mm portion
