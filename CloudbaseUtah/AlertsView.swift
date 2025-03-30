@@ -1,7 +1,7 @@
 //  AlertsView.swift
 //  CloudbaseUtah
 //  Created by Brown, Mike on 3/6/25.
-
+/*
 import SwiftUI
 
 struct TFR: Identifiable, Codable {
@@ -182,3 +182,4 @@ struct AlertsView: View {
     // Used to open URL links as an in-app sheet using Safari
     func openLink(_ url: URL) { externalURL = url; showWebView = true }
 }
+*/

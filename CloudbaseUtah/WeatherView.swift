@@ -7,6 +7,71 @@ import Combine
 import SDWebImage
 import SDWebImageSwiftUI
 
+struct TFR: Identifiable, Codable {
+    var id: String { notam_id }
+    let notam_id: String
+    let type: String
+    let facility: String
+    let state: String
+    let description: String
+    let creation_date: String
+}
+
+class TFRViewModel: ObservableObject {
+    @Published var tfrs: [TFR] = []
+    @Published var isLoading: Bool = false
+    
+    func fetchTFRs() {
+        guard let url = URL(string: "https://tfr.faa.gov/tfrapi/exportTfrList") else { return }
+        
+        isLoading = true
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let data = data {
+                do {
+                    let tfrList = try JSONDecoder().decode([TFR].self, from: data)
+                    DispatchQueue.main.async {
+                        self.tfrs = tfrList.filter { $0.state == "UT" }
+                        self.isLoading = false
+                    }
+                } catch {
+                    print("Error decoding JSON: \(error)")
+                    DispatchQueue.main.async {
+                        self.isLoading = false
+                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+            }
+        }.resume()
+    }
+}
+
+struct WeatherAlert: Identifiable, Decodable {
+    let id: String
+    let areaDesc: String
+    let event: String
+    let headline: String
+
+    private enum CodingKeys: String, CodingKey {
+        case id = "@id"
+        case areaDesc
+        case event
+        case headline
+    }
+}
+
+struct Feature: Decodable {
+    let properties: WeatherAlert
+}
+
+struct ApiResponse: Decodable {
+    let features: [Feature]
+}
+
+
 // SLC Area Forecast Discussion (AFD)
 struct AFD: Identifiable {
     let id = UUID()
@@ -69,9 +134,9 @@ struct SoundingData: Identifiable {
 class ForecastViewModel: ObservableObject {
     @Published var soaringForecast: SoaringForecast?
     init() {
-        fetchForecast()
+        fetchWeatherForecast()
     }
-    func fetchForecast() {
+    func fetchWeatherForecast() {
         guard let url = URL(string: "https://forecast.weather.gov/product.php?site=SLC&issuedby=SLC&product=SRG&format=TXT&version=1&glossary=0") else { return }
         URLSession.shared.dataTask(with: url) { data, response, error in
             guard let data = data, error == nil else { return }
@@ -226,6 +291,7 @@ struct WeatherView: View {
     @StateObject private var AFDviewModel = AFDViewModel()
     @StateObject private var windAloftData = WindAloftData()
     @StateObject private var viewModel = ForecastViewModel()
+    @StateObject private var TFRviewModel = TFRViewModel()
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
@@ -235,9 +301,130 @@ struct WeatherView: View {
     @State private var showAviation = false
     @State private var isForecastCollapsed = true
     @State private var isSoundingDataCollapsed = true
+    
+    @State private var weatherAlerts: [WeatherAlert] = []
+    @State private var noWeatherAlerts = false
+    @State private var isLoadingWeatherAlerts = true
+    @State private var isLoadingTFRs = true
+
+    func fetchWeatherAlerts() {
+        guard let url = URL(string: "https://api.weather.gov/alerts/active?area=UT") else {
+            return
+        }
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let data = data {
+                do {
+                    let decodedResponse = try JSONDecoder().decode(ApiResponse.self, from: data)
+                    DispatchQueue.main.async {
+                        if !decodedResponse.features.isEmpty {
+                            self.weatherAlerts = decodedResponse.features.map { $0.properties }
+                        } else {
+                            self.noWeatherAlerts = true
+                        }
+                        self.isLoadingWeatherAlerts = false
+                    }
+                } catch {
+                    print("Error decoding JSON: \(error)")
+                    DispatchQueue.main.async {
+                        self.isLoadingWeatherAlerts = false
+                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.isLoadingWeatherAlerts = false
+                }
+            }
+        }.resume()
+    }
+
 
     var body: some View {
         List {
+            // National forecast map
+            Section(header: Text("National Forecast (12 hour)")
+                .font(.headline)
+                .foregroundColor(sectionHeaderColor)
+                .bold()) {
+                let forecastURL = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
+                VStack {
+                    WebImage (url: URL(string: forecastURL)) { image in image.resizable() }
+                    placeholder: {
+                        Text("Tap to view")
+                            .foregroundColor(infoFontColor)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .onSuccess { image, data, cacheType in }
+                    .indicator(.activity) // Activity Indicator
+                    .transition(.fade(duration: 0.5)) // Fade Transition with duration
+                    .scaledToFit()
+                }
+                .onTapGesture { if let url = URL(string: forecastURL) { openLink(url) } }
+            }
+            // TFRs for Utah
+            Section(header: Text("Temporary Flight Restrictions")
+                .font(.headline)
+                .foregroundColor(sectionHeaderColor)
+                .bold())
+            {
+                if TFRviewModel.isLoading {
+                    ProgressView("TFRs loading...")
+                } else if TFRviewModel.tfrs.isEmpty {
+                    Text("There are no current TFRs for Utah")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                } else {
+                    ForEach(TFRviewModel.tfrs) { tfr in
+                        VStack(alignment: .leading) {
+                            Text(tfr.type.capitalized)
+                                .font(.headline)
+                                .foregroundColor(warningFontColor)
+                            Text(tfr.description)
+                                .font(.subheadline)
+                        }
+                        .onTapGesture {
+                            if let url = URL(string: "https://tfr.faa.gov/tfr3/?page=detail_\(tfr.notam_id.replacingOccurrences(of: "/", with: "_"))") {
+                                openLink(url)
+                            }
+                        }
+                    }
+                }
+            }
+            // Weather alerts for Utah
+            Section(header: Text("Weather Alerts")
+                .font(.headline)
+                .foregroundColor(sectionHeaderColor)
+                .bold())
+            {
+                if isLoadingWeatherAlerts {
+                    ProgressView("Weather alerts loading...")
+                } else if noWeatherAlerts {
+                    Text("There are no current weather alerts for Utah")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                } else {
+                    ForEach(weatherAlerts) { alert in
+                        VStack(alignment: .leading) {
+                            Text(alert.event)
+                                .font(.headline)
+                                .foregroundColor(warningFontColor)
+                            Text(alert.headline)
+                                .font(.subheadline)
+                            Text(alert.areaDesc)
+                                .font(.footnote)
+                                .foregroundColor(infoFontColor)
+                        }
+                        .padding(.vertical, 2)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if let url = URL(string: "https://www.weather.gov/slc/WWA") {
+                                openLink(url)
+                            }
+                        }
+                    }
+                }
+            }
+            // SLC Forecast Discussion
             Section(header: Text("SLC Area Forecast Discussion")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
@@ -336,17 +523,21 @@ struct WeatherView: View {
                     VStack(alignment: .leading) {
                         ForEach(viewModel.soaringForecast?.soundingData ?? []) { data in
                             HStack {
-                                Text(data.altitude.localizedCapitalized)
+                                Text(data.altitude.lowercased())
                                     .frame(maxWidth: .infinity, alignment: .trailing)
                                     .font(.subheadline)
                                 Spacer()
-                                Image(systemName: "arrow.up")
-                                    .rotationEffect(.degrees(Double(data.windDirection)))
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
-                                    .font(.subheadline)
-                                Text("\(data.windSpeed) mph")
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
-                                    .font(.subheadline)
+                                Group {
+                                    Text("\(data.windSpeed)")
+                                        .font(.subheadline)
+                                        .foregroundColor(windSpeedColor(windSpeed: Int(data.windSpeed), siteType: "")) +
+                                     Text(" mph")
+                                        .font(.subheadline)
+                                    Image(systemName: windArrow)
+                                        .rotationEffect(.degrees(Double(data.windDirection)))
+                                        .font(.subheadline)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .trailing)
                                 Spacer()
                             }
                         }
@@ -370,23 +561,33 @@ struct WeatherView: View {
                                 .frame(maxWidth: .infinity, alignment: .trailing)
                                 .font(.subheadline)
                             Spacer()
+                            Group {
+                                Text("\(reading.temperature)")
+                                    .font(.subheadline)
+                                    .foregroundColor(tempColor(reading.temperature)) +
+                                Text("° F")
+                                    .font(.subheadline)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            Spacer()
                             if reading.windDirection == 990 {
                                 Text("Light and variable")
                                     .frame(maxWidth: .infinity, alignment: .trailing)
                                     .font(.subheadline)
                             } else {
-                                Image(systemName: "arrow.up")
-                                    .rotationEffect(Angle(degrees: Double(reading.windDirection)))
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
-                                    .font(.subheadline)
-                                Text("\(reading.windSpeed) mph")
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
-                                    .font(.subheadline)
+                                Group {
+                                    Text("\(reading.windSpeed)")
+                                        .font(.subheadline)
+                                        .foregroundColor(windSpeedColor(windSpeed: reading.windSpeed, siteType: "")) +
+                                     Text(" mph")
+                                        .font(.subheadline)
+                                    Image(systemName: windArrow)
+                                        .rotationEffect(Angle(degrees: Double(reading.windDirection)))
+                                        .font(.subheadline)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .trailing)
                             }
                             Spacer()
-                            Text("\(reading.temperature)° F")
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                                .font(.subheadline)
                         }
                         .padding(.bottom, 1)
                     }
@@ -413,28 +614,10 @@ struct WeatherView: View {
                 }
                 .onTapGesture { if let url = URL(string: skewTURL) { openLink(url) } }
             }
-            Section(header: Text("National Forecast (12 hour)")
-                .font(.headline)
-                .foregroundColor(sectionHeaderColor)
-                .bold()) {
-                let forecastURL = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
-                VStack {
-                    WebImage (url: URL(string: forecastURL)) { image in image.resizable() }
-                    placeholder: {
-                        Text("Tap to view")
-                            .foregroundColor(infoFontColor)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
-                    .onSuccess { image, data, cacheType in }
-                    .indicator(.activity) // Activity Indicator
-                    .transition(.fade(duration: 0.5)) // Fade Transition with duration
-                    .scaledToFit()
-                }
-                .onTapGesture { if let url = URL(string: forecastURL) { openLink(url) } }
-            }
         }
+        .onAppear (perform: fetchWeatherAlerts)
         .onAppear {
+            TFRviewModel.fetchTFRs()
             AFDviewModel.fetchAFD()
             windAloftData.fetchWindAloftData()
         }

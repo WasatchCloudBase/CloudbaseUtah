@@ -6,6 +6,9 @@ import SwiftUI
 import Foundation
 import SafariServices
 
+// Set thermal calc logging for development
+let turnOnLogging: Bool = true
+
 // Set global constants
 enum NavBarSelectedView:Int {
     case site = 0
@@ -19,6 +22,8 @@ let GoogleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
 let GoogleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
 let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
 let sunriseLongitude: Double = -111.9801
+let windArrow: String = "arrow.up"
+    // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
 
 // Common utility functions
 func tempColor(_ tempF: Int) -> Color {
@@ -124,6 +129,26 @@ func windSpeedColor(windSpeed: Int, siteType: String) -> Color {
         }
     }
 }
+func thermalColor(_ thermalVelocity: Double) -> Color {
+    // Assumes thermalVelocity already rounded to nearest tenth
+    switch thermalVelocity {
+    case ...1.0:
+        return displayValueWhite
+    case 1.1...3.0:
+        return displayValueGreen
+    case 3.0...4.0:
+        return displayValueYellow
+    case 4.0...5.0:
+        return displayValueOrange
+    case 6.0...:
+        return displayValueRed
+    default:
+        return .clear
+    }
+}
+func roundToOneDecimal(_ value: Double) -> Double {
+    return (value * 10).rounded() / 10
+}
 func convertKnotsToMPH(_ knots: Int) -> Int {
     let mph = Int((Double(knots) * 1.15078).rounded())
     return mph
@@ -133,6 +158,9 @@ func convertCelsiusToFahrenheit(_ celsius: Int) -> Int {
 }
 func convertMetersToFeet(_ meters: Double) -> Int {
     return Int((meters * 3.28084).rounded())
+}
+func convertFeetToMeters(_ feet: Double) -> Double {
+    return (feet / 3.28084).rounded()
 }
 func formatAltitude(_ altitudeData: String) -> String {
     let numberFormatter = NumberFormatter()
@@ -207,4 +235,36 @@ func convertISODateToLocalTime(isoDateString: String) -> String {
 
     let localTimeString = localDateFormatter.string(from: date)
     return localTimeString
+}
+
+// For development logging
+// Format to call logging:
+//                          logToFile("Text to output")
+
+func logToFile(_ message: String) {
+    let fileURL = getLogFileURL()
+    
+    do {
+        let timestamp = Date().description(with: .current)
+        let logMessage = "[\(timestamp)] \(message)\n"
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            let fileHandle = try FileHandle(forWritingTo: fileURL)
+            fileHandle.seekToEndOfFile()
+            if let data = logMessage.data(using: .utf8) {
+                fileHandle.write(data)
+            }
+            fileHandle.closeFile()
+        } else {
+            try logMessage.write(to: fileURL, atomically: true, encoding: .utf8)
+        }
+    } catch {
+        print("Failed to write to log file: \(error)")
+    }
+}
+
+func getLogFileURL() -> URL {
+    let fileManager = FileManager.default
+    let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
+    let documentDirectory = urls[0]
+    return documentDirectory.appendingPathComponent("app.log")
 }

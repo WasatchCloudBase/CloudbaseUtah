@@ -47,6 +47,7 @@ func fetchSunriseSunset(forLatitude latitude: Double, longitude: Double, complet
 
 struct BaseAppView: View {
     @State private var isActive = false
+    @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     var body: some View {
         VStack {
             if isActive {
@@ -85,16 +86,17 @@ struct MainView: View {
     @State var selectedView:NavBarSelectedView = .site
     @State var siteViewActive = true
     @State var weatherViewActive = false
-    @State var alertsViewActive = false
+//    @State var alertsViewActive = false
     @State var webcamViewActive = false
     @State var linkViewActive = false
     @State var devViewActive = false
+    @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
 
     var body: some View {
         NavigationView {
             ZStack {
                 backgroundColor.edgesIgnoringSafeArea(.all)
-                
+
                 // Call content based on selected navigation
                 if selectedView == .site {
                     SiteView()
@@ -102,9 +104,9 @@ struct MainView: View {
                 if selectedView == .weather {
                     WeatherView()
                 }
-                if selectedView == .alerts {
-                    AlertsView()
-                }
+//                if selectedView == .alerts {
+//                    AlertsView()
+//                }
                 if selectedView == .webcam {
                     WebcamView()
                 }
@@ -133,7 +135,7 @@ struct MainView: View {
                             selectedView = .dev
                             siteViewActive = false
                             weatherViewActive = false
-                            alertsViewActive = false
+//                            alertsViewActive = false
                             webcamViewActive = false
                             linkViewActive = false
                             devViewActive = true
@@ -160,7 +162,7 @@ struct MainView: View {
                                 selectedView = .site
                                 siteViewActive = true
                                 weatherViewActive = false
-                                alertsViewActive = false
+//                                alertsViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = false
                                 devViewActive = false
@@ -180,7 +182,7 @@ struct MainView: View {
                                 selectedView = .weather
                                 siteViewActive = false
                                 weatherViewActive = true
-                                alertsViewActive = false
+//                                alertsViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = false
                                 devViewActive = false
@@ -196,7 +198,7 @@ struct MainView: View {
                                 }
                             }
                             Spacer()
-                            Button {
+/*                            Button {
                                 selectedView = .alerts
                                 siteViewActive = false
                                 weatherViewActive = false
@@ -216,11 +218,12 @@ struct MainView: View {
                                 }
                             }
                             Spacer()
+*/
                             Button {
                                 selectedView = .webcam
                                 siteViewActive = false
                                 weatherViewActive = false
-                                alertsViewActive = false
+//                                alertsViewActive = false
                                 webcamViewActive = true
                                 linkViewActive = false
                                 devViewActive = false
@@ -240,7 +243,7 @@ struct MainView: View {
                                 selectedView = .link
                                 siteViewActive = false
                                 weatherViewActive = false
-                                alertsViewActive = false
+//                                alertsViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = true
                                 devViewActive = false

@@ -82,6 +82,7 @@ class WindDataViewModel: ObservableObject {
 struct SiteDetailView: View {
     var site: Site  // Received from parent view
     @Environment(\.presentationMode) var presentationMode
+    @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @ObservedObject var viewModel = WindDataViewModel()
     
     var body: some View {
@@ -120,7 +121,9 @@ struct SiteDetailView: View {
                             Text("Error message:")
                             Text(errorMessage)
                         } else if viewModel.windViewData.times.isEmpty {
-                            Text("Loading data...")
+                            Text("Station down")
+                                .font(.caption)
+                                .foregroundColor(infoFontColor)
                                 .onAppear {
                                     viewModel.fetchWindData(stationID: site.readingsStation)
                                 }
@@ -134,7 +137,20 @@ struct SiteDetailView: View {
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
-                    SiteForecastView(forecastLat: site.forecastLat, forecastLon: site.forecastLon, forecastNote: site.forecastNote, siteType: site.siteType)
+                    SiteForecastView (
+                        liftParametersViewModel: liftParametersViewModel,
+                        forecastLat: site.forecastLat,
+                        forecastLon: site.forecastLon,
+                        forecastNote: site.forecastNote,
+                        siteType: site.siteType )
+                }
+                VStack(alignment: .leading) {
+                    Text("Readings data aggregated by Synoptic")
+                        .font(.caption)
+                        .foregroundColor(infoFontColor)
+                    Text("https://synopticdata.com")
+                        .font(.caption)
+                        .foregroundColor(infoFontColor)
                 }
             }
             Spacer() // Push the content to the top of the sheet
@@ -171,7 +187,7 @@ struct WindReadingsBarChartView: View {
                             .font(.caption)
                             .foregroundColor(windColor)
                             .bold()
-                        Image(systemName: "arrow.up")
+                        Image(systemName: windArrow)
                             .rotationEffect(.degrees(Double(windDirection + 180)))
                             .foregroundColor(.white)
                             .bold()

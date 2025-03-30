@@ -8,13 +8,19 @@ import SwiftUI
 struct CloudbaseUtahApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var appState = AppState()
+    @StateObject private var liftParametersViewModel = LiftParametersViewModel()
     var body: some Scene {
         WindowGroup {
             
-//            SkewTChartView()
-            
             BaseAppView()
-            // Check for date changes to force app reload
+            
+                // Load thermal lift parameters
+                .environmentObject(liftParametersViewModel)
+                .onAppear {
+                    liftParametersViewModel.fetchLiftParameters()
+                }
+
+                // Check for date changes to force app reload
                 .environmentObject(appState)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
                     appState.reload()

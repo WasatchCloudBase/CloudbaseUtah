@@ -42,10 +42,8 @@ class SiteViewModel: ObservableObject {
     }
     
     func fetchData(completion: @escaping ([Site]?) -> Void) {
-        let spreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
         let rangeName = "Sites"
-        let apiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
-        let GoogleURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(spreadsheetID)/values/\(rangeName)?alt=json&key=\(apiKey)"
+        let GoogleURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
         guard let url = URL(string: GoogleURLString) else {
             completion(nil)
             return
@@ -147,6 +145,7 @@ class SiteViewModel: ObservableObject {
 }
 
 struct SiteView: View {
+    @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @ObservedObject var viewModel = SiteViewModel()
     @State private var selectedSite: Site?
     
@@ -218,10 +217,9 @@ struct SiteView: View {
                                              }
                                          }
                                          if let windDirectionAngle = site.windDirectionAngle {
-                                             Image(systemName: "arrow.up")
+                                             Image(systemName: windArrow)
                                                  .rotationEffect(windDirectionAngle)
                                                  .font(.title3)
-                                                 .bold()
                                          }
                                      }
                                  }
