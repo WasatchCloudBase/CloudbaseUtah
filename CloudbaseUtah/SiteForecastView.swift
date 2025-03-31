@@ -7,7 +7,7 @@
 import SwiftUI
 import Combine
 
-let MaxDisplayRows = 31        // Used to calculate the reduced rows based on surface altitude; needs to be updated if rows added to view
+let MaxDisplayRows = 30        // Used to calculate the reduced rows based on surface altitude; needs to be updated if rows added to view
 
 // Forecast data structures
 struct ForecastData: Codable {
@@ -236,51 +236,52 @@ class SiteForecastViewModel: ObservableObject {
         if turnOnLogging {
             logToFile("adjustedPriorAltitude, altitude, altitudeChange, topOfLiftRatio, topOfLiftAltitude, cloudbaseRatio, cloudbaseAltitude, ambientTemp, ambientDPTemp, priorAmbientDPTemp, thermalDPTemp, priorThermalDPTemp, thermalVelocity, thermalDPTempToAmbientDPTempDiff, ambientTempToAmbientDPTempDiff, ambientDPTempDiff, priorThermalDPTempToAmbientDPTempDiff, priorAmbientDPTempToAmbientTempDiff, thermalRampTop, rampImpactAltitude, rampImpactPortion, rampReductionFactor")
         }
-
         
         let currentDate = Date()
         let oneHourAgo = Calendar.current.date(byAdding: .hour, value: -1, to: currentDate)!
         var priorReadingFormattedDate: String?
         var newDateFlag: Bool = true
+        var thermalTriggerReachedForDay: Bool = false
         
         // Determine altitude in feet and limit wind readings to only those more than 200 ft above the surface
         // by reducing the number of rows to display and specifying the max pressure reading to display
-        let surfaceAltitude = Double(convertMetersToFeet(data.elevation) + 10)
+        let surfaceAltitude = Double(convertMetersToFeet(data.elevation) + 10).rounded()
+        let surfaceBuffer = 200.0           // Don't display winds aloft within surface buffer distance above surface
         var maxPressureReading: Int = 1000  // hPa, which is sea level
         var displayRows: Int = MaxDisplayRows
-        if data.hourly.geopotential_height_900hPa.first ?? 0 < surfaceAltitude {
+        if (data.hourly.geopotential_height_900hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) {
             maxPressureReading = 850
             displayRows -= 2
         }
-        if data.hourly.geopotential_height_850hPa.first ?? 0 < surfaceAltitude {
+        if (data.hourly.geopotential_height_850hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) {
             maxPressureReading = 800
             displayRows -= 2
         }
-        if data.hourly.geopotential_height_800hPa.first ?? 0 < surfaceAltitude {
+        if (data.hourly.geopotential_height_800hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) {
             maxPressureReading = 750
             displayRows -= 2
         }
-        if data.hourly.geopotential_height_750hPa.first ?? 0 < surfaceAltitude {
+        if (data.hourly.geopotential_height_750hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) {
             maxPressureReading = 700
             displayRows -= 2
         }
-        if data.hourly.geopotential_height_700hPa.first ?? 0 < surfaceAltitude {
+        if (data.hourly.geopotential_height_700hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) {
             maxPressureReading = 650
             displayRows -= 2
         }
-        if data.hourly.geopotential_height_650hPa.first ?? 0 < surfaceAltitude {
+        if (data.hourly.geopotential_height_650hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) {
             maxPressureReading = 600
             displayRows -= 2
         }
-        if data.hourly.geopotential_height_600hPa.first ?? 0 < surfaceAltitude {
+        if (data.hourly.geopotential_height_600hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) {
             maxPressureReading = 550
             displayRows -= 2
         }
-        if data.hourly.geopotential_height_550hPa.first ?? 0 < surfaceAltitude {
+        if (data.hourly.geopotential_height_550hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) {
             maxPressureReading = 500
             displayRows -= 2
         }
-        if data.hourly.geopotential_height_500hPa.first ?? 0 < surfaceAltitude {
+        if (data.hourly.geopotential_height_500hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) {
             maxPressureReading = 450
             displayRows -= 2
         }
@@ -351,6 +352,8 @@ class SiteForecastViewModel: ObservableObject {
                             newDateFlag = false
                         } else {
                             newDateFlag = true
+                            // Reset thermal trigger temp reached for the day
+                            thermalTriggerReachedForDay = false
                         }
                         filteredHourly.newDateFlag?.append(newDateFlag)
                         priorReadingFormattedDate = formattedDate
@@ -387,7 +390,9 @@ class SiteForecastViewModel: ObservableObject {
                                                                  priorAmbientDPTemp: priorAmbientDPTemp,
                                                                  priorThermalDPTemp: priorThermalDPTemp,
                                                                  priorAltitude: priorAltitude,
-                                                                 surfaceAltitude: surfaceAltitude)
+                                                                 surfaceAltitude: surfaceAltitude,
+                                                                 surfaceTemp: data.hourly.temperature_2m[index],
+                                                                 thermalTriggerReachedForDay: thermalTriggerReachedForDay)
                             thermalVelocity = thermalResult?.thermalVelocity ?? 0.0
                             priorThermalDPTemp = thermalResult?.thermalDPTemp ?? priorThermalDPTemp
                             topOfLiftAltitude = thermalResult?.topOfLiftAltitude ?? 0.0
@@ -396,6 +401,9 @@ class SiteForecastViewModel: ObservableObject {
                             priorAmbientDPTemp = data.hourly.dewpoint_900hPa[index]
                             if topOfLiftAltitude > 0 {
                                 topOfLiftTemp = data.hourly.temperature_900hPa[index]
+                            }
+                            if thermalVelocity > 0 {
+                                thermalTriggerReachedForDay = true
                             }
                         }
                         filteredHourly.thermalVelocity_900hPa?.append(thermalVelocity)
@@ -408,7 +416,9 @@ class SiteForecastViewModel: ObservableObject {
                                                                  priorAmbientDPTemp: priorAmbientDPTemp,
                                                                  priorThermalDPTemp: priorThermalDPTemp,
                                                                  priorAltitude: priorAltitude,
-                                                                 surfaceAltitude: surfaceAltitude)
+                                                                 surfaceAltitude: surfaceAltitude,
+                                                                 surfaceTemp: data.hourly.temperature_2m[index],
+                                                                 thermalTriggerReachedForDay: thermalTriggerReachedForDay)
                             thermalVelocity = thermalResult?.thermalVelocity ?? 0.0
                             priorThermalDPTemp = thermalResult?.thermalDPTemp ?? priorThermalDPTemp
                             topOfLiftAltitude = thermalResult?.topOfLiftAltitude ?? 0.0
@@ -417,6 +427,9 @@ class SiteForecastViewModel: ObservableObject {
                             priorAmbientDPTemp = data.hourly.dewpoint_850hPa[index]
                             if topOfLiftAltitude > 0 {
                                 topOfLiftTemp = data.hourly.temperature_850hPa[index]
+                            }
+                            if thermalVelocity > 0 {
+                                thermalTriggerReachedForDay = true
                             }
                         }
                         filteredHourly.thermalVelocity_850hPa?.append(thermalVelocity)
@@ -429,7 +442,9 @@ class SiteForecastViewModel: ObservableObject {
                                                                  priorAmbientDPTemp: priorAmbientDPTemp,
                                                                  priorThermalDPTemp: priorThermalDPTemp,
                                                                  priorAltitude: priorAltitude,
-                                                                 surfaceAltitude: surfaceAltitude)
+                                                                 surfaceAltitude: surfaceAltitude,
+                                                                 surfaceTemp: data.hourly.temperature_2m[index],
+                                                                 thermalTriggerReachedForDay: thermalTriggerReachedForDay)
                             thermalVelocity = thermalResult?.thermalVelocity ?? 0.0
                             priorThermalDPTemp = thermalResult?.thermalDPTemp ?? priorThermalDPTemp
                             topOfLiftAltitude = thermalResult?.topOfLiftAltitude ?? 0.0
@@ -438,6 +453,9 @@ class SiteForecastViewModel: ObservableObject {
                             priorAmbientDPTemp = data.hourly.dewpoint_800hPa[index]
                             if topOfLiftAltitude > 0 {
                                 topOfLiftTemp = data.hourly.temperature_800hPa[index]
+                            }
+                            if thermalVelocity > 0 {
+                                thermalTriggerReachedForDay = true
                             }
                         }
                         filteredHourly.thermalVelocity_800hPa?.append(thermalVelocity)
@@ -450,7 +468,9 @@ class SiteForecastViewModel: ObservableObject {
                                                                  priorAmbientDPTemp: priorAmbientDPTemp,
                                                                  priorThermalDPTemp: priorThermalDPTemp,
                                                                  priorAltitude: priorAltitude,
-                                                                 surfaceAltitude: surfaceAltitude)
+                                                                 surfaceAltitude: surfaceAltitude,
+                                                                 surfaceTemp: data.hourly.temperature_2m[index],
+                                                                 thermalTriggerReachedForDay: thermalTriggerReachedForDay)
                             thermalVelocity = thermalResult?.thermalVelocity ?? 0.0
                             priorThermalDPTemp = thermalResult?.thermalDPTemp ?? priorThermalDPTemp
                             topOfLiftAltitude = thermalResult?.topOfLiftAltitude ?? 0.0
@@ -459,6 +479,9 @@ class SiteForecastViewModel: ObservableObject {
                             priorAmbientDPTemp = data.hourly.dewpoint_750hPa[index]
                             if topOfLiftAltitude > 0 {
                                 topOfLiftTemp = data.hourly.temperature_750hPa[index]
+                            }
+                            if thermalVelocity > 0 {
+                                thermalTriggerReachedForDay = true
                             }
                         }
                         filteredHourly.thermalVelocity_750hPa?.append(thermalVelocity)
@@ -471,7 +494,9 @@ class SiteForecastViewModel: ObservableObject {
                                                                  priorAmbientDPTemp: priorAmbientDPTemp,
                                                                  priorThermalDPTemp: priorThermalDPTemp,
                                                                  priorAltitude: priorAltitude,
-                                                                 surfaceAltitude: surfaceAltitude)
+                                                                 surfaceAltitude: surfaceAltitude,
+                                                                 surfaceTemp: data.hourly.temperature_2m[index],
+                                                                 thermalTriggerReachedForDay: thermalTriggerReachedForDay)
                             thermalVelocity = thermalResult?.thermalVelocity ?? 0.0
                             priorThermalDPTemp = thermalResult?.thermalDPTemp ?? priorThermalDPTemp
                             topOfLiftAltitude = thermalResult?.topOfLiftAltitude ?? 0.0
@@ -480,6 +505,9 @@ class SiteForecastViewModel: ObservableObject {
                             priorAmbientDPTemp = data.hourly.dewpoint_700hPa[index]
                             if topOfLiftAltitude > 0 {
                                 topOfLiftTemp = data.hourly.temperature_700hPa[index]
+                            }
+                            if thermalVelocity > 0 {
+                                thermalTriggerReachedForDay = true
                             }
                         }
                         filteredHourly.thermalVelocity_700hPa?.append(thermalVelocity)
@@ -492,7 +520,9 @@ class SiteForecastViewModel: ObservableObject {
                                                                  priorAmbientDPTemp: priorAmbientDPTemp,
                                                                  priorThermalDPTemp: priorThermalDPTemp,
                                                                  priorAltitude: priorAltitude,
-                                                                 surfaceAltitude: surfaceAltitude)
+                                                                 surfaceAltitude: surfaceAltitude,
+                                                                 surfaceTemp: data.hourly.temperature_2m[index],
+                                                                 thermalTriggerReachedForDay: thermalTriggerReachedForDay)
                             thermalVelocity = thermalResult?.thermalVelocity ?? 0.0
                             priorThermalDPTemp = thermalResult?.thermalDPTemp ?? priorThermalDPTemp
                             topOfLiftAltitude = thermalResult?.topOfLiftAltitude ?? 0.0
@@ -501,6 +531,9 @@ class SiteForecastViewModel: ObservableObject {
                             priorAmbientDPTemp = data.hourly.dewpoint_650hPa[index]
                             if topOfLiftAltitude > 0 {
                                 topOfLiftTemp = data.hourly.temperature_650hPa[index]
+                            }
+                            if thermalVelocity > 0 {
+                                thermalTriggerReachedForDay = true
                             }
                         }
                         filteredHourly.thermalVelocity_650hPa?.append(thermalVelocity)
@@ -513,7 +546,9 @@ class SiteForecastViewModel: ObservableObject {
                                                                  priorAmbientDPTemp: priorAmbientDPTemp,
                                                                  priorThermalDPTemp: priorThermalDPTemp,
                                                                  priorAltitude: priorAltitude,
-                                                                 surfaceAltitude: surfaceAltitude)
+                                                                 surfaceAltitude: surfaceAltitude,
+                                                                 surfaceTemp: data.hourly.temperature_2m[index],
+                                                                 thermalTriggerReachedForDay: thermalTriggerReachedForDay)
                             thermalVelocity = thermalResult?.thermalVelocity ?? 0.0
                             priorThermalDPTemp = thermalResult?.thermalDPTemp ?? priorThermalDPTemp
                             topOfLiftAltitude = thermalResult?.topOfLiftAltitude ?? 0.0
@@ -522,6 +557,9 @@ class SiteForecastViewModel: ObservableObject {
                             priorAmbientDPTemp = data.hourly.dewpoint_600hPa[index]
                             if topOfLiftAltitude > 0 {
                                 topOfLiftTemp = data.hourly.temperature_600hPa[index]
+                            }
+                            if thermalVelocity > 0 {
+                                thermalTriggerReachedForDay = true
                             }
                         }
                         filteredHourly.thermalVelocity_600hPa?.append(thermalVelocity)
@@ -534,7 +572,9 @@ class SiteForecastViewModel: ObservableObject {
                                                                  priorAmbientDPTemp: priorAmbientDPTemp,
                                                                  priorThermalDPTemp: priorThermalDPTemp,
                                                                  priorAltitude: priorAltitude,
-                                                                 surfaceAltitude: surfaceAltitude)
+                                                                 surfaceAltitude: surfaceAltitude,
+                                                                 surfaceTemp: data.hourly.temperature_2m[index],
+                                                                 thermalTriggerReachedForDay: thermalTriggerReachedForDay)
                             thermalVelocity = thermalResult?.thermalVelocity ?? 0.0
                             priorThermalDPTemp = thermalResult?.thermalDPTemp ?? priorThermalDPTemp
                             topOfLiftAltitude = thermalResult?.topOfLiftAltitude ?? 0.0
@@ -543,6 +583,9 @@ class SiteForecastViewModel: ObservableObject {
                             priorAmbientDPTemp = data.hourly.dewpoint_550hPa[index]
                             if topOfLiftAltitude > 0 {
                                 topOfLiftTemp = data.hourly.temperature_550hPa[index]
+                            }
+                            if thermalVelocity > 0 {
+                                thermalTriggerReachedForDay = true
                             }
                         }
                         filteredHourly.thermalVelocity_550hPa?.append(thermalVelocity)
@@ -555,7 +598,9 @@ class SiteForecastViewModel: ObservableObject {
                                                                  priorAmbientDPTemp: priorAmbientDPTemp,
                                                                  priorThermalDPTemp: priorThermalDPTemp,
                                                                  priorAltitude: priorAltitude,
-                                                                 surfaceAltitude: surfaceAltitude)
+                                                                 surfaceAltitude: surfaceAltitude,
+                                                                 surfaceTemp: data.hourly.temperature_2m[index],
+                                                                 thermalTriggerReachedForDay: thermalTriggerReachedForDay)
                             thermalVelocity = thermalResult?.thermalVelocity ?? 0.0
                             priorThermalDPTemp = thermalResult?.thermalDPTemp ?? priorThermalDPTemp
                             topOfLiftAltitude = thermalResult?.topOfLiftAltitude ?? 0.0
@@ -565,10 +610,13 @@ class SiteForecastViewModel: ObservableObject {
                             if topOfLiftAltitude > 0 {
                                 topOfLiftTemp = data.hourly.temperature_500hPa[index]
                             }
+                            if thermalVelocity > 0 {
+                                thermalTriggerReachedForDay = true
+                            }
                         }
                         filteredHourly.thermalVelocity_500hPa?.append(thermalVelocity)
-                        
-                        // Append cloudbase and top of lift data
+
+                        // Format cloudbase and top of lift data
                         // Altitudes are / 1000 so they can be displayed like "13k)
                         var formattedCloudbaseAltitude = ""
                         if cloudbaseAltitude > 0 {
@@ -576,7 +624,14 @@ class SiteForecastViewModel: ObservableObject {
                         }
                         var formattedTopOfLiftAltitude = ""
                         if topOfLiftAltitude > 0 {
-                            formattedTopOfLiftAltitude = String(Int((topOfLiftAltitude/1000).rounded())) + "k"
+                            if topOfLiftAltitude > surfaceAltitude {
+                                formattedTopOfLiftAltitude = String(Int((topOfLiftAltitude/1000).rounded())) + "k"
+                            } else {
+                                formattedTopOfLiftAltitude = ""
+                            }
+                        } else if priorThermalDPTemp > priorAmbientDPTemp {
+                            // Never reached top of lift
+                            formattedTopOfLiftAltitude = "rocket"
                         }
                         filteredHourly.formattedCloudbaseAltitude?.append(formattedCloudbaseAltitude)
                         filteredHourly.formattedTopOfLiftAltitude?.append(formattedTopOfLiftAltitude)
@@ -602,7 +657,9 @@ class SiteForecastViewModel: ObservableObject {
         priorAmbientDPTemp: Double,
         priorThermalDPTemp: Double,
         priorAltitude: Double,
-        surfaceAltitude: Double
+        surfaceAltitude: Double,
+        surfaceTemp: Double,
+        thermalTriggerReachedForDay: Bool
     ) -> ThermalResult {
 
         // Initial values (setting here to allow all to be written to log file)
@@ -641,6 +698,21 @@ class SiteForecastViewModel: ObservableObject {
         // Check if priorAltitude is less than surfaceAltitude
         let adjustedPriorAltitude = priorAltitude < surfaceAltitude ? surfaceAltitude : priorAltitude
         
+        // Check if thermal trigger temperature difference between ground temp and ambient temp is not yet reached for the day
+        // If it has been reached, assume the trigger temperature difference is 50% of the original trigger temp difference
+        var adjustedThermalTriggerTempDiff = liftParameters.thermalTriggerTempDiff
+        if thermalTriggerReachedForDay {
+            adjustedThermalTriggerTempDiff /= 2
+        }
+        guard surfaceTemp >= (ambientTemp + liftParameters.thermalTriggerTempDiff) else {
+            // Thermals not triggering; set top of lift to surface altitude
+            return ThermalResult(
+                thermalVelocity: thermalVelocity,
+                thermalDPTemp: thermalDPTemp,
+                cloudbaseAltitude: cloudbaseAltitude,
+                topOfLiftAltitude: adjustedPriorAltitude)
+        }
+        
         // Determine altitude change
         altitudeChange = altitude - adjustedPriorAltitude
         
@@ -656,27 +728,33 @@ class SiteForecastViewModel: ObservableObject {
         let thermalDPTempToAmbientDPTempDiff = max( (thermalDPTemp - ambientDPTemp), 0.0 )
         let ambientTempToAmbientDPTempDiff = max( (ambientTemp - ambientDPTemp), 0.0 )
         let ambientDPTempDiff = max( (priorAmbientDPTemp - ambientDPTemp), 0.0 )
-        let priorThermalDPTempToAmbientDPTempDiff = max( (priorThermalDPTemp - priorAmbientDPTemp), 0.0 )
         let priorAmbientDPTempToAmbientTempDiff = max( priorAmbientDPTemp - ambientTemp, 0.0)
+        let priorAltitudeThermalDPDiff = max( (priorAmbientDPTemp - thermalDPTemp), 0.0 )
+        let priorThermalDPTempToAmbientDPTempDiff = max( (priorThermalDPTemp - priorAmbientDPTemp), 0.0 )
 
         // Determine if cloudbase is reached (thermal dew point temp does not exceed ambient temp)
         if  ambientTemp <= ambientDPTemp {
-            cloudbaseRatio = (priorAmbientDPTempToAmbientTempDiff) / (ambientDPTempDiff)
             if ambientDPTempDiff == 0 {
                 cloudbaseAltitude = adjustedPriorAltitude
             } else {
+                cloudbaseRatio = priorAmbientDPTempToAmbientTempDiff / priorAltitudeThermalDPDiff
                 cloudbaseAltitude = adjustedPriorAltitude + ( altitudeChange * cloudbaseRatio )
             }
         }
         
         // Determine if top of lift is reached (thermal dew point temp does not exceed ambient dew point)
         if thermalDPTemp <= ambientDPTemp {
-            topOfLiftRatio = (ambientDPTempDiff/priorThermalDPTempToAmbientDPTempDiff)
             if priorThermalDPTempToAmbientDPTempDiff == 0 {
                 topOfLiftAltitude = adjustedPriorAltitude
             } else {
+                topOfLiftRatio = ( priorAmbientDPTempToAmbientTempDiff / priorAltitudeThermalDPDiff )
                 topOfLiftAltitude = adjustedPriorAltitude + ( altitudeChange * topOfLiftRatio )
             }
+        }
+        
+        // If cloudbase < top of lift, set top of (usable) lift to cloudbase
+        if cloudbaseAltitude > 0.0 && topOfLiftAltitude > 0.0 && cloudbaseAltitude < topOfLiftAltitude {
+            topOfLiftAltitude = cloudbaseAltitude
         }
 
         // If neither cloudbase or top of lift is reached, calculate thermal velocity (w)
@@ -695,9 +773,18 @@ class SiteForecastViewModel: ObservableObject {
                 rampReductionFactor = liftParameters.thermalRampStartPct / 100 * rampImpactPortion
                 thermalVelocity = thermalVelocity * (1 - rampReductionFactor)
             }
- 
             
+            // Adjust thermal velocity for glider sink rate
+            thermalVelocity = max( (thermalVelocity - liftParameters.thermalGliderSinkRate ), 0.0)
             
+            // Adjust down top of usaeable lift if thermalVelocity is less than glider sink rate
+            if thermalVelocity <= 0 {
+                if topOfLiftAltitude > 0 {
+                    topOfLiftAltitude = min(altitude, topOfLiftAltitude)
+                } else {
+                    topOfLiftAltitude = altitude
+                }
+            }
         }
         
         // If logging is turned on, write data for thermal calc troubleshooting
@@ -791,7 +878,6 @@ struct SiteForecastView: View {
                                 Text("Thermals")
                                     .foregroundColor(infoFontColor)
                                 Text("Top of Lift")
-                                Text("Cloudbase")
                                 if maxPressureReading >= 500 {
                                     Text("\(Int(forecastData.hourly.geopotential_height_500hPa.first ?? 500))k ft")
                                 }
@@ -949,8 +1035,15 @@ struct SiteForecastView: View {
                                                         .foregroundColor(tableDividerColor),
                                                     alignment: .center
                                                 )
-                                            Text(forecastData.hourly.formattedTopOfLiftAltitude?[index] ?? "")
-                                            Text(forecastData.hourly.formattedCloudbaseAltitude?[index] ?? "")
+                                            if forecastData.hourly.formattedTopOfLiftAltitude?[index] ?? "" == "rocket" {
+                                                Image("rocket")
+                                                    .renderingMode(.original) // Use .multicolor for multicolor rendering
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 20, height: 20)
+                                            } else {
+                                                Text(forecastData.hourly.formattedTopOfLiftAltitude?[index] ?? "")
+                                            }
                                             if maxPressureReading >= 500 {
                                                 Text("\(forecastData.hourly.thermalVelocity_500hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_500hPa?[index] ?? 0))")
                                                     .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_500hPa?[index] ?? 0))

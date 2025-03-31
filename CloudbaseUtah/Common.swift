@@ -7,7 +7,7 @@ import Foundation
 import SafariServices
 
 // Set thermal calc logging for development
-let turnOnLogging: Bool = true
+let turnOnLogging: Bool = false
 
 // Set global constants
 enum NavBarSelectedView:Int {
