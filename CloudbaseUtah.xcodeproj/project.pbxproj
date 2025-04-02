@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		451418E62D9CD67300F46C8D /* SDWebImage in Frameworks */ = {isa = PBXBuildFile; productRef = 451418E52D9CD67300F46C8D /* SDWebImage */; };
+		451418E82D9CD67300F46C8D /* SDWebImageMapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 451418E72D9CD67300F46C8D /* SDWebImageMapKit */; };
+		4526B8BE2D9CD8FF001DF2E6 /* SDWebImage in Frameworks */ = {isa = PBXBuildFile; productRef = 4526B8BD2D9CD8FF001DF2E6 /* SDWebImage */; };
+		4526B8C02D9CD8FF001DF2E6 /* SDWebImageMapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4526B8BF2D9CD8FF001DF2E6 /* SDWebImageMapKit */; };
+		453103282D9CDB450014FF75 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 453103272D9CDB450014FF75 /* SDWebImageSwiftUI */; };
 		85DEF3A7792939CF8F3E781D /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B230A66054A288D59DB916C /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework */; };
 		9B49846FE83472CBAD3279FF /* Pods_CloudbaseUtahTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A11BF600A46CB5D2FDDD6C4 /* Pods_CloudbaseUtahTests.framework */; };
 		CF7EC554CE2E110231E21E75 /* Pods_CloudbaseUtah.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5A3DE006FF57B90665038B54 /* Pods_CloudbaseUtah.framework */; };
@@ -80,6 +85,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				453103282D9CDB450014FF75 /* SDWebImageSwiftUI in Frameworks */,
+				451418E62D9CD67300F46C8D /* SDWebImage in Frameworks */,
+				4526B8C02D9CD8FF001DF2E6 /* SDWebImageMapKit in Frameworks */,
+				451418E82D9CD67300F46C8D /* SDWebImageMapKit in Frameworks */,
+				4526B8BE2D9CD8FF001DF2E6 /* SDWebImage in Frameworks */,
 				CF7EC554CE2E110231E21E75 /* Pods_CloudbaseUtah.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -159,7 +169,6 @@
 				4572B6622D7A8B5200B2723D /* Sources */,
 				4572B6632D7A8B5200B2723D /* Frameworks */,
 				4572B6642D7A8B5200B2723D /* Resources */,
-				8F12A06ADDFB058BF0749CA9 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -203,7 +212,6 @@
 				4572B6802D7A8B5300B2723D /* Sources */,
 				4572B6812D7A8B5300B2723D /* Frameworks */,
 				4572B6822D7A8B5300B2723D /* Resources */,
-				2C00AC4FF21509B6990AB590 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -226,7 +234,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					4572B6652D7A8B5200B2723D = {
 						CreatedOnToolsVersion = 16.2;
@@ -251,7 +259,8 @@
 			mainGroup = 4572B65D2D7A8B5200B2723D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				45F059E12D835DFE00ACB0DA /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+				451418E42D9CD67300F46C8D /* XCRemoteSwiftPackageReference "SDWebImage" */,
+				453103262D9CDB450014FF75 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4572B6672D7A8B5200B2723D /* Products */;
@@ -290,23 +299,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		2C00AC4FF21509B6990AB590 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah-CloudbaseUtahUITests/Pods-CloudbaseUtah-CloudbaseUtahUITests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah-CloudbaseUtahUITests/Pods-CloudbaseUtah-CloudbaseUtahUITests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah-CloudbaseUtahUITests/Pods-CloudbaseUtah-CloudbaseUtahUITests-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		3A6E2D147D717732E1F4882B /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -327,23 +319,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		8F12A06ADDFB058BF0749CA9 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah/Pods-CloudbaseUtah-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah/Pods-CloudbaseUtah-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CloudbaseUtah/Pods-CloudbaseUtah-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		9CED150684FD9CA856577A51 /* [CP] Check Pods Manifest.lock */ = {
@@ -440,7 +415,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"CloudbaseUtah/Preview Content\"";
-				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CloudbaseUtah/Info.plist;
@@ -449,6 +423,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -456,6 +431,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtah;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -472,7 +449,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"CloudbaseUtah/Preview Content\"";
-				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CloudbaseUtah/Info.plist;
@@ -481,6 +457,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -488,6 +465,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtah;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -529,6 +508,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -592,6 +572,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -620,7 +601,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2764B72323;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MARKETING_VERSION = 1.0;
@@ -640,7 +620,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2764B72323;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MARKETING_VERSION = 1.0;
@@ -659,7 +638,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2764B72323;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtahUITests;
@@ -677,7 +655,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2764B72323;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtahUITests;
@@ -731,15 +708,51 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		45F059E12D835DFE00ACB0DA /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+		451418E42D9CD67300F46C8D /* XCRemoteSwiftPackageReference "SDWebImage" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/scinfu/SwiftSoup";
+			repositoryURL = "https://github.com/SDWebImage/SDWebImage";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.8.7;
+				minimumVersion = 5.21.0;
+			};
+		};
+		453103262D9CDB450014FF75 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImageSwiftUI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.3;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		451418E52D9CD67300F46C8D /* SDWebImage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 451418E42D9CD67300F46C8D /* XCRemoteSwiftPackageReference "SDWebImage" */;
+			productName = SDWebImage;
+		};
+		451418E72D9CD67300F46C8D /* SDWebImageMapKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 451418E42D9CD67300F46C8D /* XCRemoteSwiftPackageReference "SDWebImage" */;
+			productName = SDWebImageMapKit;
+		};
+		4526B8BD2D9CD8FF001DF2E6 /* SDWebImage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 451418E42D9CD67300F46C8D /* XCRemoteSwiftPackageReference "SDWebImage" */;
+			productName = SDWebImage;
+		};
+		4526B8BF2D9CD8FF001DF2E6 /* SDWebImageMapKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 451418E42D9CD67300F46C8D /* XCRemoteSwiftPackageReference "SDWebImage" */;
+			productName = SDWebImageMapKit;
+		};
+		453103272D9CDB450014FF75 /* SDWebImageSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 453103262D9CDB450014FF75 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
+			productName = SDWebImageSwiftUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4572B65E2D7A8B5200B2723D /* Project object */;
 }

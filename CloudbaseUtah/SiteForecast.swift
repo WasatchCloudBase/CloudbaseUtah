@@ -95,6 +95,13 @@ struct WeatherCodesResponse: Codable {
     let values: [[String]]
 }
 
+// For top of lift area chart
+struct TopOfLiftDataPoint: Identifiable {
+    var id = UUID()
+    var index: Int
+    var altitude: Double
+}
+
 class SiteForecastViewModel: ObservableObject {
     @Published var forecastData: ForecastData?
     private var liftParametersViewModel: LiftParametersViewModel
@@ -200,7 +207,6 @@ class SiteForecastViewModel: ObservableObject {
             dewpoint_800hPa: [],
             dewpoint_850hPa: [],
             dewpoint_900hPa: [],
-
             geopotential_height_500hPa: [],
             geopotential_height_550hPa: [],
             geopotential_height_600hPa: [],
@@ -226,6 +232,7 @@ class SiteForecastViewModel: ObservableObject {
             thermalVelocity_850hPa: [],
             thermalVelocity_900hPa: [],
             formattedCloudbaseAltitude: [],
+            topOfLiftAltitude: [],
             formattedTopOfLiftAltitude: [],
             topOfLiftTemperature: []
         )
@@ -602,12 +609,21 @@ class SiteForecastViewModel: ObservableObject {
                         } else if priorThermalDPTemp > priorAmbientDPTemp {
                             // Never reached top of lift
                             formattedTopOfLiftAltitude = "rocket"
+                            topOfLiftAltitude = 20000
                             topOfLiftTemp = data.hourly.temperature_500hPa[index]
                         }
                         // Convert top of Lift Temp to F
                         let topOfLiftTempF = Double(convertCelsiusToFahrenheit(Int(topOfLiftTemp)))
                         
                         filteredHourly.formattedCloudbaseAltitude?.append(formattedCloudbaseAltitude)
+                        if topOfLiftAltitude.isNaN {
+                            print(String(topOfLiftAltitude))
+                            topOfLiftAltitude = 0 }
+                        // Set top of lift altitude to a minimum of surface altitude for area chart
+                        // (leaves formatted top of lift altitude set to ""
+                        if topOfLiftAltitude == 0 {
+                            topOfLiftAltitude = surfaceAltitude
+                        }
                         filteredHourly.topOfLiftAltitude?.append(topOfLiftAltitude)
                         filteredHourly.formattedTopOfLiftAltitude?.append(formattedTopOfLiftAltitude)
                         filteredHourly.topOfLiftTemperature?.append(topOfLiftTempF)
@@ -722,8 +738,18 @@ class SiteForecastViewModel: ObservableObject {
             if priorThermalDPTempToAmbientDPTempDiff == 0 {
                 topOfLiftAltitude = adjustedPriorAltitude
             } else {
-                topOfLiftRatio = ( priorAmbientDPTempToAmbientTempDiff / priorAltitudeThermalDPDiff )
-                topOfLiftAltitude = adjustedPriorAltitude + ( altitudeChange * topOfLiftRatio )
+                if priorAltitudeThermalDPDiff == 0 {
+                    // Prior ambient DP temp <= thermal DP temp (top of lift should have been already reached)
+                    // May be indicative of an inversion layer
+                    topOfLiftAltitude = adjustedPriorAltitude
+                } else {
+                    topOfLiftRatio = ( priorAmbientDPTempToAmbientTempDiff / priorAltitudeThermalDPDiff )
+                    if topOfLiftRatio.isNaN {
+                        print("topOfLiftRatio is NaN, \(priorAmbientDPTempToAmbientTempDiff), \(priorAltitudeThermalDPDiff), \(priorAmbientDPTemp), \(thermalDPTemp)")
+                        topOfLiftRatio = 0.0
+                    }
+                    topOfLiftAltitude = adjustedPriorAltitude + ( altitudeChange * topOfLiftRatio )
+                }
             }
         }
         

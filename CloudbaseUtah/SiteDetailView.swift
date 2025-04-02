@@ -165,7 +165,7 @@ struct WindReadingsBarChartView: View {
     var body: some View {
         let count = min(windViewData.times.count, 10)
         let dataRange = (windViewData.times.count - count)..<windViewData.times.count
-        
+
         Chart {
             ForEach(dataRange, id: \.self) { index in
                 let windSpeed = windViewData.windSpeed[index]
@@ -174,7 +174,7 @@ struct WindReadingsBarChartView: View {
                 let time = windViewData.times[index]
                 let windColor = windSpeedColor(windSpeed: Int(windSpeed), siteType: siteType)
                 let gustColor = windSpeedColor(windSpeed: Int(windGust), siteType: siteType)
-                
+
                 BarMark(
                     x: .value("Time", time),
                     yStart: .value("Wind Speed", 0),

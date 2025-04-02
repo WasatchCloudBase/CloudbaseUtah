@@ -241,6 +241,19 @@ func convertISODateToLocalTime(isoDateString: String) -> String {
 // Format to call logging:
 //                          logToFile("Text to output")
 
+func deleteLogFile() {
+    let fileURL = getLogFileURL()
+    
+    if FileManager.default.fileExists(atPath: fileURL.path) {
+        do {
+            try FileManager.default.removeItem(at: fileURL)
+            print("Log file deleted successfully.")
+        } catch {
+            print("Failed to delete log file: \(error)")
+        }
+    }
+}
+
 func logToFile(_ message: String) {
     let fileURL = getLogFileURL()
     
@@ -267,4 +280,10 @@ func getLogFileURL() -> URL {
     let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
     let documentDirectory = urls[0]
     return documentDirectory.appendingPathComponent("app.log")
+}
+
+// Call this function when the app launches
+func applicationDidFinishLaunching() {
+    deleteLogFile()
+    // Other initialization code
 }

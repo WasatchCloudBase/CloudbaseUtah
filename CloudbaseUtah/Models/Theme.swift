@@ -23,10 +23,14 @@ let rowHeaderColor: Color = .sky
 let sectionHeaderColor: Color = .white
 let infoFontColor: Color = .titanium
 let warningFontColor: Color = .warning
+
+// Table and chart colors
 let tableBackgroundColor: Color = .gunmetal
 let tableSectionDividerColor: Color = .grayslime
 let tableMinorDividerColor: Color = .grayslime
 let tableMajorDividerColor: Color = .titanium
+let chartGradientStartColor: Color = .darksky2
+let chartGradientEndColor: Color = .darksky2
 
 // Colors of forecast and reading values
 let displayValueWhite: Color = .white

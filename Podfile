@@ -6,8 +6,7 @@ target 'CloudbaseUtah' do
   use_frameworks!
 
   # Pods for CloudbaseUtah
-  pod 'SwiftSoup'
-  pod 'SDWebImageSwiftUI'
+
 
   target 'CloudbaseUtahTests' do
     inherit! :search_paths
