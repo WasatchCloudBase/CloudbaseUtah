@@ -150,12 +150,32 @@ class ForecastViewModel: ObservableObject {
         let datePrefix = "DATE..."
         let thermalIndexPrefix = "THERMAL INDEX..."
         let upperLevelWindsPrefix = "UPPER LEVEL WINDS AT SALT LAKE CITY"
-        let endPrefix = "21000 FT"
-        guard let startRange = content.range(of: start),
-              let dateRange = content.range(of: datePrefix, range: startRange.upperBound..<content.endIndex),
-              let thermalIndexRange = content.range(of: thermalIndexPrefix, range: dateRange.upperBound..<content.endIndex),
-              let upperLevelWindsRange = content.range(of: upperLevelWindsPrefix, range: thermalIndexRange.upperBound..<content.endIndex),
-              let endRange = content.range(of: endPrefix, range: upperLevelWindsRange.upperBound..<content.endIndex) else { return }
+        let endPrefix = "20000 FT"
+        guard let startRange = content.range(of: start)
+        else {
+            print("Soaring forecast: could not parse start date (e.g., no row for \(start))")
+            return
+        }
+        guard let dateRange = content.range(of: datePrefix, range: startRange.upperBound..<content.endIndex)
+        else {
+            print("Soaring forecast: could not parse date range (e.g., no row for \(datePrefix))")
+            return
+        }
+        guard let thermalIndexRange = content.range(of: thermalIndexPrefix, range: dateRange.upperBound..<content.endIndex)
+        else {
+            print("Soaring forecast: could not parse thermal index range (e.g., no row for \(thermalIndexPrefix))")
+            return
+        }
+        guard let upperLevelWindsRange = content.range(of: upperLevelWindsPrefix, range: thermalIndexRange.upperBound..<content.endIndex)
+        else {
+            print("Soaring forecast: could not parse upper level winds range (e.g., no row for \(upperLevelWindsPrefix))")
+            return
+        }
+        guard let endRange = content.range(of: endPrefix, range: upperLevelWindsRange.upperBound..<content.endIndex)
+        else {
+            print("Could not parse end range (e.g., no row for \(endPrefix))")
+            return
+        }
         let date = String(content[dateRange.upperBound...].prefix(9)).trimmingCharacters(in: .whitespacesAndNewlines)
         let soaringForecastDataSring = removeExtraBlankLines(String(content[thermalIndexRange.upperBound..<upperLevelWindsRange.lowerBound]))
         let soaringForecast = parseSoaringForecastData(soaringForecastDataSring)

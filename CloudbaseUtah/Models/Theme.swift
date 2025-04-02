@@ -24,7 +24,9 @@ let sectionHeaderColor: Color = .white
 let infoFontColor: Color = .titanium
 let warningFontColor: Color = .warning
 let tableBackgroundColor: Color = .gunmetal
-let tableDividerColor: Color = .titanium
+let tableSectionDividerColor: Color = .grayslime
+let tableMinorDividerColor: Color = .grayslime
+let tableMajorDividerColor: Color = .titanium
 
 // Colors of forecast and reading values
 let displayValueWhite: Color = .white
