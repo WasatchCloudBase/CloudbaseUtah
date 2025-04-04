@@ -14,6 +14,9 @@ struct CloudbaseUtahApp: App {
             
             BaseAppView()
             
+                // Force dark mode
+                .environment(\.colorScheme, .dark)
+            
                 // Load thermal lift parameters
                 .environmentObject(liftParametersViewModel)
                 .onAppear {

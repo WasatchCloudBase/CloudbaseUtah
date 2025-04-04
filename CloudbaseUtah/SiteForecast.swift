@@ -95,13 +95,6 @@ struct WeatherCodesResponse: Codable {
     let values: [[String]]
 }
 
-// For top of lift area chart
-struct TopOfLiftDataPoint: Identifiable {
-    var id = UUID()
-    var index: Int
-    var altitude: Double
-}
-
 class SiteForecastViewModel: ObservableObject {
     @Published var forecastData: ForecastData?
     private var liftParametersViewModel: LiftParametersViewModel
@@ -609,7 +602,7 @@ class SiteForecastViewModel: ObservableObject {
                         } else if priorThermalDPTemp > priorAmbientDPTemp {
                             // Never reached top of lift
                             formattedTopOfLiftAltitude = "rocket"
-                            topOfLiftAltitude = 20000
+                            topOfLiftAltitude = 19000
                             topOfLiftTemp = data.hourly.temperature_500hPa[index]
                         }
                         // Convert top of Lift Temp to F

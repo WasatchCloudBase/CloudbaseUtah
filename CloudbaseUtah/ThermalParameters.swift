@@ -60,7 +60,7 @@ class LiftParametersViewModel: ObservableObject {
                                     liftParameters.thermalGliderSinkRate = value
                                 case "Parameter":
                                     // skip heading row
-                                    let headingRow = value
+                                    _ = value
                                 default:
                                     break
                                 }

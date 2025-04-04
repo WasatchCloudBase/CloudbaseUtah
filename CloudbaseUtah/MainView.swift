@@ -141,7 +141,7 @@ struct MainView: View {
                             devViewActive = true
                         } label: {
                             Text("Cloudbase Utah")
-                                .font(.body.width(.condensed) .bold())
+                                .bold()
                                 .foregroundColor(titleFontColor)
                         }
 
