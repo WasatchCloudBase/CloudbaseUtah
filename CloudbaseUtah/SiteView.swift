@@ -3,6 +3,7 @@
 //  Created by Brown, Mike on 3/6/25.
 
 import SwiftUI
+import Combine
 
 struct Site: Identifiable {
     let id = UUID()
@@ -29,14 +30,32 @@ struct Site: Identifiable {
     var windGustColor: Color?
 }
 
+struct CUASAWindData: Codable {
+    var ID: String
+    var timestamp: Double
+    var windspeed: Double
+    var windspeed_avg: Double
+    var windspeed_max: Double
+    var windspeed_min: Double
+    var wind_direction: Double
+    var wind_direction_avg: Double
+    var battery_level: Double?
+    var internal_temp: Double?
+    var external_temp: Double?
+    var current: Double?
+    var pwm: Double?
+}
+
 class SiteViewModel: ObservableObject {
     @Published var sites: [Site] = []
+    private var cancellables = Set<AnyCancellable>()
     
     init() {
         fetchData { [weak self] sites in
             DispatchQueue.main.async {
                 self?.sites = sites ?? []
                 self?.fetchMesonetData()
+                self?.fetchCUASAData()
             }
         }
     }
@@ -139,8 +158,48 @@ class SiteViewModel: ObservableObject {
                 print("Failed to parse Mesonet data: \(error)")
             }
         }
-        
         task.resume()
+    }
+    
+    func fetchCUASAData() {
+        let CUASASites = sites.filter { $0.readingsSource == "CUASA" && $0.readingsStation != "" }
+        guard !CUASASites.isEmpty else { return }
+        
+        let readingInterval: Double = 5 * 60 // 5 minutes in seconds
+        let readingEnd = Date().timeIntervalSince1970 // current timestamp in seconds
+        let readingStart = readingEnd - readingInterval // to ensure at least one reading is returned
+        
+        for site in CUASASites {
+            let stationID = site.readingsStation
+            let urlString = "https://sierragliding.us/api/station/" + stationID + "/data?start=" + String(readingStart) + "&end=" + String(readingEnd) + "&sample=" + String(readingInterval)
+            guard let url = URL(string: urlString) else { continue }
+            URLSession.shared.dataTaskPublisher(for: url)
+                .map { $0.data }
+                .decode(type: [CUASAWindData].self, decoder: JSONDecoder())
+                .replaceError(with: [])
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] windDataArray in
+                    guard let self = self, let latestWindData = windDataArray.last else { return }
+                    self.sites.indices.forEach { index in
+                        if self.sites[index].readingsStation == stationID {
+                            let windSpeed = convertKMToMiles(latestWindData.windspeed_avg).rounded()
+                            let windDirection = latestWindData.wind_direction_avg + 180
+                            let windGust = convertKMToMiles(latestWindData.windspeed_max).rounded()
+                            self.sites[index].windSpeed = String(Int(windSpeed))
+                            self.sites[index].windColor = windSpeedColor(windSpeed: Int(windSpeed), siteType: self.sites[index].siteType)
+                            self.sites[index].windDirection = String(Int(windDirection))
+                            self.sites[index].windDirectionAngle = Angle(degrees: windDirection)
+                            self.sites[index].windGust = String(Int(windGust))
+                            self.sites[index].windGustColor = windSpeedColor(windSpeed: Int(windGust), siteType: self.sites[index].siteType)
+                            let date = Date(timeIntervalSince1970: latestWindData.timestamp)
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "h:mm"
+                            self.sites[index].windTime = formatter.string(from: date)
+                        }
+                    }
+                }
+                .store(in: &cancellables)
+        }
     }
 }
 
@@ -223,6 +282,7 @@ struct SiteView: View {
                                          }
                                      }
                                  }
+                                 .contentShape(Rectangle()) // Makes entire area tappable
                                  .onTapGesture { openSiteDetail(site) }
                              }
                          }

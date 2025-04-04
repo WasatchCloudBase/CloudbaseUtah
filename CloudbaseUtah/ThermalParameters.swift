@@ -19,7 +19,8 @@ struct LiftParametersResponse: Codable {
 struct LiftParameters: Codable {
     var thermalLapseRate: Double
     var thermalVelocityConstant: Double
-    var thermalTriggerTempDiff: Double
+    var initialTriggerTempDiff: Double
+    var ongoingTriggerTempDiff: Double
     var thermalRampDistance: Double
     var thermalRampStartPct: Double
     var cloudbaseLapseRatesDiff: Double
@@ -30,7 +31,7 @@ class LiftParametersViewModel: ObservableObject {
     @Published var liftParameters: LiftParameters?
     
     func fetchLiftParameters() {
-        var liftParameters: LiftParameters = .init(thermalLapseRate: 0, thermalVelocityConstant: 0, thermalTriggerTempDiff: 0, thermalRampDistance: 0, thermalRampStartPct: 0, cloudbaseLapseRatesDiff: 0, thermalGliderSinkRate: 0)
+        var liftParameters: LiftParameters = .init(thermalLapseRate: 0, thermalVelocityConstant: 0, initialTriggerTempDiff: 0, ongoingTriggerTempDiff: 0, thermalRampDistance: 0, thermalRampStartPct: 0, cloudbaseLapseRatesDiff: 0, thermalGliderSinkRate: 0)
         
         let rangeName = "LiftParameters"
         let liftParameterURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
@@ -48,8 +49,10 @@ class LiftParametersViewModel: ObservableObject {
                                     liftParameters.thermalLapseRate = value
                                 case "thermalVelocityConstant":
                                     liftParameters.thermalVelocityConstant = value
-                                case "thermalTriggerTempDiff":
-                                    liftParameters.thermalTriggerTempDiff = value
+                                case "initialTriggerTempDiff":
+                                    liftParameters.initialTriggerTempDiff = value
+                                case "ongoingTriggerTempDiff":
+                                    liftParameters.ongoingTriggerTempDiff = value
                                 case "thermalRampDistance":
                                     liftParameters.thermalRampDistance = value
                                 case "thermalRampStartPct":

@@ -682,13 +682,13 @@ class SiteForecastViewModel: ObservableObject {
         // Check if priorAltitude is less than surfaceAltitude
         let adjustedPriorAltitude = priorAltitude < surfaceAltitude ? surfaceAltitude : priorAltitude
         
-        // Check if thermal trigger temperature difference between ground temp and ambient temp is not yet reached for the day
-        // If it has been reached, assume the trigger temperature difference is 50% of the original trigger temp difference
-        var adjustedThermalTriggerTempDiff = liftParameters.thermalTriggerTempDiff
+        // Check if initial thermal trigger temperature difference between ground temp and ambient temp is not yet reached for the day
+        // If it has previously been reached, use ongoing thermal trigger temperature difference instead
+        var adjustedThermalTriggerTempDiff = liftParameters.initialTriggerTempDiff
         if thermalTriggerReachedForDay {
-            adjustedThermalTriggerTempDiff /= 2
+            adjustedThermalTriggerTempDiff = liftParameters.ongoingTriggerTempDiff
         }
-        guard surfaceTemp >= (ambientTemp + liftParameters.thermalTriggerTempDiff) else {
+        guard surfaceTemp >= (ambientTemp + adjustedThermalTriggerTempDiff) else {
             // Thermals not triggering; set top of lift to surface altitude
             return ThermalResult(
                 thermalVelocity: thermalVelocity,

@@ -162,6 +162,9 @@ func convertMetersToFeet(_ meters: Double) -> Int {
 func convertFeetToMeters(_ feet: Double) -> Double {
     return (feet / 3.28084).rounded()
 }
+func convertKMToMiles(_ km: Double) -> Double {
+    return (km * 0.621371).rounded()
+}
 func formatAltitude(_ altitudeData: String) -> String {
     let numberFormatter = NumberFormatter()
      numberFormatter.numberStyle = .decimal

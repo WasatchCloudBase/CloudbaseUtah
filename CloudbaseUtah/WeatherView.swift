@@ -402,6 +402,8 @@ struct WeatherView: View {
                             Text(tfr.description)
                                 .font(.subheadline)
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())      // Makes entire area tappable
                         .onTapGesture {
                             if let url = URL(string: "https://tfr.faa.gov/tfr3/?page=detail_\(tfr.notam_id.replacingOccurrences(of: "/", with: "_"))") {
                                 openLink(url)
@@ -435,7 +437,8 @@ struct WeatherView: View {
                                 .foregroundColor(infoFontColor)
                         }
                         .padding(.vertical, 2)
-                        .contentShape(Rectangle())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())      // Makes entire area tappable
                         .onTapGesture {
                             if let url = URL(string: "https://www.weather.gov/slc/WWA") {
                                 openLink(url)
@@ -617,21 +620,21 @@ struct WeatherView: View {
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
                 .bold()) {
-//                let skewTURL = "https://weather.ral.ucar.edu/upper/displayUpper.php?img=KSLC.png&endDate=-1&endTime=-1&duration=0"
+                // let skewTURL = "https://weather.ral.ucar.edu/upper/displayUpper.php?img=KSLC.png&endDate=-1&endTime=-1&duration=0"
                 let skewTURL = "https://www.weather.gov/zse/ModelSounding?id=kslc&model=hrrr"
                 VStack {
                     WebImage (url: URL(string: skewTURL)) { image in image.resizable() }
                     placeholder: {
                         Text("Tap to view")
                             .foregroundColor(infoFontColor)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                     .onSuccess { image, data, cacheType in }
                     .indicator(.activity) // Activity Indicator
                     .transition(.fade(duration: 0.5)) // Fade Transition with duration
                     .scaledToFit()
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .contentShape(Rectangle())      // Makes entire area tappable
                 .onTapGesture { if let url = URL(string: skewTURL) { openLink(url) } }
             }
         }
