@@ -24,6 +24,7 @@ let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
 let sunriseLongitude: Double = -111.9801
 let windArrow: String = "arrow.up"
     // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
+let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
 
 // Common utility functions
 func tempColor(_ tempF: Int) -> Color {

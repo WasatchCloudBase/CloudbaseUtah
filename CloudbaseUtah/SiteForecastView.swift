@@ -319,6 +319,7 @@ struct SiteForecastView: View {
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_500hPa[index]), siteType: siteType))
                                                     Image(systemName: windArrow)
                                                         .rotationEffect(.degrees(forecastData.hourly.winddirection_500hPa[index] - 180))
+                                                        .font(.footnote)
                                                 }
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
@@ -331,6 +332,7 @@ struct SiteForecastView: View {
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_550hPa[index]), siteType: siteType))
                                                     Image(systemName: windArrow)
                                                         .rotationEffect(.degrees(forecastData.hourly.winddirection_550hPa[index] - 180))
+                                                        .font(.footnote)
                                                 }
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
@@ -343,6 +345,7 @@ struct SiteForecastView: View {
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_600hPa[index]), siteType: siteType))
                                                     Image(systemName: windArrow)
                                                         .rotationEffect(.degrees(forecastData.hourly.winddirection_600hPa[index] - 180))
+                                                        .font(.footnote)
                                                 }
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
@@ -355,6 +358,7 @@ struct SiteForecastView: View {
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_650hPa[index]), siteType: siteType))
                                                     Image(systemName: windArrow)
                                                         .rotationEffect(.degrees(forecastData.hourly.winddirection_650hPa[index] - 180))
+                                                        .font(.footnote)
                                                 }
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
@@ -367,6 +371,7 @@ struct SiteForecastView: View {
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_700hPa[index]), siteType: siteType))
                                                     Image(systemName: windArrow)
                                                         .rotationEffect(.degrees(forecastData.hourly.winddirection_700hPa[index] - 180))
+                                                        .font(.footnote)
                                                 }
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
@@ -379,6 +384,7 @@ struct SiteForecastView: View {
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_750hPa[index]), siteType: siteType))
                                                     Image(systemName: windArrow)
                                                         .rotationEffect(.degrees(forecastData.hourly.winddirection_750hPa[index] - 180))
+                                                        .font(.footnote)
                                                 }
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
@@ -391,6 +397,7 @@ struct SiteForecastView: View {
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_800hPa[index]), siteType: siteType))
                                                     Image(systemName: windArrow)
                                                         .rotationEffect(.degrees(forecastData.hourly.winddirection_800hPa[index] - 180))
+                                                        .font(.footnote)
                                                 }
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
@@ -403,6 +410,7 @@ struct SiteForecastView: View {
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_850hPa[index]), siteType: siteType))
                                                     Image(systemName: windArrow)
                                                         .rotationEffect(.degrees(forecastData.hourly.winddirection_850hPa[index] - 180))
+                                                        .font(.footnote)
                                                 }
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
@@ -415,6 +423,7 @@ struct SiteForecastView: View {
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_900hPa[index]), siteType: siteType))
                                                     Image(systemName: windArrow)
                                                         .rotationEffect(.degrees(forecastData.hourly.winddirection_900hPa[index] - 180))
+                                                        .font(.footnote)
                                                 }
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
@@ -450,6 +459,7 @@ struct SiteForecastView: View {
                                                 .padding(.vertical, 0)
                                                 Image(systemName: windArrow)
                                                     .rotationEffect(.degrees(forecastData.hourly.winddirection_10m[index] - 180))
+                                                    .font(.footnote)
                                             }
                                             .padding(.vertical, 0)
                                             .frame(width: dataWidth)

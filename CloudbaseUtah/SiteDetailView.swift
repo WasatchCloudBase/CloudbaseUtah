@@ -184,7 +184,7 @@ struct SiteDetailView: View {
             List {
                 
                 Section(header: Text("Wind Readings")
-                    .font(.headline)
+                    .font(.subheadline)
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
@@ -223,6 +223,9 @@ struct SiteDetailView: View {
                                     .padding(.top, 4)
                             default:
                                 Text("Invalid readings source; no history available")
+                                    .font(.caption)
+                                    .foregroundColor(infoFontColor)
+                                    .padding(.top, 4)
                             }
                         }
                     }
@@ -244,7 +247,7 @@ struct SiteDetailView: View {
                 }
                 
                 Section(header: Text("Forecast")
-                    .font(.headline)
+                    .font(.subheadline)
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
@@ -309,6 +312,7 @@ struct WindReadingsBarChartView: View {
                             .rotationEffect(.degrees(Double(windDirection + 180)))
                             .foregroundColor(.white)
                             .bold()
+                            .font(.footnote)
                         // Replace x-axis values with hh:mm and strip the am/pm
                         Text(String(time).split(separator: " ", maxSplits: 1).first ?? "")
                             .font(.caption)

@@ -94,7 +94,7 @@ struct UDOTCameraListView: View {
             .sheet(item: $selectedCamera) { camera in
                 VStack(alignment: .leading) {
                     Text("Location: \(camera.location)")
-                        .font(.headline)
+                        .font(.subheadline)
                     Text("Latitude: \(camera.latitude)")
                     Text("Latitude: \(camera.longitude)")
                     Text("URL: \(camera.views[0].url)")

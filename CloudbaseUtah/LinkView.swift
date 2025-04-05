@@ -55,7 +55,7 @@ struct LinkView: View {
             ForEach(viewModel.groupedLinks.keys.sorted(), id: \.self) { category in
                 // Split is used to strip the order sequence number from the front of the category on display
                 Section(header: Text(category.split(separator: " ", maxSplits: 1)[1])
-                    .font(.headline)
+                    .font(.subheadline)
                     .foregroundColor(sectionHeaderColor)
                     .bold()) {
                     ForEach(viewModel.groupedLinks[category] ?? []) { item in
@@ -67,7 +67,7 @@ struct LinkView: View {
                         }) {
                             VStack(alignment: .leading) {
                                 Text(item.title)
-                                    .font(.headline)
+                                    .font(.subheadline)
                                     .foregroundColor(rowHeaderColor)
                                 Text(item.description)
                                     .font(.subheadline)

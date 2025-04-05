@@ -223,7 +223,7 @@ struct SiteView: View {
                      let areaName = area.split(separator: " ", maxSplits: 1).dropFirst().joined(separator: " ")
                      
                      Section(header: Text(areaName)
-                         .font(.headline)
+                         .font(.subheadline)
                          .foregroundColor(sectionHeaderColor)
                          .bold())
                      {
@@ -231,7 +231,7 @@ struct SiteView: View {
                              VStack(alignment: .leading) {
                                  HStack {
                                      Text(site.siteName)
-                                         .font(.headline)
+                                         .font(.subheadline)
                                          .foregroundColor(rowHeaderColor)
                                      if site.readingsAlt != "" {
                                          Text("\(site.readingsAlt) ft")
@@ -253,9 +253,8 @@ struct SiteView: View {
                                                      .font(.subheadline)
                                              } else {
                                                  Text(windSpeed)
-                                                     .font(.title3)
+                                                     .font(.subheadline)
                                                      .foregroundColor(site.windColor)
-                                                     .bold()
                                              }
                                          } else {
                                              Text ("Station down")
@@ -269,16 +268,15 @@ struct SiteView: View {
                                                          .font(.subheadline)
                                                          .foregroundColor(infoFontColor)
                                                      Text(windGust)
-                                                         .font(.title3)
+                                                         .font(.subheadline)
                                                          .foregroundColor(site.windGustColor)
-                                                         .bold()
                                                  }
                                              }
                                          }
                                          if let windDirectionAngle = site.windDirectionAngle {
                                              Image(systemName: windArrow)
                                                  .rotationEffect(windDirectionAngle)
-                                                 .font(.title3)
+                                                 .font(.footnote)
                                          }
                                      }
                                  }

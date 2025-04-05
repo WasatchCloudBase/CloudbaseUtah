@@ -602,7 +602,7 @@ class SiteForecastViewModel: ObservableObject {
                         } else if priorThermalDPTemp > priorAmbientDPTemp {
                             // Never reached top of lift
                             formattedTopOfLiftAltitude = "rocket"
-                            topOfLiftAltitude = 19000
+                            topOfLiftAltitude = defaultTopOfLiftAltitude
                             topOfLiftTemp = data.hourly.temperature_500hPa[index]
                         }
                         // Convert top of Lift Temp to F
@@ -776,7 +776,8 @@ class SiteForecastViewModel: ObservableObject {
                 if topOfLiftAltitude > 0 {
                     topOfLiftAltitude = min(altitude, topOfLiftAltitude)
                 } else {
-                    topOfLiftAltitude = altitude
+                    // Set top of lift conservatively to the bottom of the altitude range being evaluated
+                    topOfLiftAltitude = adjustedPriorAltitude
                 }
             }
         }

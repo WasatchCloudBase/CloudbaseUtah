@@ -397,7 +397,7 @@ struct WeatherView: View {
                     ForEach(TFRviewModel.tfrs) { tfr in
                         VStack(alignment: .leading) {
                             Text(tfr.type.capitalized)
-                                .font(.headline)
+                                .font(.subheadline)
                                 .foregroundColor(warningFontColor)
                             Text(tfr.description)
                                 .font(.subheadline)
@@ -428,7 +428,7 @@ struct WeatherView: View {
                     ForEach(weatherAlerts) { alert in
                         VStack(alignment: .leading) {
                             Text(alert.event)
-                                .font(.headline)
+                                .font(.subheadline)
                                 .foregroundColor(warningFontColor)
                             Text(alert.headline)
                                 .font(.subheadline)
@@ -558,7 +558,7 @@ struct WeatherView: View {
                                         .font(.subheadline)
                                     Image(systemName: windArrow)
                                         .rotationEffect(.degrees(Double(data.windDirection)))
-                                        .font(.subheadline)
+                                        .font(.footnote)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .trailing)
                                 Spacer()
@@ -606,7 +606,7 @@ struct WeatherView: View {
                                         .font(.subheadline)
                                     Image(systemName: windArrow)
                                         .rotationEffect(Angle(degrees: Double(reading.windDirection)))
-                                        .font(.subheadline)
+                                        .font(.footnote)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .trailing)
                             }

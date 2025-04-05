@@ -71,7 +71,7 @@ struct WebcamView: View {
     var body: some View {
         List {
             Section(header: Text("Point of the Mountain")
-                .font(.headline)
+                .font(.subheadline)
                 .foregroundColor(sectionHeaderColor)
                 .bold()) {
                     Button(action: {
@@ -81,7 +81,7 @@ struct WebcamView: View {
                     }) {
                         VStack(alignment: .leading) {
                             Text("Download IPCams to view POTM webcams")
-                                .font(.headline)
+                                .font(.subheadline)
                                 .foregroundColor(rowHeaderColor)
                             Text("UHGPGA webcam page has IP and PW info")
                                 .font(.subheadline)
@@ -91,7 +91,7 @@ struct WebcamView: View {
             ForEach(viewModel.groupedWeatherCams.keys.sorted(), id: \.self) { category in
                 // Split is used to strip the order sequence number from the front of the category on display
                 Section(header: Text(category.split(separator: " ", maxSplits: 1)[1])
-                    .font(.headline)
+                    .font(.subheadline)
                     .foregroundColor(sectionHeaderColor)
                     .bold()) {
                     ForEach(viewModel.groupedWeatherCams[category] ?? [], id: \.id) { cam in
@@ -99,7 +99,7 @@ struct WebcamView: View {
                             Text(cam.name)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity, alignment: .center)
-                                .font(.headline)
+                                .font(.subheadline)
                                 .foregroundColor(rowHeaderColor)
                             WebImage (url: URL(string: cam.imageURL.isEmpty ? cam.linkURL : cam.imageURL)) { image in
                                 image.resizable() // Control layout like SwiftUI.AsyncImage

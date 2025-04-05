@@ -112,7 +112,7 @@ struct AlertsView: View {
         List {
             // TFRs for Utah
             Section(header: Text("Temporary Flight Restrictions")
-                .font(.headline)
+                .font(.subheadline)
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
@@ -126,7 +126,7 @@ struct AlertsView: View {
                     ForEach(viewModel.tfrs) { tfr in
                         VStack(alignment: .leading) {
                             Text(tfr.type.capitalized)
-                                .font(.headline)
+                                .font(.subheadline)
                                 .foregroundColor(warningFontColor)
                             Text(tfr.description)
                                 .font(.subheadline)
@@ -141,7 +141,7 @@ struct AlertsView: View {
             }
             // Weather alerts for Utah
             Section(header: Text("Weather Alerts")
-                .font(.headline)
+                .font(.subheadline)
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
@@ -155,9 +155,9 @@ struct AlertsView: View {
                     ForEach(weatherAlerts) { alert in
                         VStack(alignment: .leading) {
                             Text(alert.event)
-                                .font(.headline)
+                                .font(.subheadline)
                                 .foregroundColor(warningFontColor)
-                            Text(alert.headline)
+                            Text(alert.subheadline)
                                 .font(.subheadline)
                             Text(alert.areaDesc)
                                 .font(.footnote)

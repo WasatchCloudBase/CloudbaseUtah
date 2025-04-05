@@ -9,20 +9,20 @@ struct AboutView: View {
         backgroundColor.edgesIgnoringSafeArea(.all)
         List {
             Section(header: Text("About Cloudbase Utah")
-                .font(.headline)
+                .font(.subheadline)
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
                 VStack(alignment: .leading) {
                     Text("Contact info")
-                        .font(.headline)
+                        .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                     Text("mike.del.brown@gmail.com")
                         .font(.subheadline)
                 }
                 VStack(alignment: .leading) {
                     Text("Cloudbase Utah github repository")
-                        .font(.headline)
+                        .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                     Text("https://github.com/WasatchCloudBase/CloudbaseUtah")
                         .font(.footnote)
@@ -30,7 +30,7 @@ struct AboutView: View {
 
             }
             Section(header: Text("Development Tools")
-                .font(.headline)
+                .font(.subheadline)
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
@@ -40,12 +40,12 @@ struct AboutView: View {
                     }
                 }) {
                     Text("Cloudbase Utah Metadata")
-                        .font(.headline)
+                        .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                 }
                 NavigationLink(destination: UDOTCameraListView()) {
                     Text("UDOT cameras map")
-                        .font(.headline)
+                        .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                 }
             }
