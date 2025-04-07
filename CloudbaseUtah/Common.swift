@@ -6,9 +6,6 @@ import SwiftUI
 import Foundation
 import SafariServices
 
-// Set thermal calc logging for development
-let turnOnLogging: Bool = false
-
 // Set global constants
 enum NavBarSelectedView:Int {
     case site = 0
@@ -212,6 +209,23 @@ func removeExtraBlankLines(_ text: String?) -> String {
     return cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
+// Created for site forecast results that occassionally contain null for a weather code
+func replaceNullsInJSON(data: Data) -> Data? {
+    // Convert Data to String
+    guard let dataString = String(data: data, encoding: .utf8) else {
+        print("Failed to convert Data to String.")
+        return nil
+    }
+    // Replace all occurrences of "null" with "0"
+    let modifiedString = dataString.replacingOccurrences(of: "null", with: "0")
+    // Convert String back to Data
+    guard let modifiedData = modifiedString.data(using: .utf8) else {
+        print("Failed to convert modified String back to Data.")
+        return nil
+    }
+    return modifiedData
+}
+
 // Function to open links using Safari in app window
 struct SafariView: UIViewControllerRepresentable {
     let url: URL
@@ -239,55 +253,4 @@ func convertISODateToLocalTime(isoDateString: String) -> String {
 
     let localTimeString = localDateFormatter.string(from: date)
     return localTimeString
-}
-
-// For development logging
-// Format to call logging:
-//                          logToFile("Text to output")
-
-func deleteLogFile() {
-    let fileURL = getLogFileURL()
-    
-    if FileManager.default.fileExists(atPath: fileURL.path) {
-        do {
-            try FileManager.default.removeItem(at: fileURL)
-            print("Log file deleted successfully.")
-        } catch {
-            print("Failed to delete log file: \(error)")
-        }
-    }
-}
-
-func logToFile(_ message: String) {
-    let fileURL = getLogFileURL()
-    
-    do {
-        let timestamp = Date().description(with: .current)
-        let logMessage = "[\(timestamp)] \(message)\n"
-        if FileManager.default.fileExists(atPath: fileURL.path) {
-            let fileHandle = try FileHandle(forWritingTo: fileURL)
-            fileHandle.seekToEndOfFile()
-            if let data = logMessage.data(using: .utf8) {
-                fileHandle.write(data)
-            }
-            fileHandle.closeFile()
-        } else {
-            try logMessage.write(to: fileURL, atomically: true, encoding: .utf8)
-        }
-    } catch {
-        print("Failed to write to log file: \(error)")
-    }
-}
-
-func getLogFileURL() -> URL {
-    let fileManager = FileManager.default
-    let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
-    let documentDirectory = urls[0]
-    return documentDirectory.appendingPathComponent("app.log")
-}
-
-// Call this function when the app launches
-func applicationDidFinishLaunching() {
-    deleteLogFile()
-    // Other initialization code
 }

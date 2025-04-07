@@ -21,14 +21,16 @@ struct SiteForecastView: View {
     var forecastLat: String
     var forecastLon: String
     var forecastNote: String
+    var siteName: String
     var siteType: String
     
-    init(liftParametersViewModel: LiftParametersViewModel, forecastLat: String, forecastLon: String, forecastNote: String, siteType: String) {
+    init(liftParametersViewModel: LiftParametersViewModel, forecastLat: String, forecastLon: String, forecastNote: String, siteName: String, siteType: String) {
         self._liftParametersViewModel = ObservedObject(wrappedValue: liftParametersViewModel)
         self._viewModel = StateObject(wrappedValue: SiteForecastViewModel(liftParametersViewModel: liftParametersViewModel))
         self.forecastLat = forecastLat
         self.forecastLon = forecastLon
         self.forecastNote = forecastNote
+        self.siteName = siteName
         self.siteType = siteType
     }
     var body: some View {
@@ -591,7 +593,7 @@ struct SiteForecastView: View {
                 }
             }
         }
-        .onAppear { viewModel.fetchForecast(ForecastLat: forecastLat, ForecastLon: forecastLon) }
+        .onAppear { viewModel.fetchForecast(SiteName: siteName, ForecastLat: forecastLat, ForecastLon: forecastLon) }
     }
     
     func getDividerColor (_ newDateFlag: Bool) -> Color {

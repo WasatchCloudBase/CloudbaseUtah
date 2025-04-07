@@ -256,6 +256,7 @@ struct SiteDetailView: View {
                         forecastLat: site.forecastLat,
                         forecastLon: site.forecastLon,
                         forecastNote: site.forecastNote,
+                        siteName: site.siteName,
                         siteType: site.siteType )
                 }
                 if site.readingsSource == "Mesonet" {

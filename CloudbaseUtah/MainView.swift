@@ -275,6 +275,8 @@ struct MainView: View {
                     sunrise = sunriseTime
                     sunset = sunsetTime
                 }
+                
+                initializeLoggingFile()
             }
         }
     }
