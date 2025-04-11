@@ -6,23 +6,6 @@ import SwiftUI
 import Foundation
 import SafariServices
 
-// Set global constants
-enum NavBarSelectedView:Int {
-    case site = 0
-    case weather = 1
-    case alerts = 2
-    case webcam = 3
-    case link = 4
-    case dev = 9
-}
-let GoogleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
-let GoogleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
-let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
-let sunriseLongitude: Double = -111.9801
-let windArrow: String = "arrow.up"
-    // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
-let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
-
 // Common utility functions
 func tempColor(_ tempF: Int) -> Color {
     switch tempF {

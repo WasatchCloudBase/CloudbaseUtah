@@ -154,6 +154,7 @@ struct SiteDetailView: View {
     var site: Site  // Received from parent view
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
+    @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @ObservedObject var viewModel = WindDataViewModel()
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
@@ -253,6 +254,7 @@ struct SiteDetailView: View {
                 {
                     SiteForecastView (
                         liftParametersViewModel: liftParametersViewModel,
+                        sunriseSunsetViewModel: sunriseSunsetViewModel,
                         forecastLat: site.forecastLat,
                         forecastLon: site.forecastLon,
                         forecastNote: site.forecastNote,

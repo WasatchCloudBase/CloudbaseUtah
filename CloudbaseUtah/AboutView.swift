@@ -34,6 +34,7 @@ struct AboutView: View {
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
+                
                 Button(action: {
                     if let url = URL(string: "https://docs.google.com/spreadsheets/d/1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls/edit?gid=0#gid=0") {
                         UIApplication.shared.open(url)
@@ -48,6 +49,12 @@ struct AboutView: View {
                         .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                 }
+                NavigationLink(destination: MapView()) {
+                    Text("Map View")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                }
+
             }
         }
     }

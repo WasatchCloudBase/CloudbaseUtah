@@ -56,5 +56,7 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Location access used to diplay current location on map</string>
 </dict>
 </plist>

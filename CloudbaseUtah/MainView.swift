@@ -4,50 +4,10 @@
 
 import SwiftUI
 
-// Sunrise and sunset URL fetch response structure
-struct SunriseSunsetResponse: Codable {
-    let results: Results
-    let status: String
-}
-// Sunrise and sunset JSON decode for Results portion of URL response
-struct Results: Codable {
-    let sunrise: String
-    let sunset: String
-}
-// Get sunrise / sunset for SLC airport
-func fetchSunriseSunset(forLatitude latitude: Double, longitude: Double, completion: @escaping (String, String) -> Void) {
-    let urlString = "https://api.sunrise-sunset.org/json?lat=\(latitude)&lng=\(longitude)&formatted=0"
-    guard let url = URL(string: urlString) else {
-        print("Invalid URL")
-        return
-    }
-    let task = URLSession.shared.dataTask(with: url) { data, response, error in
-        if let error = error {
-            print("Error: \(error.localizedDescription)")
-            return
-        }
-        guard let data = data else {
-            print("No data received")
-            return
-        }
-        do {
-            let decoder = JSONDecoder()
-            let response = try decoder.decode(SunriseSunsetResponse.self, from: data)
-            let sunrise = convertISODateToLocalTime(isoDateString: response.results.sunrise)
-            let sunset = convertISODateToLocalTime(isoDateString: response.results.sunset)
-            DispatchQueue.main.async {
-                completion(sunrise, sunset)
-            }
-        } catch {
-            print("Error decoding JSON: \(error.localizedDescription)")
-        }
-    }
-    task.resume()
-}
-
 struct BaseAppView: View {
     @State private var isActive = false
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
+    @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     var body: some View {
         VStack {
             if isActive {
@@ -81,8 +41,6 @@ struct SplashScreenView: View {
 
 struct MainView: View {
     @EnvironmentObject var appState: AppState
-    @State var sunrise: String = ""
-    @State var sunset: String = ""
     @State var selectedView:NavBarSelectedView = .site
     @State var siteViewActive = true
     @State var weatherViewActive = false
@@ -91,6 +49,7 @@ struct MainView: View {
     @State var linkViewActive = false
     @State var devViewActive = false
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
+    @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
 
     var body: some View {
         NavigationView {
@@ -125,7 +84,7 @@ struct MainView: View {
                         HStack (spacing:1) {
                             Image(systemName: "sunrise")
                                 .foregroundColor(sunImageColor)
-                            Text(sunrise)
+                            Text(sunriseSunsetViewModel.sunriseSunset?.sunrise ?? "")
                                 .foregroundColor(sunFontColor)
                                 .font(.caption)
                         }
@@ -148,7 +107,7 @@ struct MainView: View {
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         HStack (spacing:1) {
-                            Text(sunset)
+                            Text(sunriseSunsetViewModel.sunriseSunset?.sunset ?? "")
                                 .foregroundColor(sunFontColor)
                                 .font(.caption)
                             Image(systemName: "sunset")
@@ -269,14 +228,6 @@ struct MainView: View {
                         .frame(height: 1)
                     Spacer()
                 }
-            }.onAppear {
-                fetchSunriseSunset (forLatitude: sunriseLatitude, longitude: sunriseLongitude)
-                { sunriseTime, sunsetTime in
-                    sunrise = sunriseTime
-                    sunset = sunsetTime
-                }
-                
-                initializeLoggingFile()
             }
         }
     }

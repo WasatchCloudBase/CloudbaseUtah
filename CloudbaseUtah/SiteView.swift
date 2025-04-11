@@ -51,7 +51,7 @@ class SiteViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     init() {
-        fetchData { [weak self] sites in
+        fetchLatestReadingsData { [weak self] sites in
             DispatchQueue.main.async {
                 self?.sites = sites ?? []
                 self?.fetchMesonetData()
@@ -60,7 +60,7 @@ class SiteViewModel: ObservableObject {
         }
     }
     
-    func fetchData(completion: @escaping ([Site]?) -> Void) {
+    func fetchLatestReadingsData(completion: @escaping ([Site]?) -> Void) {
         let rangeName = "Sites"
         let GoogleURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
         guard let url = URL(string: GoogleURLString) else {
@@ -105,6 +105,16 @@ class SiteViewModel: ObservableObject {
             }
         }
         task.resume()
+    }
+    
+    func reloadLatestReadingsData() {
+        fetchLatestReadingsData { [weak self] sites in
+            DispatchQueue.main.async {
+                self?.sites = sites ?? []
+                self?.fetchMesonetData()
+                self?.fetchCUASAData()
+            }
+        }
     }
     
     func fetchMesonetData() {
@@ -205,6 +215,7 @@ class SiteViewModel: ObservableObject {
 
 struct SiteView: View {
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
+    @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @ObservedObject var viewModel = SiteViewModel()
     @State private var selectedSite: Site?
     
@@ -237,6 +248,8 @@ struct SiteView: View {
                                          Text("\(site.readingsAlt) ft")
                                              .font(.caption)
                                              .foregroundColor(infoFontColor)
+                                             .lineLimit(1)
+                                             .fixedSize(horizontal: true, vertical: false)
                                      }
                                      Spacer()
                                      HStack {
@@ -246,20 +259,28 @@ struct SiteView: View {
                                              Text(windTimeText)
                                                  .font(.caption)
                                                  .foregroundColor(infoFontColor)
+                                                 .lineLimit(1)
+                                                 .fixedSize(horizontal: true, vertical: false)
                                          }
                                          if let windSpeed = site.windSpeed {
                                              if windSpeed == "0" {
                                                  Text("calm")
                                                      .font(.subheadline)
+                                                     .lineLimit(1)
+                                                     .fixedSize(horizontal: true, vertical: false)
                                              } else {
                                                  Text(windSpeed)
                                                      .font(.subheadline)
                                                      .foregroundColor(site.windColor)
+                                                     .lineLimit(1)
+                                                     .fixedSize(horizontal: true, vertical: false)
                                              }
                                          } else {
                                              Text ("Station down")
                                                  .font(.caption)
                                                  .foregroundColor(infoFontColor)
+                                                 .lineLimit(1)
+                                                 .fixedSize(horizontal: true, vertical: false)
                                          }
                                          if let windGust = site.windGust {
                                              if windGust != "0" && windGust != "" {
@@ -267,10 +288,16 @@ struct SiteView: View {
                                                      Text("g")
                                                          .font(.subheadline)
                                                          .foregroundColor(infoFontColor)
+                                                         .lineLimit(1)
+                                                         .fixedSize(horizontal: true, vertical: false)
                                                      Text(windGust)
                                                          .font(.subheadline)
                                                          .foregroundColor(site.windGustColor)
+                                                         .lineLimit(1)
+                                                         .fixedSize(horizontal: true, vertical: false)
                                                  }
+                                                 .lineLimit(1)
+                                                 .fixedSize(horizontal: true, vertical: false)
                                              }
                                          }
                                          if let windDirectionAngle = site.windDirectionAngle {
@@ -279,6 +306,8 @@ struct SiteView: View {
                                                  .font(.footnote)
                                          }
                                      }
+                                     .lineLimit(1)
+                                     .fixedSize(horizontal: true, vertical: false)
                                  }
                                  .contentShape(Rectangle()) // Makes entire area tappable
                                  .onTapGesture { openSiteDetail(site) }
@@ -296,11 +325,13 @@ struct SiteView: View {
                  }
              }
          }
-        .sheet(item: $selectedSite) { site in
+        .sheet(item: $selectedSite, onDismiss: {
+            viewModel.reloadLatestReadingsData()
+        }) { site in
             SiteDetailView(site: site)
         }
-     }
-     func openSiteDetail(_ site: Site) {
-         selectedSite = site
-     }
- }
+    }
+    func openSiteDetail(_ site: Site) {
+        selectedSite = site
+    }
+}

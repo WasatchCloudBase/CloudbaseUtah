@@ -17,6 +17,7 @@ struct TopOfLiftDataPoint: Identifiable {
 
 struct SiteForecastView: View {
     @ObservedObject var liftParametersViewModel: LiftParametersViewModel
+    @ObservedObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @StateObject private var viewModel: SiteForecastViewModel
     var forecastLat: String
     var forecastLon: String
@@ -24,15 +25,17 @@ struct SiteForecastView: View {
     var siteName: String
     var siteType: String
     
-    init(liftParametersViewModel: LiftParametersViewModel, forecastLat: String, forecastLon: String, forecastNote: String, siteName: String, siteType: String) {
+    init(liftParametersViewModel: LiftParametersViewModel, sunriseSunsetViewModel: SunriseSunsetViewModel, forecastLat: String, forecastLon: String, forecastNote: String, siteName: String, siteType: String) {
         self._liftParametersViewModel = ObservedObject(wrappedValue: liftParametersViewModel)
-        self._viewModel = StateObject(wrappedValue: SiteForecastViewModel(liftParametersViewModel: liftParametersViewModel))
+        self._sunriseSunsetViewModel = ObservedObject(wrappedValue: sunriseSunsetViewModel)
+        self._viewModel = StateObject(wrappedValue: SiteForecastViewModel(liftParametersViewModel: liftParametersViewModel, sunriseSunsetViewModel: sunriseSunsetViewModel))
         self.forecastLat = forecastLat
         self.forecastLon = forecastLon
         self.forecastNote = forecastNote
         self.siteName = siteName
         self.siteType = siteType
     }
+    
     var body: some View {
         VStack (alignment: .leading) {
             if let forecastData = viewModel.forecastData {

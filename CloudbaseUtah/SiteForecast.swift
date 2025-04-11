@@ -107,12 +107,14 @@ struct WeatherCodesResponse: Codable {
 class SiteForecastViewModel: ObservableObject {
     @Published var forecastData: ForecastData?
     private var liftParametersViewModel: LiftParametersViewModel
+    private var sunriseSunsetViewModel: SunriseSunsetViewModel
     @Published var weatherCodes: [String: String] = [:]
     @Published var maxPressureReading: Int = 1000       // Pressure to start displaying winds aloft (1000 hpa is sea level)
     
-    // Make thermal lift parameters available in this view model
-    init(liftParametersViewModel: LiftParametersViewModel) {
+    // Make thermal lift parameters and sunrise/sunset times available in this view model
+    init(liftParametersViewModel: LiftParametersViewModel, sunriseSunsetViewModel: SunriseSunsetViewModel) {
         self.liftParametersViewModel = liftParametersViewModel
+        self.sunriseSunsetViewModel = sunriseSunsetViewModel
     }
 
     func fetchWeatherCodes(completion: @escaping ([String: String]) -> Void) {
@@ -245,6 +247,19 @@ class SiteForecastViewModel: ObservableObject {
             topOfLiftTemperature: []
         )
         
+        // Get sunrise/sunset times from environment object
+        var forecastStartTime = 6
+        var forecastEndTime = 21
+        if let sunriseSunset = sunriseSunsetViewModel.sunriseSunset {
+            // Get the hour from sunrise and sunset times (provided in format hh:mm)
+            // Add 13 to sunset to convert to pm and provide forecast at least until after sunset
+            forecastStartTime = Int(sunriseSunset.sunrise.split(separator: ":", maxSplits: 1).first ?? "6") ?? 6
+            forecastEndTime = ( Int(sunriseSunset.sunset.split(separator: ":", maxSplits: 1).first ?? "6") ?? 6 ) + 13
+        } else {
+            print("Sunrise/sunset not available")
+            if turnOnLogging {logToFile("Sunrise/sunset times not available") }
+        }
+        
         let currentDate = Date()
         let startOfDay = Calendar.current.startOfDay(for: currentDate)
         let oneHourAgo = Calendar.current.date(byAdding: .hour, value: -1, to: currentDate)!
@@ -267,7 +282,7 @@ class SiteForecastViewModel: ObservableObject {
         if (data.hourly.geopotential_height_550hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) { maxPressureReading = 500 }
         if (data.hourly.geopotential_height_500hPa.first ?? 0).rounded() < (surfaceAltitude + surfaceBuffer) { maxPressureReading = 450 }
         self.maxPressureReading = maxPressureReading
-        
+
         for (index, time) in data.hourly.time.enumerated() {
             let timeFormatter = DateFormatter()
             timeFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
@@ -277,7 +292,8 @@ class SiteForecastViewModel: ObservableObject {
                 // There is logic below to filter the display for only times starting from one hour prior to now
                 if timeObj >= startOfDay {
                     let hour = Calendar.current.component(.hour, from: timeObj)
-                    if hour >= 6 && hour <= 21 {
+                    if hour >= forecastStartTime && hour <= forecastEndTime {
+
                         let dateFormatter = DateFormatter()
                         dateFormatter.dateFormat = "E"
                         let formattedDay = dateFormatter.string(from: timeObj)
