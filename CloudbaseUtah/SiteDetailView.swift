@@ -48,7 +48,7 @@ class WindDataViewModel: ObservableObject {
         switch readingsSource {
         case "Mesonet":
             let url = URL(string: "https://api.mesowest.net/v2/station/timeseries?&stid=\(stationID)&recent=420&vars=air_temp,wind_direction,wind_gust,wind_speed&units=english,speed|mph,temp|F&within=120&obtimezone=local&timeformat=%-I:%M %p&token=ef3b9f4584b64e6da12d8688f19d9f4a")!
-                cancellable = URLSession.shared.dataTaskPublisher(for: url)
+            cancellable = URLSession.shared.dataTaskPublisher(for: url)
                 .map { $0.data }
                 .map { data in
                     // Convert data to string, replace "null" with "0.0", and convert back to data
@@ -62,12 +62,14 @@ class WindDataViewModel: ObservableObject {
                 .replaceError(with: WindData(STATION: []))
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] data in
-                    guard let self = self, let station = data.STATION.first else { return }
+                    guard let self = self, let station = data.STATION.first else {
+                        print("No valid data found")
+                        return
+                    }
                     let recentTimes = Array(station.OBSERVATIONS.date_time.suffix(8))
                     let recentWindSpeed = Array(station.OBSERVATIONS.wind_speed_set_1.suffix(8)).map { $0 ?? 0.0 }
                     let recentWindGust = station.OBSERVATIONS.wind_gust_set_1?.suffix(8).map { $0 ?? 0.0 } ?? Array(repeating: nil, count: 8)
                     let recentWindDirection = Array(station.OBSERVATIONS.wind_direction_set_1.suffix(8))
-                    
                     if let latestTimeString = recentTimes.last,
                        let latestTime = ISO8601DateFormatter().date(from: latestTimeString),
                        Date().timeIntervalSince(latestTime) > 2 * 60 * 60 {
@@ -155,10 +157,12 @@ struct SiteDetailView: View {
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
     @ObservedObject var viewModel = WindDataViewModel()
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
+    @State private var isActive = false
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -203,9 +207,6 @@ struct SiteDetailView: View {
                                     .padding(.top, 8)
                                     .font(.caption)
                                     .foregroundColor(infoFontColor)
-                                    .onAppear {
-                                        viewModel.fetchWindData(stationID: site.readingsStation, readingsSource: site.readingsSource)
-                                    }
                             } else {
                                 WindReadingsBarChartView(windViewData: viewModel.windViewData, siteType: site.siteType)
                             }
@@ -247,7 +248,21 @@ struct SiteDetailView: View {
                     }
                 }
                 
-                Section(header: Text("Forecast")
+                Section(header: Text("Daily Forecast")
+                    .font(.subheadline)
+                    .foregroundColor(sectionHeaderColor)
+                    .bold())
+                {
+                    SiteDailyForecastView (
+                        weatherCodesViewModel: weatherCodesViewModel,
+                        forecastLat: site.forecastLat,
+                        forecastLon: site.forecastLon,
+                        forecastNote: site.forecastNote,
+                        siteName: site.siteName,
+                        siteType: site.siteType )
+                }
+                
+                Section(header: Text("Detailed Forecast")
                     .font(.subheadline)
                     .foregroundColor(sectionHeaderColor)
                     .bold())
@@ -255,12 +270,14 @@ struct SiteDetailView: View {
                     SiteForecastView (
                         liftParametersViewModel: liftParametersViewModel,
                         sunriseSunsetViewModel: sunriseSunsetViewModel,
+                        weatherCodesViewModel: weatherCodesViewModel,
                         forecastLat: site.forecastLat,
                         forecastLon: site.forecastLon,
                         forecastNote: site.forecastNote,
                         siteName: site.siteName,
                         siteType: site.siteType )
                 }
+                
                 if site.readingsSource == "Mesonet" {
                     VStack(alignment: .leading) {
                         Text("Readings data aggregated by Synoptic")
@@ -274,11 +291,28 @@ struct SiteDetailView: View {
             }
             Spacer() // Push the content to the top of the sheet
         }
+        .onAppear {
+            viewModel.fetchWindData(stationID: site.readingsStation, readingsSource: site.readingsSource)
+            isActive = true
+            startTimer()
+        }
+        .onDisappear {
+            isActive = false
+        }
         // Used to open URL links as an in-app sheet using Safari
         .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }
     }
     // Used to open URL links as an in-app sheet using Safari
     func openLink(_ url: URL) { externalURL = url; showWebView = true }
+    
+    // Reload readings data when page is active for a time interval
+    private func startTimer() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval) {
+            if isActive {
+                viewModel.fetchWindData(stationID: site.readingsStation, readingsSource: site.readingsSource)
+            }
+        }
+    }
 }
 
 

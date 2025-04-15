@@ -18,6 +18,7 @@ struct TopOfLiftDataPoint: Identifiable {
 struct SiteForecastView: View {
     @ObservedObject var liftParametersViewModel: LiftParametersViewModel
     @ObservedObject var sunriseSunsetViewModel: SunriseSunsetViewModel
+    @ObservedObject var weatherCodesViewModel: WeatherCodesViewModel
     @StateObject private var viewModel: SiteForecastViewModel
     var forecastLat: String
     var forecastLon: String
@@ -25,10 +26,20 @@ struct SiteForecastView: View {
     var siteName: String
     var siteType: String
     
-    init(liftParametersViewModel: LiftParametersViewModel, sunriseSunsetViewModel: SunriseSunsetViewModel, forecastLat: String, forecastLon: String, forecastNote: String, siteName: String, siteType: String) {
+    init(liftParametersViewModel: LiftParametersViewModel,
+         sunriseSunsetViewModel: SunriseSunsetViewModel,
+         weatherCodesViewModel: WeatherCodesViewModel,
+         forecastLat: String,
+         forecastLon: String,
+         forecastNote: String,
+         siteName: String,
+         siteType: String) {
         self._liftParametersViewModel = ObservedObject(wrappedValue: liftParametersViewModel)
         self._sunriseSunsetViewModel = ObservedObject(wrappedValue: sunriseSunsetViewModel)
-        self._viewModel = StateObject(wrappedValue: SiteForecastViewModel(liftParametersViewModel: liftParametersViewModel, sunriseSunsetViewModel: sunriseSunsetViewModel))
+        self._weatherCodesViewModel = ObservedObject(wrappedValue: weatherCodesViewModel)
+        self._viewModel = StateObject(wrappedValue: SiteForecastViewModel(liftParametersViewModel: liftParametersViewModel,
+                                                                          sunriseSunsetViewModel: sunriseSunsetViewModel,
+                                                                          weatherCodesViewModel: weatherCodesViewModel))
         self.forecastLat = forecastLat
         self.forecastLon = forecastLon
         self.forecastNote = forecastNote
@@ -49,23 +60,10 @@ struct SiteForecastView: View {
                         .padding(.bottom, 5)
                     
                     let maxPressureReading = viewModel.maxPressureReading
-                    
-                    // Grid structure sizing parameters
-                    let headingHeight: CGFloat = 14                                 // Day, date, time rows
-                    let imageHeight: CGFloat = 38                                   // Weather skies image
-                    let dataHeight: CGFloat = 22
-                    let labelHeight: CGFloat = 22                                   // Wind, Lift label rows
-                    let doubleHeight: CGFloat = dataHeight * 2                      // Surface wind + gust combined
-                    var areaChartHeight: CGFloat = 0                                // ToL area chart height calculated below
-                    let areaChartPaddingHeight: CGFloat = 0                         // Adjustment to reflect spacing between table rows
                     let dataWidth: CGFloat = 48                                     // Width for each data column
                     let dataRows: Int = forecastData.hourly.dateTime?.count ?? 0    // Total count of data rows returned
                     let dataFrameWidth: CGFloat = CGFloat(dataRows) * (dataWidth)   // Width for all data tables and charts
-                    let imageScalingFactor: CGFloat = 0.5                           // Weather skies image
-                    let windArrowSpacing: CGFloat = 3                               // Space between wind speed and directio arrow
-                    let dateChangeDividerSize: CGFloat = 1
-                    let areaChartOpacity: CGFloat = 0.5
-                    
+
                     // Create separate grids for each section to enable area graphs to overlay a section
                     let weatherGridItems: [GridItem] = {
                         var weatherItems = Array(repeating: GridItem(.fixed(headingHeight), spacing: 0), count: 1)     // Day
@@ -210,7 +208,7 @@ struct SiteForecastView: View {
                         .padding(.vertical, 0)
                         ScrollView(.horizontal) {
                             VStack (spacing: 0) {
-                                
+
                                 // Header and weather rows
                                 LazyHGrid(rows: weatherGridItems, spacing: 0) {
                                     ForEach(forecastData.hourly.dateTime?.indices ?? 0..<0, id: \.self) { index in
@@ -249,49 +247,39 @@ struct SiteForecastView: View {
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
                                                 .overlay ( Divider() .frame(width: dateChangeDividerSize, height: headingHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
-                                            Group {
-                                                Image(systemName: forecastData.hourly.weatherCodeImage?[index] ?? "questionmark")
-                                                    .renderingMode(.original) // Use .multicolor for multicolor rendering
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .frame(width: dataWidth * imageScalingFactor)
-                                            }
-                                            // Display divider when date changes
-                                            .frame(width: dataWidth)
-                                            .overlay ( Divider() .frame(width: dateChangeDividerSize, height: imageHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
-                                            if forecastData.hourly.topOfLiftTemperature?[index] ?? -999 > -999 {
-                                                Text("\(Int(forecastData.hourly.topOfLiftTemperature?[index] ?? -999))°")
+                                            Image(systemName: forecastData.hourly.weatherCodeImage?[index] ?? "questionmark")
+                                                .renderingMode(.original) // Use .multicolor for multicolor rendering
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: dataWidth * imageScalingFactor)
+                                                // Display divider when date changes
+                                                .frame(width: dataWidth)
+                                                .overlay ( Divider() .frame(width: dateChangeDividerSize, height: imageHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                            Text(forecastData.hourly.formattedTopOfLiftTemp?[index] ?? "") //formattedTopOfLiftTemperature?[index] ?? "")
                                                     .font(.caption)
-                                                    .foregroundStyle(tempColor(Int(forecastData.hourly.topOfLiftTemperature?[index] ?? -999)))
+                                                    .foregroundStyle(tempColor(Int(forecastData.hourly.topOfLiftTemp?[index] ?? -999)))
                                                     .frame(width: dataWidth)
                                                     // Display divider when date changes
                                                     .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
-                                            } else {
-                                                Text("")
-                                                    .font(.caption)
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
-                                            }
-                                            Text("\(Int(forecastData.hourly.temperature_2m[index]))°")
+                                            Text(forecastData.hourly.formattedSurfaceTemp?[index] ?? "")
                                                 .font(.caption)
                                                 .foregroundStyle(tempColor(Int(forecastData.hourly.temperature_2m[index])))
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
                                                 .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
-                                            Text(forecastData.hourly.cloudcover[index] == 0 ? "" : "\(Int(forecastData.hourly.cloudcover[index]))")
+                                            Text(forecastData.hourly.formattedCloudCover?[index] ?? "")
                                                 .font(.caption)
                                                 .foregroundStyle(cloudCoverColor(Int(forecastData.hourly.cloudcover[index])))
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
                                                 .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
-                                            Text(forecastData.hourly.precipitation_probability[index] == 0 ? "" : "\(Int(forecastData.hourly.precipitation_probability[index]))")
+                                            Text(forecastData.hourly.formattedPrecipProbability?[index] ?? "")
                                                 .font(.caption)
                                                 .foregroundStyle(precipColor(Int(forecastData.hourly.precipitation_probability[index])))
                                                 .frame(width: dataWidth)
                                                 // Display divider when date changes
                                                 .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
-                                            Text(forecastData.hourly.cape[index] == 0 ? "" : "\(Int(forecastData.hourly.cape[index]))")
+                                            Text(forecastData.hourly.formattedCAPE?[index] ?? "")
                                                 .font(.caption)
                                                 .foregroundStyle(CAPEColor(Int(forecastData.hourly.cape[index])))
                                                 .frame(width: dataWidth)
@@ -442,13 +430,13 @@ struct SiteForecastView: View {
                                         .opacity(areaChartOpacity)
                                 )
                                 .background(tableBackgroundColor)
-
+ 
                                 // Surface wind and Top of Lift forecast table
                                 LazyHGrid(rows: surfaceGridItems, spacing: 0) {
                                     ForEach(forecastData.hourly.dateTime?.indices ?? 0..<0, id: \.self) { index in
                                         Group {
                                             HStack(spacing: windArrowSpacing) {
-                                                VStack(spacing: 1) {
+                                                VStack(alignment: .trailing, spacing: 1) {
                                                     Text("\(Int(forecastData.hourly.windspeed_10m[index]))")
                                                         .font(.caption)
                                                         .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windspeed_10m[index]), siteType: siteType))
@@ -458,8 +446,7 @@ struct SiteForecastView: View {
                                                         Text("\(Int(forecastData.hourly.windgusts_10m[index]))")
                                                             .font(.caption)
                                                             .foregroundStyle(windSpeedColor(windSpeed: Int(forecastData.hourly.windgusts_10m[index]), siteType: siteType))
-                                                    }
-                                                    
+                                                    }                                                    
                                                 }
                                                 .padding(.vertical, 0)
                                                 Image(systemName: windArrow)

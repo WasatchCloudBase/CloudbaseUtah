@@ -25,7 +25,7 @@ class GoogleSheetViewModel: ObservableObject {
     private var cancellable: AnyCancellable?
     func fetchLinks() {
         let rangeName = "Links"
-        let urlString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
+        let urlString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
         guard let url = URL(string: urlString) else
         {
             return

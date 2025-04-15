@@ -10,6 +10,7 @@ struct CloudbaseUtahApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var liftParametersViewModel = LiftParametersViewModel()
     @StateObject private var sunriseSunsetViewModel = SunriseSunsetViewModel()
+    @StateObject private var weatherCodesViewModel = WeatherCodesViewModel()
     var body: some Scene {
         WindowGroup {
             
@@ -22,6 +23,12 @@ struct CloudbaseUtahApp: App {
                 .environmentObject(liftParametersViewModel)
                 .onAppear {
                     liftParametersViewModel.fetchLiftParameters()
+                }
+            
+                // Load weather codes
+                .environmentObject(weatherCodesViewModel)
+                .onAppear {
+                    weatherCodesViewModel.fetchWeatherCodes()
                 }
             
                 // Load sunrise / sunset times
@@ -42,7 +49,7 @@ struct CloudbaseUtahApp: App {
                 }
         }
         .onChange(of: scenePhase) {
-            newPhase in if newPhase == .active { appState.reload() }
+            if scenePhase == .active { appState.reload() }
         }
     }
 }

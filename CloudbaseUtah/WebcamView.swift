@@ -23,7 +23,7 @@ class WeatherCamsViewModel: ObservableObject {
     
     func fetchWeatherCams() {
         let rangeName = "WeatherCams"
-        let urlString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
+        let urlString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
         guard let url = URL(string: urlString) else { return }
         
         URLSession.shared.dataTask(with: url) { data, response, error in
@@ -131,7 +131,7 @@ struct WebcamView: View {
         }
         .onAppear {
             // Clear all image caches and force reload if more than 5 minutes have passed since last update
-            if Date().timeIntervalSince(webcamLastUpdate) > 300 {
+            if Date().timeIntervalSince(webcamLastUpdate) > pageRefreshInterval {
                 SDImageCache.shared.clear(with: .all) {
                     webcamLastUpdate = Date()
                 }

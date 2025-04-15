@@ -11,18 +11,32 @@ import Combine
 enum NavBarSelectedView:Int {
     case site = 0
     case weather = 1
-    case alerts = 2
+    case map = 2
     case webcam = 3
     case link = 4
     case dev = 9
 }
-let GoogleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
-let GoogleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
+let googleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
+let googleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
 let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
 let sunriseLongitude: Double = -111.9801
 let windArrow: String = "arrow.up"
     // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
 let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
+let pageRefreshInterval: TimeInterval = 120         // Time in seconds to refresh wind readings (300 for 5 min)
+
+// Grid structure sizing parameters
+let headingHeight: CGFloat = 16                                 // Day, date, time rows
+let imageHeight: CGFloat = 38                                   // Weather skies image
+let dataHeight: CGFloat = 22
+let labelHeight: CGFloat = 22                                   // Wind, Lift label rows
+let doubleHeight: CGFloat = dataHeight * 2                      // Surface wind + gust combined
+var areaChartHeight: CGFloat = 0                                // ToL area chart height calculated below
+let areaChartPaddingHeight: CGFloat = 0                         // Adjustment to reflect spacing between table rows
+let imageScalingFactor: CGFloat = 0.5                           // Weather skies image
+let windArrowSpacing: CGFloat = 3                               // Space between wind speed and direction arrow
+let dateChangeDividerSize: CGFloat = 1
+let areaChartOpacity: CGFloat = 0.5
 
 // Get lift parameters for common use
 struct LiftParameterSource: Codable, Identifiable {
@@ -52,7 +66,7 @@ class LiftParametersViewModel: ObservableObject {
         var liftParameters: LiftParameters = .init(thermalLapseRate: 0, thermalVelocityConstant: 0, initialTriggerTempDiff: 0, ongoingTriggerTempDiff: 0, thermalRampDistance: 0, thermalRampStartPct: 0, cloudbaseLapseRatesDiff: 0, thermalGliderSinkRate: 0)
         
         let rangeName = "LiftParameters"
-        let liftParameterURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
+        let liftParameterURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
         guard let liftParameterURL = URL(string: liftParameterURLString) else {
             print("invalid URL for thermal lift parameters")
             return
@@ -94,6 +108,44 @@ class LiftParametersViewModel: ObservableObject {
                 }
             }
         }.resume()
+    }
+}
+
+// Load weather codes
+struct WeatherCodes: Identifiable {
+    let id = UUID()
+    let weatherCode: Int
+    let imageName: String
+}
+struct WeatherCodesResponse: Codable {
+    let values: [[String]]
+}
+class WeatherCodesViewModel: ObservableObject {
+    @Published var weatherCodes: [WeatherCodes] = []
+    private var cancellables = Set<AnyCancellable>()
+    let sheetName = "WeatherCodes"
+    init() {
+        fetchWeatherCodes()
+    }
+    func fetchWeatherCodes() {
+        let weatherCodesURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(sheetName)?alt=json&key=\(googleApiKey)"
+        guard let url = URL(string: weatherCodesURLString) else {
+            print("Invalid URL")
+            return
+        }
+        URLSession.shared.dataTaskPublisher(for: url)
+            .map { $0.data }
+            .decode(type: WeatherCodesResponse.self, decoder: JSONDecoder())
+            .map { response in
+                response.values.dropFirst().map { WeatherCodes(weatherCode: Int($0[0]) ?? 0, imageName: $0[1]) }
+            }
+            .replaceError(with: [])
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.weatherCodes, on: self)
+            .store(in: &cancellables)
+    }
+    func weatherCodeImage(for weatherCode: Int) -> String? {
+        return weatherCodes.first { $0.weatherCode == weatherCode }?.imageName
     }
 }
 

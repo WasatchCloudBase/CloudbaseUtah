@@ -49,12 +49,6 @@ struct AboutView: View {
                         .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                 }
-                NavigationLink(destination: MapView()) {
-                    Text("Map View")
-                        .font(.subheadline)
-                        .foregroundColor(rowHeaderColor)
-                }
-
             }
         }
     }

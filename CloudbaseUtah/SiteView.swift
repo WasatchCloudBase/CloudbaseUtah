@@ -62,7 +62,7 @@ class SiteViewModel: ObservableObject {
     
     func fetchLatestReadingsData(completion: @escaping ([Site]?) -> Void) {
         let rangeName = "Sites"
-        let GoogleURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
+        let GoogleURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
         guard let url = URL(string: GoogleURLString) else {
             completion(nil)
             return
@@ -216,8 +216,10 @@ class SiteViewModel: ObservableObject {
 struct SiteView: View {
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
     @ObservedObject var viewModel = SiteViewModel()
     @State private var selectedSite: Site?
+    @State private var isActive = false
     
     var body: some View {
         VStack {
@@ -325,6 +327,13 @@ struct SiteView: View {
                  }
              }
          }
+        .onAppear {
+            isActive = true
+            startTimer()
+        }
+        .onDisappear {
+            isActive = false
+        }
         .sheet(item: $selectedSite, onDismiss: {
             viewModel.reloadLatestReadingsData()
         }) { site in
@@ -333,5 +342,12 @@ struct SiteView: View {
     }
     func openSiteDetail(_ site: Site) {
         selectedSite = site
+    }
+    private func startTimer() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval) {
+            if isActive {
+                viewModel.reloadLatestReadingsData()
+            }
+        }
     }
 }

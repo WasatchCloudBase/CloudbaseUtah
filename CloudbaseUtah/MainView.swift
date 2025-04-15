@@ -44,11 +44,12 @@ struct MainView: View {
     @State var selectedView:NavBarSelectedView = .site
     @State var siteViewActive = true
     @State var weatherViewActive = false
-//    @State var alertsViewActive = false
+    @State var mapViewActive = false
     @State var webcamViewActive = false
     @State var linkViewActive = false
     @State var devViewActive = false
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
 
     var body: some View {
@@ -63,9 +64,9 @@ struct MainView: View {
                 if selectedView == .weather {
                     WeatherView()
                 }
-//                if selectedView == .alerts {
-//                    AlertsView()
-//                }
+                if selectedView == .map {
+                    MapView()
+                }
                 if selectedView == .webcam {
                     WebcamView()
                 }
@@ -94,7 +95,7 @@ struct MainView: View {
                             selectedView = .dev
                             siteViewActive = false
                             weatherViewActive = false
-//                            alertsViewActive = false
+                            mapViewActive = false
                             webcamViewActive = false
                             linkViewActive = false
                             devViewActive = true
@@ -121,7 +122,7 @@ struct MainView: View {
                                 selectedView = .site
                                 siteViewActive = true
                                 weatherViewActive = false
-//                                alertsViewActive = false
+                                mapViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = false
                                 devViewActive = false
@@ -141,7 +142,7 @@ struct MainView: View {
                                 selectedView = .weather
                                 siteViewActive = false
                                 weatherViewActive = true
-//                                alertsViewActive = false
+                                mapViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = false
                                 devViewActive = false
@@ -157,32 +158,31 @@ struct MainView: View {
                                 }
                             }
                             Spacer()
-/*                            Button {
-                                selectedView = .alerts
+                            Button {
+                                selectedView = .map
                                 siteViewActive = false
                                 weatherViewActive = false
-                                alertsViewActive = true
+                                mapViewActive = true
                                 webcamViewActive = false
                                 linkViewActive = false
                                 devViewActive = false
                             } label: {
                                 VStack {
-                                    Image(systemName: "exclamationmark.triangle")
-                                        .foregroundColor(alertsViewActive ? toolbarActiveImageColor : toolbarImageColor)
+                                    Image(systemName: "map")
+                                        .foregroundColor(mapViewActive ? toolbarActiveImageColor : toolbarImageColor)
                                         .imageScale(.medium)
-                                    Text("Alerts")
-                                        .foregroundColor(alertsViewActive ? toolbarActiveFontColor : toolbarFontColor)
+                                    Text("Map")
+                                        .foregroundColor(mapViewActive ? toolbarActiveFontColor : toolbarFontColor)
                                         .font(.caption)
                                         .padding(.top, 4)
                                 }
                             }
                             Spacer()
-*/
                             Button {
                                 selectedView = .webcam
                                 siteViewActive = false
                                 weatherViewActive = false
-//                                alertsViewActive = false
+                                mapViewActive = false
                                 webcamViewActive = true
                                 linkViewActive = false
                                 devViewActive = false
@@ -202,7 +202,7 @@ struct MainView: View {
                                 selectedView = .link
                                 siteViewActive = false
                                 weatherViewActive = false
-//                                alertsViewActive = false
+                                mapViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = true
                                 devViewActive = false

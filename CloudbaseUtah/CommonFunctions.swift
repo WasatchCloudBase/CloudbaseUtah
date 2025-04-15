@@ -29,7 +29,7 @@ func cloudCoverColor(_ cloudCoverPct: Int) -> Color {
     switch cloudCoverPct {
     case ...39:
         return displayValueGreen
-    case 39...59:
+    case 40...59:
         return displayValueYellow
     case 60...79:
         return displayValueOrange

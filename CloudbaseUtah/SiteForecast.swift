@@ -83,10 +83,16 @@ struct HourlyData: Codable {
     var thermalVelocity_800hPa: [Double]?
     var thermalVelocity_850hPa: [Double]?
     var thermalVelocity_900hPa: [Double]?
+    var topOfLiftTemp: [Double]?
+    // formatted variables to prevent errors where compiler cannot determine types when converting double to string in a view
     var formattedCloudbaseAltitude: [String]?
     var topOfLiftAltitude: [Double]?
     var formattedTopOfLiftAltitude: [String]?
-    var topOfLiftTemperature: [Double]?
+    var formattedTopOfLiftTemp: [String]?
+    var formattedCAPE: [String]?
+    var formattedPrecipProbability: [String]?
+    var formattedCloudCover: [String]?
+    var formattedSurfaceTemp: [String]?
 }
 
 // Structure used to store data that is common for all altitudes and pass to thermal calculation function
@@ -98,47 +104,21 @@ struct ForecastBaseData {
     var surfaceTemp: Double
 }
 
-struct WeatherCodesResponse: Codable {
-    let range: String
-    let majorDimension: String
-    let values: [[String]]
-}
-
 class SiteForecastViewModel: ObservableObject {
     @Published var forecastData: ForecastData?
     private var liftParametersViewModel: LiftParametersViewModel
     private var sunriseSunsetViewModel: SunriseSunsetViewModel
+    private var weatherCodesViewModel: WeatherCodesViewModel
     @Published var weatherCodes: [String: String] = [:]
     @Published var maxPressureReading: Int = 1000       // Pressure to start displaying winds aloft (1000 hpa is sea level)
     
-    // Make thermal lift parameters and sunrise/sunset times available in this view model
-    init(liftParametersViewModel: LiftParametersViewModel, sunriseSunsetViewModel: SunriseSunsetViewModel) {
+    // Make thermal lift parameters, weather code images, and sunrise/sunset times available in this view model
+    init(liftParametersViewModel: LiftParametersViewModel,
+         sunriseSunsetViewModel: SunriseSunsetViewModel,
+         weatherCodesViewModel: WeatherCodesViewModel) {
         self.liftParametersViewModel = liftParametersViewModel
         self.sunriseSunsetViewModel = sunriseSunsetViewModel
-    }
-
-    func fetchWeatherCodes(completion: @escaping ([String: String]) -> Void) {
-        let rangeName = "WeatherCodes"
-        let weatherCodesURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(GoogleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(GoogleApiKey)"
-        
-        guard let weatherCodesURL = URL(string: weatherCodesURLString) else { return }
-        
-        URLSession.shared.dataTask(with: weatherCodesURL) { data, response, error in
-            if let data = data {
-                let decoder = JSONDecoder()
-                if let result = try? decoder.decode(WeatherCodesResponse.self, from: data) {
-                    var weatherCodes: [String: String] = [:]
-                    for row in result.values.dropFirst() {
-                        if row.count >= 2 {
-                            weatherCodes[row[0]] = row[1]
-                        }
-                    }
-                    DispatchQueue.main.async {
-                        completion(weatherCodes)
-                    }
-                }
-            }
-        }.resume()
+        self.weatherCodesViewModel = weatherCodesViewModel
     }
     
     func fetchForecast(SiteName: String, ForecastLat: String, ForecastLon: String) {
@@ -157,10 +137,7 @@ class SiteForecastViewModel: ObservableObject {
                 // Uses the original data as the default if the removal of nulls failed
                 if let forecastData = try? decoder.decode(ForecastData.self, from: modifiedData ?? data) {
                     DispatchQueue.main.async {
-                        self.fetchWeatherCodes { weatherCodes in
-                            self.weatherCodes = weatherCodes
-                            self.forecastData = self.filterForecastData(siteName: SiteName, data: forecastData)
-                        }
+                        self.forecastData = self.filterForecastData(siteName: SiteName, data: forecastData)
                     }
                 } else {
                     print("JSON decode failed for forecast")
@@ -241,10 +218,15 @@ class SiteForecastViewModel: ObservableObject {
             thermalVelocity_800hPa: [],
             thermalVelocity_850hPa: [],
             thermalVelocity_900hPa: [],
+            topOfLiftTemp: [],
             formattedCloudbaseAltitude: [],
             topOfLiftAltitude: [],
             formattedTopOfLiftAltitude: [],
-            topOfLiftTemperature: []
+            formattedTopOfLiftTemp: [],
+            formattedCAPE: [],
+            formattedPrecipProbability: [],
+            formattedCloudCover: [],
+            formattedSurfaceTemp: []
         )
         
         // Get sunrise/sunset times from environment object
@@ -314,8 +296,7 @@ class SiteForecastViewModel: ObservableObject {
                         priorReadingFormattedDate = formattedDate
                         
                         // Set weather code image
-                        let weatherCode = String(data.hourly.weathercode[index])
-                        var weatherCodeImage = weatherCodes[weatherCode] ?? ""
+                        var weatherCodeImage = self.weatherCodesViewModel.weatherCodeImage(for: data.hourly.weathercode[index]) ?? ""
                         // Adjust sun/cloud/rain weather code image based on high % precip
                         if weatherCodeImage == "cloud.sun.fill" || weatherCodeImage == "sun.max.fill" || weatherCodeImage == "cloud.fill" {
                             if data.hourly.precipitation_probability[index] > 70 {
@@ -510,7 +491,7 @@ class SiteForecastViewModel: ObservableObject {
                             topOfLiftTemp = data.hourly.temperature_500hPa[index]
                         }
                         // Convert top of Lift Temp to F
-                        let topOfLiftTempF = Double(convertCelsiusToFahrenheit(Int(topOfLiftTemp)))
+                        let topOfLiftTempF = convertCelsiusToFahrenheit(Int(topOfLiftTemp))
 
                         // Only append display structure for times that are no more than an hour ago
                         // (earlier times only processed to determine if thermal trigger temp has already been reached today)
@@ -524,9 +505,25 @@ class SiteForecastViewModel: ObservableObject {
                             filteredHourly.weatherCodeImage?.append(weatherCodeImage)
                             filteredHourly.weathercode.append(data.hourly.weathercode[index])
                             filteredHourly.cloudcover.append(data.hourly.cloudcover[index])
+                            if data.hourly.cloudcover[index] == 0 {
+                                filteredHourly.formattedCloudCover?.append("")
+                            } else {
+                                filteredHourly.formattedCloudCover?.append(String(Int(data.hourly.cloudcover[index])))
+                            }
                             filteredHourly.precipitation_probability.append(data.hourly.precipitation_probability[index])
+                            if data.hourly.precipitation_probability[index] == 0 {
+                                filteredHourly.formattedPrecipProbability?.append("")
+                            } else {
+                                filteredHourly.formattedPrecipProbability?.append(String(Int(data.hourly.precipitation_probability[index])))
+                            }
                             filteredHourly.cape.append(data.hourly.cape[index])
+                            if data.hourly.cape[index].rounded() == 0 {
+                                filteredHourly.formattedCAPE?.append("")
+                            } else {
+                                filteredHourly.formattedCAPE?.append(String(Int(data.hourly.cape[index].rounded())))
+                            }
                             filteredHourly.temperature_2m.append(Double(surfaceTemp))
+                            filteredHourly.formattedSurfaceTemp?.append(String(surfaceTemp) + "°")
                             filteredHourly.windspeed_500hPa.append(data.hourly.windspeed_500hPa[index].rounded())
                             filteredHourly.windspeed_550hPa.append(data.hourly.windspeed_550hPa[index].rounded())
                             filteredHourly.windspeed_600hPa.append(data.hourly.windspeed_600hPa[index].rounded())
@@ -576,7 +573,8 @@ class SiteForecastViewModel: ObservableObject {
                             // (leaves formatted top of lift altitude set to ""
                             filteredHourly.topOfLiftAltitude?.append(max(topOfLiftAltitude, surfaceAltitude))
                             filteredHourly.formattedTopOfLiftAltitude?.append(formattedTopOfLiftAltitude)
-                            filteredHourly.topOfLiftTemperature?.append(topOfLiftTempF)
+                            filteredHourly.topOfLiftTemp?.append(Double(topOfLiftTempF))
+                            filteredHourly.formattedTopOfLiftTemp?.append(String(topOfLiftTempF) + "°")
                         }
                     }
                 }
