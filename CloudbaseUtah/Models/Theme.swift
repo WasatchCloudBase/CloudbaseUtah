@@ -6,8 +6,8 @@ import SwiftUI
 
 // Title bar colors
 let backgroundColor: Color = .black
-let sunImageColor: Color = .sky
-let sunFontColor: Color = .sky
+let sunImageColor: Color = .sunshine
+let sunFontColor: Color = .titanium
 let titleFontColor: Color = .white
 let titlebarSeparatorColor: Color = .darksky2
 

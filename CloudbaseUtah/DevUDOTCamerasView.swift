@@ -1,12 +1,166 @@
 // DevUtilView.swift
 // CloudbaseUtah
 // Created by Brown, Mike on 3/15/25.
-
 import SwiftUI
 import MapKit
-import Combine
 
-// Model to parse JSON data
+struct UDOTCameraListView: View {
+    @State private var selectedAnnotation: CameraSelection? = nil
+    @State private var cameras: [CameraAnnotation] = []
+    let initialRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 39.320980, longitude: -111.093731), // Center of Utah
+        span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0) // Zoom level for Utah
+    )
+    var body: some View {
+        CameraMapView(annotations: cameras, initialRegion: initialRegion, onTapAnnotation: { annotation in
+            selectedAnnotation = CameraSelection(
+                id: annotation.id,
+                name: annotation.name,
+                latitude: annotation.coordinate.latitude,
+                longitude: annotation.coordinate.longitude,
+                viewURL: annotation.viewURL
+            )
+        })
+        .sheet(item: $selectedAnnotation) { cameraSelection in
+            AnnotationSheet(
+                id: cameraSelection.id,
+                latitude: cameraSelection.latitude,
+                longitude: cameraSelection.longitude,
+                location: cameraSelection.name,
+                viewURL: cameraSelection.viewURL
+            )
+        }
+        .onAppear {
+            fetchCameras()
+        }
+    }
+    
+    private func fetchCameras() {
+        guard let url = URL(string: uDOTCamerasAPI) else {
+            print("Invalid URL")
+            return
+        }
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Error fetching data: \(error)")
+                return
+            }
+            guard let data = data else {
+                print("No data returned")
+                return
+            }
+            do {
+                let cameraDataList = try JSONDecoder().decode([CameraData].self, from: data)
+                DispatchQueue.main.async {
+                    cameras = cameraDataList.map {
+                        CameraAnnotation(
+                            id: $0.id,
+                            name: $0.location,
+                            coordinate: CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude),
+                            viewURL: $0.views.first?.viewURL ?? "MISSING URL"
+                        )
+                    }
+                }
+            } catch {
+                print("Error decoding JSON: \(error)")
+            }
+        }.resume()
+    }
+}
+
+struct AnnotationSheet: View {
+    let id: Int
+    let latitude: Double
+    let longitude: Double
+    let location: String
+    let viewURL: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Camera Details")
+                .font(.headline)
+            Text("ID: \(id)")
+            Text("Location: \(location)")
+            Text("Latitude: \(latitude)")
+            Text("Longitude: \(longitude)")
+            Text("View URL:")
+            Link(viewURL, destination: URL(string: viewURL) ?? URL(string: uDOTCamerasLink)!)
+        }
+        .padding()
+        .font(.body)
+    }
+}
+
+struct CameraMapView: UIViewRepresentable {
+    let annotations: [CameraAnnotation]
+    let initialRegion: MKCoordinateRegion
+    let onTapAnnotation: (CameraAnnotation) -> Void
+    
+    func makeUIView(context: Context) -> MKMapView {
+        let cameraMapView = MKMapView()
+        cameraMapView.delegate = context.coordinator
+        cameraMapView.setRegion(initialRegion, animated: false) // Set initial region
+        return cameraMapView
+    }
+    
+    func updateUIView(_ cameraMapView: MKMapView, context: Context) {
+        cameraMapView.removeAnnotations(cameraMapView.annotations)
+        cameraMapView.addAnnotations(annotations.map { annotation in
+            let mapAnnotation = MKPointAnnotation()
+            mapAnnotation.title = annotation.name
+            mapAnnotation.coordinate = annotation.coordinate
+            return mapAnnotation
+        })
+/*
+        for annotation in annotations {
+            let mapAnnotation = MKPointAnnotation()
+            mapAnnotation.title = annotation.name
+            mapAnnotation.coordinate = annotation.coordinate
+            cameraMapView.addAnnotation(mapAnnotation)
+        }
+ */
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(annotations: annotations, onTapAnnotation: onTapAnnotation)
+    }
+    
+    class Coordinator: NSObject, MKMapViewDelegate {
+        let annotations: [CameraAnnotation]
+        let onTapAnnotation: (CameraAnnotation) -> Void
+        
+        init(annotations: [CameraAnnotation], onTapAnnotation: @escaping (CameraAnnotation) -> Void) {
+            self.annotations = annotations
+            self.onTapAnnotation = onTapAnnotation
+        }
+        
+        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            if let annotation = view.annotation as? MKPointAnnotation {
+                if let cameraAnnotation = annotations.first(where: {
+                    $0.name == annotation.title
+                }) {
+                    onTapAnnotation(cameraAnnotation)
+                }
+            }
+        }
+    }
+}
+
+struct CameraAnnotation: Identifiable {
+    let id: Int
+    let name: String
+    let coordinate: CLLocationCoordinate2D
+    let viewURL: String
+}
+
+struct CameraSelection: Identifiable {
+    let id: Int
+    let name: String
+    let latitude: Double
+    let longitude: Double
+    let viewURL: String
+}
+
 struct CameraData: Codable, Identifiable {
     let id: Int
     let source: String
@@ -33,107 +187,16 @@ struct CameraData: Codable, Identifiable {
     }
 }
 
-struct ViewData: Codable, Identifiable {
-    let id: Int
-    let url: String
+struct ViewData: Codable {
+    let viewId: Int
+    let viewURL: String
     let status: String
     let description: String
-    
+
     enum CodingKeys: String, CodingKey {
-        case id = "Id"
-        case url = "Url"
+        case viewId = "Id"
+        case viewURL = "Url"
         case status = "Status"
         case description = "Description"
-    }
-}
-
-// ViewModel to handle network request
-class CameraViewModel: ObservableObject {
-    @Published var cameras = [CameraData]()
-    private var cancellable: AnyCancellable?
-    
-    init() {
-        fetchCameras()
-    }
-    
-    func fetchCameras() {
-        guard let url = URL(string: "https://www.udottraffic.utah.gov/api/v2/get/cameras?key=6035b1d6b660471a89c9b0c0804a584b&format=json") else { return }
-        cancellable = URLSession.shared.dataTaskPublisher(for: url)
-            .map { $0.data }
-            .decode(type: [CameraData].self, decoder: JSONDecoder())
-            .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { _ in }, receiveValue: { [weak self] cameras in
-                self?.cameras = cameras
-            })
-    }
-}
-
-// SwiftUI view to display map with camera icons
-struct UDOTCameraListView: View {
-    @StateObject private var cameraViewModel = CameraViewModel()
-    @State private var selectedCamera: CameraData?
-    @State private var mapType: MKMapType = .standard
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 39.6, longitude: -111.5), // Utah's approximate center
-        span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)
-    )
-    
-    var body: some View {
-        NavigationView {
-            VStack {
-                // Pass cameras to the BuildMapView
-                BuildMapView(mapType: $mapType, region: $region, cameras: cameraViewModel.cameras)
-                    .cornerRadius(10)
-                Picker("Map Style", selection: $mapType) {
-                    Text("Standard").tag(MKMapType.standard)
-                    Text("Hybrid").tag(MKMapType.hybrid)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding()
-            }
-        }
-    }
-    
-    struct BuildMapView: UIViewRepresentable {
-        @Binding var mapType: MKMapType
-        @Binding var region: MKCoordinateRegion
-        var cameras: [CameraData] // Accept cameras as input
-        
-        func makeUIView(context: Context) -> MKMapView {
-            let mapView = MKMapView()
-            mapView.setRegion(region, animated: true)
-            mapView.delegate = context.coordinator // Set delegate for annotations
-            return mapView
-        }
-        
-        func updateUIView(_ mapView: MKMapView, context: Context) {
-            mapView.mapType = mapType
-            addAnnotations(to: mapView) // Add annotations for cameras
-        }
-        
-        func makeCoordinator() -> Coordinator {
-            Coordinator(self)
-        }
-        
-        private func addAnnotations(to mapView: MKMapView) {
-            mapView.removeAnnotations(mapView.annotations) // Clear existing annotations
-            let annotations = cameras.map { camera -> MKPointAnnotation in
-                let annotation = MKPointAnnotation()
-                annotation.title = camera.location
-                annotation.coordinate = CLLocationCoordinate2D(latitude: camera.latitude, longitude: camera.longitude)
-                return annotation
-            }
-            mapView.addAnnotations(annotations)
-        }
-        
-        // Coordinator to handle annotations and interactions
-        class Coordinator: NSObject, MKMapViewDelegate {
-            var parent: BuildMapView
-            
-            
-            init(_ parent: BuildMapView) {
-                self.parent = parent
-            }
-        }
     }
 }

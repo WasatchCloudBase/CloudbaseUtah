@@ -6,6 +6,7 @@ import SwiftUI
 import Combine
 import SDWebImage
 import SDWebImageSwiftUI
+import Foundation
 
 struct TFR: Identifiable, Codable {
     var id: String { notam_id }
@@ -22,7 +23,7 @@ class TFRViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     
     func fetchTFRs() {
-        guard let url = URL(string: "https://tfr.faa.gov/tfrapi/exportTfrList") else { return }
+        guard let url = URL(string: TFRAPI) else { return }
         
         isLoading = true
         
@@ -86,7 +87,7 @@ class AFDViewModel: ObservableObject {
     private var cancellable: AnyCancellable?
 
     func fetchAFD() {
-        guard let url = URL(string: "https://forecast.weather.gov/product.php?site=NWS&issuedby=SLC&product=AFD&format=txt&version=1&glossary=0") else { return }
+        guard let url = URL(string: forecastDiscussionLink) else { return }
         cancellable = URLSession.shared.dataTaskPublisher(for: url)
             .map { $0.data }
             .compactMap { String(data: $0, encoding: .utf8) }
@@ -117,8 +118,12 @@ class AFDViewModel: ObservableObject {
 struct SoaringForecast: Identifiable {
     let id = UUID()
     let date: String
+    let soaringForecastFormat: String
+    let triggerTempData: String
     let soaringForecastData: [SoaringForecastData]
     let soundingData: [SoundingData]
+    let richSoundingData: [RichSoundingData]
+    let modelData: [ModelData]
 }
 struct SoaringForecastData: Identifiable {
     let id = UUID()
@@ -131,25 +136,135 @@ struct SoundingData: Identifiable {
     let windDirection: Int
     let windSpeed: Int
 }
-class ForecastViewModel: ObservableObject {
+struct RichSoundingData: Identifiable {
+    let id = UUID()
+    let altitude: Int
+    let temperatureF: Double
+    let windDirection: Int
+    let windSpeedKt: Int
+    let thermalIndex: Double
+    let liftRateMs: Double
+    var windSpeedMph: Double {return Double(windSpeedKt) * 1.15078}
+}
+struct ModelData: Identifiable {
+    let id = UUID()
+    let value: String
+}
+
+class SoaringForecastViewModel: ObservableObject {
     @Published var soaringForecast: SoaringForecast?
     init() {
-        fetchWeatherForecast()
+        fetchSoaringForecast()
     }
-    func fetchWeatherForecast() {
-        guard let url = URL(string: "https://forecast.weather.gov/product.php?site=SLC&issuedby=SLC&product=SRG&format=TXT&version=1&glossary=0") else { return }
+    func fetchSoaringForecast() {
+        guard let url = URL(string: soaringForecastLink) else { return }
         URLSession.shared.dataTask(with: url) { data, response, error in
             guard let data = data, error == nil else { return }
             if let content = String(data: data, encoding: .utf8) {
-                self.parseForecast(content: content)
+                // Check if the output is formatted using the summer (rich) forecast
+                if content.contains("Soaring Forecast") {
+                    self.parseRichSoaringForecast(content: content)
+                }
+                // The winter (simple) version should contain "SOARING FORECAST" instead
+                else {
+                    self.parseSimpleSoaringForecast(content: content)
+                }
             }
         }.resume()
     }
-    func parseForecast(content: String) {
+    
+    // Summer soaring forecast with additional data
+    func parseRichSoaringForecast(content: String) {
+        let start = "National Weather Service Salt Lake City, Utah"
+        let datePrefix = "This forecast is for "
+        let triggerTempPrefix = ":"
+        let soaringForecastPrefix = "...then"
+        let remarksPrefix = "Remarks..."
+        let soundingSummaryPrefix = "Upper air data from rawinsonde observation taken on "
+        // Prefix below skips header rows on sounding table data
+        let soundingPrefix = "--------------------------------------------------------------------------------"
+        let modelPrefix = "* * * * * * Numerical weather prediction model forecast data valid * * * * * *"
+        let endPrefix = "This product is issued"
+        guard let startRange = content.range(of: start)
+        else {
+            print("Soaring forecast: could not parse start date (e.g., no row for \(start))")
+            return
+        }
+        guard let dateRange = content.range(of: datePrefix, range: startRange.upperBound..<content.endIndex)
+        else {
+            print("Soaring forecast: could not parse date range (e.g., no row for \(datePrefix))")
+            return
+        }
+        guard let triggerTempRange = content.range(of: triggerTempPrefix, range: dateRange.upperBound..<content.endIndex)
+        else {
+            print("Soaring forecast: could not parse soaring forecast data range (e.g., no row for \(soaringForecastPrefix))")
+            return
+        }
+        guard let soaringForecastRange = content.range(of: soaringForecastPrefix, range: triggerTempRange.upperBound..<content.endIndex)
+        else {
+            print("Soaring forecast: could not parse soaring forecast data range (e.g., no row for \(soaringForecastPrefix))")
+            return
+        }
+        guard let remarksRange = content.range(of: remarksPrefix, range: soaringForecastRange.upperBound..<content.endIndex)
+        else {
+            print("Soaring forecast: could not parse remarks data range (e.g., no row for \(remarksPrefix))")
+            return
+        }
+        guard let soundingRange = content.range(of: soundingPrefix, range: remarksRange.upperBound..<content.endIndex)
+        else {
+            print("Soaring forecast: could not parse sounding data range (e.g., no row for \(soundingPrefix))")
+            return
+        }
+        guard let modelRange = content.range(of: modelPrefix, range: soundingRange.upperBound..<content.endIndex)
+        else {
+            print("Soaring forecast: could not parse model forecast data range (e.g., no row for \(soundingPrefix))")
+            return
+        }
+        guard let endRange = content.range(of: endPrefix, range: modelRange.upperBound..<content.endIndex)
+        else {
+            print("Could not parse end range (e.g., no row for \(endPrefix))")
+            return
+        }
+        
+        // Process soaring forecast date
+        let date = removeExtraBlankLines(String(content[dateRange.upperBound..<triggerTempRange.lowerBound]))
+        
+        // Process trigger temp statement
+        var triggerTempString = removeExtraBlankLines(String(content[triggerTempRange.upperBound..<soaringForecastRange.lowerBound])) + ":"
+        triggerTempString = triggerTempString
+            .replacingOccurrences(of: "the ", with: "")
+            .replacingOccurrences(of: "temperature", with: "temp")
+        triggerTempString = removeTextFromOpenToClose(triggerTempString, open: "/", close: "C")     // Remove max temp in Celsius
+        triggerTempString = roundNumbersInString(in: triggerTempString)
+        
+        // Process soaring forecast
+        let soaringForecastDataString = removeExtraBlankLines(String(content[soaringForecastRange.upperBound..<remarksRange.lowerBound]))
+        let soaringForecast = parseRichSoaringForecastData(soaringForecastDataString)
+        // Note:  remarks section is ignored
+        
+        // Process rich sounding data
+        let soundingDataString = removeExtraBlankLines(String(content[soundingRange.upperBound..<modelRange.lowerBound]))
+        let richSoundingData = parseRichSoundingData(soundingDataString)
+        
+        // Set default for simple sounding data (rich sounding data above used instead)
+        var soundingData: [SoundingData] = []
+        soundingData.append(SoundingData(altitude: "0", windDirection: 0, windSpeed: 0))
+        
+        // Process numerical model data
+        let modelDataString = String(content[modelRange.upperBound..<endRange.lowerBound])
+        let modelData = parseModelData(modelDataString)
+        
+        DispatchQueue.main.async {
+            self.soaringForecast = SoaringForecast(date: date, soaringForecastFormat: "Rich", triggerTempData: triggerTempString, soaringForecastData: soaringForecast, soundingData: soundingData, richSoundingData: richSoundingData, modelData: modelData)
+        }
+    }
+    
+    // Winter soaring forecast with limited data
+    func parseSimpleSoaringForecast(content: String) {
         let start = "SOARING FORECAST FOR SALT LAKE CITY"
         let datePrefix = "DATE..."
-        let thermalIndexPrefix = "THERMAL INDEX..."
-        let upperLevelWindsPrefix = "UPPER LEVEL WINDS AT SALT LAKE CITY"
+        let soaringForecastPrefix = "THERMAL INDEX..."
+        let soundingPrefix = "UPPER LEVEL WINDS AT SALT LAKE CITY"
         let endPrefix = "20000 FT"
         guard let startRange = content.range(of: start)
         else {
@@ -161,25 +276,26 @@ class ForecastViewModel: ObservableObject {
             print("Soaring forecast: could not parse date range (e.g., no row for \(datePrefix))")
             return
         }
-        guard let thermalIndexRange = content.range(of: thermalIndexPrefix, range: dateRange.upperBound..<content.endIndex)
+        guard let SoaringForecastRange = content.range(of: soaringForecastPrefix, range: dateRange.upperBound..<content.endIndex)
         else {
-            print("Soaring forecast: could not parse thermal index range (e.g., no row for \(thermalIndexPrefix))")
+            print("Soaring forecast: could not parse soaring forecast data range (e.g., no row for \(soaringForecastPrefix))")
             return
         }
-        guard let upperLevelWindsRange = content.range(of: upperLevelWindsPrefix, range: thermalIndexRange.upperBound..<content.endIndex)
+        guard let soundingRange = content.range(of: soundingPrefix, range: SoaringForecastRange.upperBound..<content.endIndex)
         else {
-            print("Soaring forecast: could not parse upper level winds range (e.g., no row for \(upperLevelWindsPrefix))")
+            print("Soaring forecast: could not parse sounding data range (e.g., no row for \(soundingPrefix))")
             return
         }
-        guard let endRange = content.range(of: endPrefix, range: upperLevelWindsRange.upperBound..<content.endIndex)
+        guard let endRange = content.range(of: endPrefix, range: soundingRange.upperBound..<content.endIndex)
         else {
             print("Could not parse end range (e.g., no row for \(endPrefix))")
             return
         }
+        let modelData: [ModelData] = []     // Not used in this forecast
         let date = String(content[dateRange.upperBound...].prefix(9)).trimmingCharacters(in: .whitespacesAndNewlines)
-        let soaringForecastDataSring = removeExtraBlankLines(String(content[thermalIndexRange.upperBound..<upperLevelWindsRange.lowerBound]))
-        let soaringForecast = parseSoaringForecastData(soaringForecastDataSring)
-        let soundingDataString = removeExtraBlankLines(String(content[upperLevelWindsRange.upperBound..<endRange.lowerBound]))
+        let soaringForecastDataSring = removeExtraBlankLines(String(content[SoaringForecastRange.upperBound..<soundingRange.lowerBound]))
+        let soaringForecast = parseSimpleSoaringForecastData(soaringForecastDataSring)
+        let soundingDataString = removeExtraBlankLines(String(content[soundingRange.upperBound..<endRange.lowerBound]))
         let soundingData = soundingDataString
             .replacingOccurrences(of: " FT MSL", with: "")
             .replacingOccurrences(of: ".", with: "")
@@ -192,16 +308,83 @@ class ForecastViewModel: ObservableObject {
                       let windSpeed = Int(components[4])
                 else {
                     return nil }
-                let adjustedWindDirection = (windDirection + 180) % 360
                 let windSpeedMph = convertKnotsToMPH(Int(windSpeed))
                 let altitudeString = formatAltitude(String(altitude))
-                return SoundingData(altitude: altitudeString, windDirection: adjustedWindDirection, windSpeed: windSpeedMph)
+                return SoundingData(altitude: altitudeString, windDirection: windDirection, windSpeed: windSpeedMph)
         }
+        
+        // pass back default for rich sounding data (not used)
+        var richSoundingData: [RichSoundingData] = []
+        richSoundingData.append(RichSoundingData(altitude: 0, temperatureF: 0.0, windDirection: 0, windSpeedKt: 0, thermalIndex: 0.0, liftRateMs: 0.0))
+
         DispatchQueue.main.async {
-            self.soaringForecast = SoaringForecast(date: date, soaringForecastData: soaringForecast, soundingData: soundingData.reversed())
+            self.soaringForecast = SoaringForecast(date: date, soaringForecastFormat: "Simple", triggerTempData: "", soaringForecastData: soaringForecast, soundingData: soundingData.reversed(), richSoundingData: richSoundingData, modelData: modelData)
         }
     }
-    func parseSoaringForecastData(_ input: String) -> [SoaringForecastData] {
+    
+    func parseRichSoaringForecastData(_ input: String) -> [SoaringForecastData] {
+        var formattedInput = input
+            .replacingOccurrences(of: "Maximum", with: "Max")
+            .replacingOccurrences(of: "maximum", with: "max")
+            .replacingOccurrences(of: "Temperature", with: "Temp")
+            .replacingOccurrences(of: "temperature", with: "temp")
+            .replacingOccurrences(of: "MSL", with: "")
+            .replacingOccurrences(of: "Degrees", with: "°")
+            .replacingOccurrences(of: "Slc", with: "SLC")  // override capitalized for SLC
+        formattedInput = removeTextFromOpenToClose(formattedInput, open: "/", close: "C")     // Remove max temp in Celsius
+        formattedInput = formatTimeinString(from: formattedInput)
+        
+        // Remove the max rate of lift containing "# ft/min"
+        let patternFtMin = "\\d+ ft/min"
+        let regexFtMin = try! NSRegularExpression(pattern: patternFtMin)
+        let rangeFtMin = NSRange(location: 0, length: formattedInput.utf16.count)
+        formattedInput = regexFtMin.stringByReplacingMatches(in: formattedInput, options: [], range: rangeFtMin, withTemplate: "").trimmingCharacters(in: .whitespaces)
+        
+        // Remove parentheses around max rate of lift containing "# m/s"
+        let patternMsWithParentheses = "\\((\\d+\\.\\d+ m/s)\\)"
+        let regexMsWithParentheses = try! NSRegularExpression(pattern: patternMsWithParentheses)
+        let rangeMsWithParentheses = NSRange(location: 0, length: formattedInput.utf16.count)
+        formattedInput = regexMsWithParentheses.stringByReplacingMatches(in: formattedInput, options: [], range: rangeMsWithParentheses, withTemplate: "$1").trimmingCharacters(in: .whitespaces)
+        
+        formattedInput = formatNumbersInString(removeTextInParentheses(formattedInput))
+        // Removed rounding because I care more about m/s with decimal than removing decimal from temps
+        // formattedInput = roundNumbersInString(in: formattedInput)
+        let lines = formattedInput.split(separator: "\n")
+        var dataRows: [SoaringForecastData] = []
+        for line in lines {
+            let components = line.split(separator: ".", omittingEmptySubsequences: true)
+            if components.count > 1 {
+                let heading = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                let value = components.dropFirst().joined(separator: ".").trimmingCharacters(in: .whitespacesAndNewlines)
+                dataRows.append(SoaringForecastData(heading: heading, value: value))
+            } else {
+                let heading = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                dataRows.append(SoaringForecastData(heading: heading, value: nil))
+            }
+        }
+        return dataRows
+    }
+    
+    func parseRichSoundingData(_ input: String) -> [RichSoundingData] {
+        let lines = input.split(separator: "\n")
+        var richSoundingData: [RichSoundingData] = []
+        for line in lines { // Header rows parsed out above; otherwise use .dropFirst(3)
+            let columns = line.split(separator: " ", omittingEmptySubsequences: true)
+            if columns.count >= 13, let altitude = Int(columns[0]), altitude <= 18000 {
+                let temperatureF = Double(columns[2]) ?? 0.0
+                let windDirection = Int(columns[3]) ?? 0
+                let windSpeedKt = Int(columns[4]) ?? 0
+                let thermalIndex = Double(columns[10]) ?? 0.0
+                let liftRateMs = Double(columns[12]) ?? 0.0
+                
+                let dataRow = RichSoundingData(altitude: altitude, temperatureF: temperatureF, windDirection: windDirection, windSpeedKt: windSpeedKt, thermalIndex: thermalIndex, liftRateMs: liftRateMs)
+                richSoundingData.append(dataRow)
+            }
+        }
+        return richSoundingData
+    }
+    
+    func parseSimpleSoaringForecastData(_ input: String) -> [SoaringForecastData] {
         let cleanedInput = input
             .replacingOccurrences(of: "MSL", with: "")
             .replacingOccurrences(of: "DEGREES", with: "°")
@@ -222,6 +405,16 @@ class ForecastViewModel: ObservableObject {
         }
         return dataRows
     }
+    
+    func parseModelData(_ input: String) -> [ModelData] {
+        let lines = input.split(separator: "\n")
+        var dataRows: [ModelData] = []
+        for line in lines {
+            dataRows.append(ModelData(value: String(line)))
+        }
+        return dataRows
+    }
+
 }
 
 // Winds Aloft forecast
@@ -310,7 +503,7 @@ class WindAloftData: ObservableObject {
 struct WeatherView: View {
     @StateObject private var AFDviewModel = AFDViewModel()
     @StateObject private var windAloftData = WindAloftData()
-    @StateObject private var viewModel = ForecastViewModel()
+    @StateObject private var soaringForecastViewModel = SoaringForecastViewModel()
     @StateObject private var TFRviewModel = TFRViewModel()
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
@@ -319,8 +512,9 @@ struct WeatherView: View {
     @State private var showShortTerm = false
     @State private var showLongTerm = false
     @State private var showAviation = false
-    @State private var isForecastCollapsed = true
-    @State private var isSoundingDataCollapsed = true
+    @State private var showSoaringForecast = true
+    @State private var showSoundingData = true
+    @State private var showSoaringModelData = false
     
     @State private var weatherAlerts: [WeatherAlert] = []
     @State private var noWeatherAlerts = false
@@ -328,7 +522,7 @@ struct WeatherView: View {
     @State private var isLoadingTFRs = true
 
     func fetchWeatherAlerts() {
-        guard let url = URL(string: "https://api.weather.gov/alerts/active?area=UT") else {
+        guard let url = URL(string: weatherAlertsAPI) else {
             return
         }
         URLSession.shared.dataTask(with: url) { data, response, error in
@@ -360,27 +554,28 @@ struct WeatherView: View {
 
     var body: some View {
         List {
+            
             // National forecast map
             Section(header: Text("National Forecast (12 hour)")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
                 .bold()) {
-                let forecastURL = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
-                VStack {
-                    WebImage (url: URL(string: forecastURL)) { image in image.resizable() }
-                    placeholder: {
-                        Text("Tap to view")
-                            .foregroundColor(infoFontColor)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    VStack {
+                        WebImage (url: URL(string: forecastUSMapLink)) { image in image.resizable() }
+                        placeholder: {
+                            Text("Tap to view")
+                                .foregroundColor(infoFontColor)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                        .onSuccess { image, data, cacheType in }
+                        .indicator(.activity) // Activity Indicator
+                        .transition(.fade(duration: 0.5)) // Fade Transition with duration
+                        .scaledToFit()
                     }
-                    .onSuccess { image, data, cacheType in }
-                    .indicator(.activity) // Activity Indicator
-                    .transition(.fade(duration: 0.5)) // Fade Transition with duration
-                    .scaledToFit()
+                    .onTapGesture { if let url = URL(string: forecastUSMapLink) { openLink(url) } }
                 }
-                .onTapGesture { if let url = URL(string: forecastURL) { openLink(url) } }
-            }
+            
             // TFRs for Utah
             Section(header: Text("Temporary Flight Restrictions")
                 .font(.headline)
@@ -412,6 +607,7 @@ struct WeatherView: View {
                     }
                 }
             }
+            
             // Weather alerts for Utah
             Section(header: Text("Weather Alerts")
                 .font(.headline)
@@ -440,13 +636,14 @@ struct WeatherView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                         .contentShape(Rectangle())      // Makes entire area tappable
                         .onTapGesture {
-                            if let url = URL(string: "https://www.weather.gov/slc/WWA") {
+                            if let url = URL(string: weatherAlertsLink) {
                                 openLink(url)
                             }
                         }
                     }
                 }
             }
+            
             // SLC Forecast Discussion
             Section(header: Text("SLC Area Forecast Discussion")
                 .font(.headline)
@@ -509,59 +706,143 @@ struct WeatherView: View {
                         )
                     }
                 } else {
-                Text("Loading...")
+                    Text("Loading...")
                 }
             }
-            Section(header: Text("Soaring Forecast and Sounding Data")
+            
+            // Soaring forecast
+            Section(header: Text("Soaring Forecast")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
-                Text("Forecast Date: \(viewModel.soaringForecast?.date ?? "")")
+                Text("Forecast Date: \(soaringForecastViewModel.soaringForecast?.date ?? "")")
                     .font(.footnote)
-                DisclosureGroup(isExpanded: $isForecastCollapsed) {
+                DisclosureGroup(isExpanded: $showSoaringForecast) {
                     VStack(alignment: .leading) {
-                        ForEach(viewModel.soaringForecast?.soaringForecastData ?? []) { data in
+                        if ((soaringForecastViewModel.soaringForecast?.soaringForecastFormat) == "Rich") {
+                            Text(soaringForecastViewModel.soaringForecast?.triggerTempData ?? "")
+                                .font(.subheadline)
+                                .padding(.bottom, 5)
+                        }
+                        ForEach(soaringForecastViewModel.soaringForecast?.soaringForecastData ?? []) { data in
                             HStack {
                                 Text(data.heading)
+                                    .multilineTextAlignment(.trailing)
+                                    .font(.subheadline)
+                                    .padding(.trailing, 2)
+                                    .foregroundColor(infoFontColor)
                                     .frame(maxWidth: .infinity, alignment: .trailing)
-                                    .font(.subheadline)
-                                    .padding(.trailing, 10)
-                                Spacer()
                                 Text(data.value ?? "")
-                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     .font(.subheadline)
-                                    .padding(.leading, 10)
-                                Spacer()
+                                    .padding(.leading, 2)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            .padding(.bottom, 5)
                         }
                         .padding(.bottom, 1)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())      // Makes entire area tappable
+                    .onTapGesture {
+                        if let url = URL(string: soaringForecastLink) {
+                            openLink(url)
+                        }
                     }
                 } label: {
                     Text("Soaring Forecast")
                         .font(.headline)
                         .foregroundColor(rowHeaderColor)
                 }
-                DisclosureGroup(isExpanded: $isSoundingDataCollapsed) {
-                    VStack(alignment: .leading) {
-                        ForEach(viewModel.soaringForecast?.soundingData ?? []) { data in
-                            HStack {
-                                Text(data.altitude.lowercased())
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                DisclosureGroup(isExpanded: $showSoundingData) {
+                    // Process rich format sounding data
+                    if ((soaringForecastViewModel.soaringForecast?.soaringForecastFormat) == "Rich") {
+                        LazyVGrid(columns: [
+                            GridItem(.fixed(60), spacing: 6, alignment: .trailing),
+                            GridItem(.fixed(52), spacing: 6, alignment: .trailing),
+                            GridItem(.fixed(52), spacing: 6, alignment: .trailing),
+                            GridItem(.fixed(52), spacing: 6, alignment: .trailing),
+                            GridItem(.fixed(52), spacing: 6, alignment: .trailing)
+                        ], spacing: 6) {
+                            Text("Altitude")
+                                .font(.subheadline)
+                                .foregroundColor(infoFontColor)
+                            Text("Temp")
+                                .font(.subheadline)
+                                .foregroundColor(infoFontColor)
+                            Text("Wind (mph)")
+                                .font(.subheadline)
+                                .foregroundColor(infoFontColor)
+                            Text("Thermal Index")
+                                .font(.subheadline)
+                                .foregroundColor(infoFontColor)
+                                .multilineTextAlignment(.trailing)
+                            Text("Lift (m/s)")
+                                .font(.subheadline)
+                                .foregroundColor(infoFontColor)
+                                .multilineTextAlignment(.trailing)
+                            ForEach(soaringForecastViewModel.soaringForecast?.richSoundingData ?? []) { data in
+                                Text("\(data.altitude) ft")
                                     .font(.subheadline)
-                                Spacer()
-                                Group {
-                                    Text("\(data.windSpeed)")
+                                HStack {
+                                    Text("\(String(Int(data.temperatureF)))")
                                         .font(.subheadline)
-                                        .foregroundColor(windSpeedColor(windSpeed: Int(data.windSpeed), siteType: "")) +
-                                     Text(" mph")
+                                        .foregroundColor(tempColor(Int(data.temperatureF))) +
+                                    Text(" ° F")
                                         .font(.subheadline)
+                                }
+                                HStack {
+                                    Text("\(String(Int(data.windSpeedMph)))")
+                                        .font(.subheadline)
+                                        .foregroundColor(windSpeedColor(windSpeed: Int(data.windSpeedMph), siteType: ""))
                                     Image(systemName: windArrow)
-                                        .rotationEffect(.degrees(Double(data.windDirection)))
+                                        .rotationEffect(Angle(degrees: Double(data.windDirection+180)))
                                         .font(.footnote)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                                Spacer()
+                                Text(String(format: "%.1f", data.thermalIndex))
+                                    .font(.subheadline)
+                                Text(String(format: "%.1f", data.liftRateMs))
+                                    .font(.subheadline)
+                                    .foregroundStyle(thermalColor(data.liftRateMs))
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())      // Makes entire area tappable
+                        .onTapGesture {
+                            if let url = URL(string: soaringForecastLink) {
+                                openLink(url)
+                            }
+                        }
+                    }
+                    // Process simple format sounding data
+                    else {
+                        VStack(alignment: .leading) {
+                            ForEach(soaringForecastViewModel.soaringForecast?.soundingData ?? []) { data in
+                                HStack {
+                                    Text(data.altitude.lowercased())
+                                        .frame(maxWidth: .infinity, alignment: .trailing)
+                                        .font(.subheadline)
+                                    Spacer()
+                                    Group {
+                                        Text("\(data.windSpeed)")
+                                            .font(.subheadline)
+                                            .foregroundColor(windSpeedColor(windSpeed: Int(data.windSpeed), siteType: "")) +
+                                        Text(" mph")
+                                            .font(.subheadline)
+                                        Image(systemName: windArrow)
+                                            .rotationEffect(.degrees(Double(data.windDirection+180)))
+                                            .font(.footnote)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                                    Spacer()
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())      // Makes entire area tappable
+                        .onTapGesture {
+                            if let url = URL(string: soaringForecastLink) {
+                                openLink(url)
                             }
                         }
                     }
@@ -570,60 +851,90 @@ struct WeatherView: View {
                         .font(.headline)
                         .foregroundColor(rowHeaderColor)
                 }
-            }
-            Section(header: Text("SLC Winds Aloft Forecast")
-                .font(.headline)
-                .foregroundColor(sectionHeaderColor)
-                .bold()) {
-                Text("Forecast for the next \(windAloftData.cycle) hours")
-                    .font(.footnote)
-                VStack(alignment: .leading) {
-                    ForEach(windAloftData.readings, id: \.altitude) { reading in
-                        HStack {
-                            Text("\(reading.altitude) ft")
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                                .font(.subheadline)
-                            Spacer()
-                            Group {
-                                Text("\(reading.temperature)")
-                                    .font(.subheadline)
-                                    .foregroundColor(tempColor(reading.temperature)) +
-                                Text("° F")
-                                    .font(.subheadline)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            Spacer()
-                            if reading.windDirection == 990 {
-                                Text("Light and variable")
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
-                                    .font(.subheadline)
-                            } else {
-                                Group {
-                                    Text("\(reading.windSpeed)")
-                                        .font(.subheadline)
-                                        .foregroundColor(windSpeedColor(windSpeed: reading.windSpeed, siteType: "")) +
-                                     Text(" mph")
-                                        .font(.subheadline)
-                                    Image(systemName: windArrow)
-                                        .rotationEffect(Angle(degrees: Double(reading.windDirection)))
-                                        .font(.footnote)
+                // Process rich format numerical model data
+                if ((soaringForecastViewModel.soaringForecast?.soaringForecastFormat) == "Rich") {
+                    DisclosureGroup(isExpanded: $showSoaringModelData) {
+                        ScrollView(.horizontal) {
+                            VStack(alignment: .leading) {
+                                ForEach(soaringForecastViewModel.soaringForecast?.modelData ?? []) { data in
+                                    Text(data.value)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .font(.system(.subheadline, design: .monospaced))
                                 }
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .padding(.vertical, 0)
                             }
-                            Spacer()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())      // Makes entire area tappable
+                            .onTapGesture {
+                                if let url = URL(string: soaringForecastLink) {
+                                    openLink(url)
+                                }
+                            }
                         }
-                        .padding(.bottom, 1)
+                    } label: {
+                        Text("Numerical Model Data")
+                            .font(.headline)
+                            .foregroundColor(rowHeaderColor)
                     }
                 }
             }
+            
+            // Winds aloft forecast
+            Section(header: Text("SLC Winds Aloft Forecast")
+                .font(.headline)
+                .foregroundColor(sectionHeaderColor)
+                .bold())
+            {
+                Text("Forecast for the next \(windAloftData.cycle) hours")
+                    .font(.footnote)
+                    LazyVGrid(columns: [
+                    GridItem(.fixed(60), spacing: 6, alignment: .trailing),
+                    GridItem(.fixed(60), spacing: 6, alignment: .trailing),
+                    GridItem(.fixed(60), spacing: 6, alignment: .trailing),
+                ], spacing: 6) {
+                    Text("Altitude")
+                        .font(.subheadline)
+                        .foregroundColor(infoFontColor)
+                    Text("Temp")
+                        .font(.subheadline)
+                        .foregroundColor(infoFontColor)
+                    Text("Wind (mph)")
+                        .font(.subheadline)
+                        .foregroundColor(infoFontColor)
+                    ForEach(windAloftData.readings, id: \.altitude) { reading in
+                        Text("\(reading.altitude) ft")
+                            .font(.subheadline)
+                        HStack {
+                            Text("\(reading.temperature)")
+                                .font(.subheadline)
+                                .foregroundColor(tempColor(reading.temperature)) +
+                            Text(" ° F")
+                                .font(.subheadline)
+                        }
+                        if reading.windDirection == 990 {
+                            Text("Light and variable")
+                                .font(.subheadline)
+                        } else {
+                            HStack {
+                                Text("\(reading.windSpeed)")
+                                    .font(.subheadline)
+                                    .foregroundColor(windSpeedColor(windSpeed: reading.windSpeed, siteType: ""))
+                                Image(systemName: windArrow)
+                                    .rotationEffect(Angle(degrees: Double(reading.windDirection)))
+                                    .font(.footnote)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Skew-T
             Section(header: Text("SLC Skew-T")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
                 .bold()) {
-                // let skewTURL = "https://weather.ral.ucar.edu/upper/displayUpper.php?img=KSLC.png&endDate=-1&endTime=-1&duration=0"
-                let skewTURL = "https://www.weather.gov/zse/ModelSounding?id=kslc&model=hrrr"
                 VStack {
-                    WebImage (url: URL(string: skewTURL)) { image in image.resizable() }
+                    WebImage (url: URL(string: skewTLink)) { image in image.resizable() }
                     placeholder: {
                         Text("Tap to view")
                             .foregroundColor(infoFontColor)
@@ -635,8 +946,9 @@ struct WeatherView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .contentShape(Rectangle())      // Makes entire area tappable
-                .onTapGesture { if let url = URL(string: skewTURL) { openLink(url) } }
+                .onTapGesture { if let url = URL(string: skewTLink) { openLink(url) } }
             }
+            
         }
         .onAppear (perform: fetchWeatherAlerts)
         .onAppear {

@@ -20,10 +20,28 @@ let googleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
 let googleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
 let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
 let sunriseLongitude: Double = -111.9801
+let centerLatitude: Double = 39.6                   // Center of Utah for maps
+let centerLongitude: Double = -111.5
 let windArrow: String = "arrow.up"
     // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
 let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
 let pageRefreshInterval: TimeInterval = 120         // Time in seconds to refresh wind readings (300 for 5 min)
+
+// HTTP links and APIs
+let forecastUSMapLink: String = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
+let weatherAlertsAPI: String = "https://api.weather.gov/alerts/active?area=UT"
+let weatherAlertsLink: String = "https://www.weather.gov/slc/WWA"
+let TFRAPI: String = "https://tfr.faa.gov/tfrapi/exportTfrList"
+let forecastDiscussionLink: String = "https://forecast.weather.gov/product.php?site=NWS&issuedby=SLC&product=AFD&format=txt&version=1&glossary=0"
+let soaringForecastLink: String = "https://forecast.weather.gov/product.php?site=NWS&product=SRG&issuedby=SLC"
+let skewTLink: String = "https://www.weather.gov/zse/ModelSounding?id=kslc&model=hrrr"
+// prior skewTLink: String = "https://weather.ral.ucar.edu/upper/displayUpper.php?img=KSLC.png&endDate=-1&endTime=-1&duration=0"
+let uDOTCamerasAPI: String = "https://www.udottraffic.utah.gov/api/v2/get/cameras?key=6035b1d6b660471a89c9b0c0804a584b&format=json"
+let uDOTCamerasLink: String = "https://www.udottraffic.utah.gov"
+let cloudbaseUtahGitLink: String = "https://github.com/WasatchCloudBase/CloudbaseUtah"
+let cloudbaseUtahGoogleSheetLink: String = "https://docs.google.com/spreadsheets/d/1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls/edit?gid=0#gid=0"
+var ipCamLink: String = "https://apps.apple.com/us/app/ip-camera-viewer-ipcams/id1045600272"
+var UHGPGAcamsLink: String = "https://www.uhgpga.org/webcams"
 
 // Grid structure sizing parameters
 let headingHeight: CGFloat = 16                                 // Day, date, time rows

@@ -4,11 +4,11 @@
 
 import SwiftUI
 import MapKit
-
+/*
 struct MapView: View {
     @State private var mapType: MKMapType = .standard
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 39.6, longitude: -111.5), // Utah's approximate center
+        center: CLLocationCoordinate2D(latitude: centerLatitude, longitude: centerLongitude), // Utah's approximate center
         span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)
     )
     
@@ -41,3 +41,4 @@ struct BuildMapView: UIViewRepresentable {
         mapView.mapType = mapType
     }
 }
+*/

@@ -65,7 +65,7 @@ struct MainView: View {
                     WeatherView()
                 }
                 if selectedView == .map {
-                    MapView()
+    //                MapView()
                 }
                 if selectedView == .webcam {
                     WebcamView()
@@ -82,9 +82,10 @@ struct MainView: View {
                 .toolbar {
                     // Title bar (top of screen)
                     ToolbarItem(placement: .navigationBarLeading) {
-                        HStack (spacing:1) {
+                        HStack (spacing:3) {
                             Image(systemName: "sunrise")
                                 .foregroundColor(sunImageColor)
+                                .imageScale(.medium)
                             Text(sunriseSunsetViewModel.sunriseSunset?.sunrise ?? "")
                                 .foregroundColor(sunFontColor)
                                 .font(.caption)
@@ -107,12 +108,13 @@ struct MainView: View {
 
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        HStack (spacing:1) {
+                        HStack (spacing:3) {
                             Text(sunriseSunsetViewModel.sunriseSunset?.sunset ?? "")
                                 .foregroundColor(sunFontColor)
                                 .font(.caption)
                             Image(systemName: "sunset")
                                 .foregroundColor(sunImageColor)
+                                .imageScale(.medium)
                         }
                     }
                     // Navigation bar (bottom of screen)

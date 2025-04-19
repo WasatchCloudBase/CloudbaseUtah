@@ -66,8 +66,6 @@ struct WebcamView: View {
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
-    var ipCamURL: String = "https://apps.apple.com/us/app/ip-camera-viewer-ipcams/id1045600272"
-    var UHGPGAcamsURL: String = "https://www.uhgpga.org/webcams"
     var body: some View {
         List {
             Section(header: Text("Point of the Mountain")
@@ -75,7 +73,7 @@ struct WebcamView: View {
                 .foregroundColor(sectionHeaderColor)
                 .bold()) {
                     Button(action: {
-                        if let url = URL(string: ipCamURL) {
+                        if let url = URL(string: ipCamLink) {
                             UIApplication.shared.open(url)
                         }
                     }) {

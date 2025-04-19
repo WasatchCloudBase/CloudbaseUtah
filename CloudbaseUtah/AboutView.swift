@@ -20,30 +20,33 @@ struct AboutView: View {
                     Text("mike.del.brown@gmail.com")
                         .font(.subheadline)
                 }
-                VStack(alignment: .leading) {
-                    Text("Cloudbase Utah github repository")
-                        .font(.subheadline)
-                        .foregroundColor(rowHeaderColor)
-                    Text("https://github.com/WasatchCloudBase/CloudbaseUtah")
-                        .font(.footnote)
-                }
-
             }
+            
             Section(header: Text("Development Tools")
                 .font(.subheadline)
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
-                
                 Button(action: {
-                    if let url = URL(string: "https://docs.google.com/spreadsheets/d/1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls/edit?gid=0#gid=0") {
+                    if let url = URL(string: cloudbaseUtahGoogleSheetLink) {
                         UIApplication.shared.open(url)
                     }
                 }) {
-                    Text("Cloudbase Utah Metadata")
+                    Text("Cloudbase Utah metadata")
                         .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                 }
+                
+                Button(action: {
+                    if let url = URL(string: cloudbaseUtahGitLink) {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    Text("Cloudbase Utah github repository")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                }
+                
                 NavigationLink(destination: UDOTCameraListView()) {
                     Text("UDOT cameras map")
                         .font(.subheadline)

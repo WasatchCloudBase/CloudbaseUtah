@@ -192,6 +192,88 @@ func removeExtraBlankLines(_ text: String?) -> String {
     return cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
+func formatNumbersInString(_ input: String) -> String {
+    let pattern = "\\d+"
+    let regex = try! NSRegularExpression(pattern: pattern, options: [])
+    let range = NSRange(location: 0, length: input.utf16.count)
+    let matches = regex.matches(in: input, options: [], range: range)
+    var formattedString = input as NSString
+    for match in matches.reversed() {
+        let numberString = formattedString.substring(with: match.range)
+        if let number = Int(numberString) {
+            let numberFormatter = NumberFormatter()
+            numberFormatter.numberStyle = .decimal
+            if let formattedNumberString = numberFormatter.string(from: NSNumber(value: number)) {
+                formattedString = formattedString.replacingCharacters(in: match.range, with: formattedNumberString) as NSString
+            }
+        }
+    }
+    return formattedString as String
+}
+
+func removeTextInParentheses(_ text: String?) -> String {
+    // Set default if input is nil
+    let nonOptionalText = text ?? ""
+    let pattern = "\\([^()]*\\)"
+    return nonOptionalText.replacingOccurrences(of: pattern, with: "", options: .regularExpression)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+// Function to look for two strings, and when found, remove everything in the data string from openingString through closingString
+// For example, passing " [" and "]" will change "data [including bracketed data] here" to "data here"
+func removeTextFromOpenToClose(_ data: String, open: String, close: String) -> String {
+    let pattern = "\(NSRegularExpression.escapedPattern(for: open)).*?\(NSRegularExpression.escapedPattern(for: close))"
+    let regex = try! NSRegularExpression(pattern: pattern, options: [])
+    let range = NSRange(location: 0, length: data.utf16.count)
+    let updatedData = regex.stringByReplacingMatches(in: data, options: [], range: range, withTemplate: "")
+    return updatedData
+}
+
+// Convert numbers followed by MDT to MST to time format
+func formatTimeinString(from string: String) -> String {
+    let pattern = "\\b(\\d+) ?(MDT|MST)\\b"
+    let regex = try! NSRegularExpression(pattern: pattern, options: [])
+    let nsString = string as NSString
+    let matches = regex.matches(in: string, options: [], range: NSRange(location: 0, length: nsString.length))
+    var resultString = string
+    for match in matches.reversed() {
+        let numberRange = match.range(at: 1)
+        let timezoneRange = match.range(at: 2)
+        if let number = Int(nsString.substring(with: numberRange)) {
+            let hours = number / 100
+            let minutes = number % 100
+            let formattedTime = String(format: "%02d:%02d", hours, minutes)
+            let timezone = nsString.substring(with: timezoneRange)
+            
+            let fullMatchRange = match.range(at: 0)
+            let replacement = "\(formattedTime) \(timezone)"
+            resultString = (resultString as NSString).replacingCharacters(in: fullMatchRange, with: replacement)
+        }
+    }
+    return resultString
+}
+
+// Convert all numbers with decimal components to integers
+func roundNumbersInString (in data: String) -> String {
+    // Regular expression to find numbers with decimal digits
+    let pattern = "\\d+\\.\\d+"
+    let regex = try! NSRegularExpression(pattern: pattern, options: [])
+    let range = NSRange(location: 0, length: data.utf16.count)
+    // Use the matches to find and replace each decimal number
+    let matches = regex.matches(in: data, options: [], range: range)
+    var newString = data
+    for match in matches.reversed() {
+        if let matchRange = Range(match.range, in: data) {
+            let numberString = String(data[matchRange])
+            if let number = Double(numberString) {
+                let roundedNumber = Int(round(number))
+                newString.replaceSubrange(matchRange, with: "\(roundedNumber)")
+            }
+        }
+    }
+    return newString
+}
+
 // Created for site forecast results that occassionally contain null for a weather code
 func replaceNullsInJSON(data: Data) -> Data? {
     // Convert Data to String
