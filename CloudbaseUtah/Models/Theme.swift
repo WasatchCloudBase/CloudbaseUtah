@@ -43,3 +43,7 @@ let displayValueYellow: Color = .displayValueYellow
 let displayValueOrange: Color = .displayValueOrange
 let displayValueRed: Color = .displayValueRed
 let repeatDateTimeColor: Color = .titanium
+
+// Map page colors
+let annotationTextColor: Color = .sky
+let cameraColor: Color = .sky

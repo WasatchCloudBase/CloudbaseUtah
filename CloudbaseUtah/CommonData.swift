@@ -56,6 +56,11 @@ let windArrowSpacing: CGFloat = 3                               // Space between
 let dateChangeDividerSize: CGFloat = 1
 let areaChartOpacity: CGFloat = 0.5
 
+// Map parameters
+let annotationCameraImage: String = "camera.circle"
+let annotationTextWidth: CGFloat = 60
+let annotationTextHeight: CGFloat = 14
+
 // Get lift parameters for common use
 struct LiftParameterSource: Codable, Identifiable {
     var id = UUID()
@@ -162,8 +167,27 @@ class WeatherCodesViewModel: ObservableObject {
             .assign(to: \.weatherCodes, on: self)
             .store(in: &cancellables)
     }
-    func weatherCodeImage(for weatherCode: Int) -> String? {
-        return weatherCodes.first { $0.weatherCode == weatherCode }?.imageName
+    func weatherCodeImage(weatherCode: Int, cloudcover: Double, precipProbability: Double, tempF: Double) -> String? {
+        var weatherCodeImage: String = weatherCodes.first { $0.weatherCode == weatherCode }?.imageName ?? ""
+        // Adjust sun/cloud/rain weather code image based on high % precip
+        if weatherCodeImage == "cloud.sun.fill" || weatherCodeImage == "sun.max.fill" || weatherCodeImage == "cloud.fill" {
+            if precipProbability > 50.0 {
+                if tempF < 32.0 {
+                    weatherCodeImage = "cloud.snow.fill"
+                } else {
+                    weatherCodeImage = "cloud.rain.fill"
+                }
+            } else {
+                if cloudcover > 70.0 {
+                    weatherCodeImage = "cloud.fill"
+                } else if cloudcover > 30.0 {
+                    weatherCodeImage = "cloud.sun.fill"
+                } else {
+                    weatherCodeImage = "sun.max.fill"
+                }
+            }
+        }
+        return weatherCodeImage
     }
 }
 

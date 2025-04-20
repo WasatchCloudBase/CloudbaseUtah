@@ -296,17 +296,11 @@ class SiteForecastViewModel: ObservableObject {
                         priorReadingFormattedDate = formattedDate
                         
                         // Set weather code image
-                        var weatherCodeImage = self.weatherCodesViewModel.weatherCodeImage(for: data.hourly.weathercode[index]) ?? ""
-                        // Adjust sun/cloud/rain weather code image based on high % precip
-                        if weatherCodeImage == "cloud.sun.fill" || weatherCodeImage == "sun.max.fill" || weatherCodeImage == "cloud.fill" {
-                            if data.hourly.precipitation_probability[index] > 70 {
-                                if surfaceTemp < 32 {
-                                    weatherCodeImage = "cloud.snow.fill"
-                                } else {
-                                    weatherCodeImage = "cloud.rain.fill"
-                                }
-                            }
-                        }
+                        let weatherCodeImage = self.weatherCodesViewModel.weatherCodeImage (
+                            weatherCode: Int(data.hourly.weathercode[index]),
+                            cloudcover: data.hourly.cloudcover[index],
+                            precipProbability: data.hourly.precipitation_probability[index],
+                            tempF: Double(surfaceTemp)) ?? ""
                         
                         // Create variables to store thermal lift at each altitude
                         var thermalVelocity_900hPa: Double = 0.0

@@ -3,163 +3,9 @@
 // Created by Brown, Mike on 3/15/25.
 import SwiftUI
 import MapKit
-
-struct UDOTCameraListView: View {
-    @State private var selectedAnnotation: CameraSelection? = nil
-    @State private var cameras: [CameraAnnotation] = []
-    let initialRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 39.320980, longitude: -111.093731), // Center of Utah
-        span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0) // Zoom level for Utah
-    )
-    var body: some View {
-        CameraMapView(annotations: cameras, initialRegion: initialRegion, onTapAnnotation: { annotation in
-            selectedAnnotation = CameraSelection(
-                id: annotation.id,
-                name: annotation.name,
-                latitude: annotation.coordinate.latitude,
-                longitude: annotation.coordinate.longitude,
-                viewURL: annotation.viewURL
-            )
-        })
-        .sheet(item: $selectedAnnotation) { cameraSelection in
-            AnnotationSheet(
-                id: cameraSelection.id,
-                latitude: cameraSelection.latitude,
-                longitude: cameraSelection.longitude,
-                location: cameraSelection.name,
-                viewURL: cameraSelection.viewURL
-            )
-        }
-        .onAppear {
-            fetchCameras()
-        }
-    }
-    
-    private func fetchCameras() {
-        guard let url = URL(string: uDOTCamerasAPI) else {
-            print("Invalid URL")
-            return
-        }
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let error = error {
-                print("Error fetching data: \(error)")
-                return
-            }
-            guard let data = data else {
-                print("No data returned")
-                return
-            }
-            do {
-                let cameraDataList = try JSONDecoder().decode([CameraData].self, from: data)
-                DispatchQueue.main.async {
-                    cameras = cameraDataList.map {
-                        CameraAnnotation(
-                            id: $0.id,
-                            name: $0.location,
-                            coordinate: CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude),
-                            viewURL: $0.views.first?.viewURL ?? "MISSING URL"
-                        )
-                    }
-                }
-            } catch {
-                print("Error decoding JSON: \(error)")
-            }
-        }.resume()
-    }
-}
-
-struct AnnotationSheet: View {
-    let id: Int
-    let latitude: Double
-    let longitude: Double
-    let location: String
-    let viewURL: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Camera Details")
-                .font(.headline)
-            Text("ID: \(id)")
-            Text("Location: \(location)")
-            Text("Latitude: \(latitude)")
-            Text("Longitude: \(longitude)")
-            Text("View URL:")
-            Link(viewURL, destination: URL(string: viewURL) ?? URL(string: uDOTCamerasLink)!)
-        }
-        .padding()
-        .font(.body)
-    }
-}
-
-struct CameraMapView: UIViewRepresentable {
-    let annotations: [CameraAnnotation]
-    let initialRegion: MKCoordinateRegion
-    let onTapAnnotation: (CameraAnnotation) -> Void
-    
-    func makeUIView(context: Context) -> MKMapView {
-        let cameraMapView = MKMapView()
-        cameraMapView.delegate = context.coordinator
-        cameraMapView.setRegion(initialRegion, animated: false) // Set initial region
-        return cameraMapView
-    }
-    
-    func updateUIView(_ cameraMapView: MKMapView, context: Context) {
-        cameraMapView.removeAnnotations(cameraMapView.annotations)
-        cameraMapView.addAnnotations(annotations.map { annotation in
-            let mapAnnotation = MKPointAnnotation()
-            mapAnnotation.title = annotation.name
-            mapAnnotation.coordinate = annotation.coordinate
-            return mapAnnotation
-        })
-/*
-        for annotation in annotations {
-            let mapAnnotation = MKPointAnnotation()
-            mapAnnotation.title = annotation.name
-            mapAnnotation.coordinate = annotation.coordinate
-            cameraMapView.addAnnotation(mapAnnotation)
-        }
- */
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(annotations: annotations, onTapAnnotation: onTapAnnotation)
-    }
-    
-    class Coordinator: NSObject, MKMapViewDelegate {
-        let annotations: [CameraAnnotation]
-        let onTapAnnotation: (CameraAnnotation) -> Void
-        
-        init(annotations: [CameraAnnotation], onTapAnnotation: @escaping (CameraAnnotation) -> Void) {
-            self.annotations = annotations
-            self.onTapAnnotation = onTapAnnotation
-        }
-        
-        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
-            if let annotation = view.annotation as? MKPointAnnotation {
-                if let cameraAnnotation = annotations.first(where: {
-                    $0.name == annotation.title
-                }) {
-                    onTapAnnotation(cameraAnnotation)
-                }
-            }
-        }
-    }
-}
-
-struct CameraAnnotation: Identifiable {
-    let id: Int
-    let name: String
-    let coordinate: CLLocationCoordinate2D
-    let viewURL: String
-}
-
-struct CameraSelection: Identifiable {
-    let id: Int
-    let name: String
-    let latitude: Double
-    let longitude: Double
-    let viewURL: String
-}
+import Combine
+import SDWebImage
+import SDWebImageSwiftUI
 
 struct CameraData: Codable, Identifiable {
     let id: Int
@@ -198,5 +44,169 @@ struct ViewData: Codable {
         case viewURL = "Url"
         case status = "Status"
         case description = "Description"
+    }
+}
+
+class CamerasViewModel: ObservableObject {
+    @Published var cameras: [CameraData] = []
+    @Published var clusteredCameras: [CameraData] = []
+
+    func fetchCameras() {
+        guard let url = URL(string: "https://www.udottraffic.utah.gov/api/v2/get/cameras?key=6035b1d6b660471a89c9b0c0804a584b&format=json") else {
+            print("Invalid URL")
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, _, error in
+            guard let data = data, error == nil else {
+                print("Error fetching data: \(error?.localizedDescription ?? "Unknown error")")
+                return
+            }
+
+            do {
+                let decodedData = try JSONDecoder().decode([CameraData].self, from: data)
+                DispatchQueue.main.async {
+                    self.cameras = decodedData
+                    self.updateClusters(regionSpan: MKCoordinateSpan(latitudeDelta: 4.0, longitudeDelta: 6.0)) // Initial clustering
+                }
+            } catch {
+                print("Error decoding JSON: \(error)")
+            }
+        }.resume()
+    }
+
+    func updateClusters(regionSpan: MKCoordinateSpan) {
+        let thresholdDistance = max(regionSpan.latitudeDelta, regionSpan.longitudeDelta) * 0.1
+        clusteredCameras = []
+
+        for camera in cameras {
+            if clusteredCameras.allSatisfy({ existingCamera in
+                let distance = sqrt(pow(camera.latitude - existingCamera.latitude, 2) + pow(camera.longitude - existingCamera.longitude, 2))
+                return distance > thresholdDistance
+            }) {
+                clusteredCameras.append(camera)
+            }
+        }
+    }
+}
+
+struct UDOTCameraListView: View {
+    @StateObject private var viewModel = CamerasViewModel()
+    @State private var region = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 39.321, longitude: -111.0937),
+        span: MKCoordinateSpan(latitudeDelta: 4.0, longitudeDelta: 6.0)
+    )
+    @State private var selectedCamera: CameraData?
+    @State private var lastRegionSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0)
+
+    var body: some View {
+        NavigationView {
+            Map(coordinateRegion: $region, annotationItems: viewModel.clusteredCameras) { camera in
+                MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: camera.latitude, longitude: camera.longitude)) {
+                    Button {
+                        selectedCamera = camera
+                    } label: {
+                        VStack {
+                            Image(systemName: annotationCameraImage)
+                                .foregroundColor(cameraColor)
+                            Text(camera.location)
+                                .font(.footnote)
+                                .foregroundColor(annotationTextColor)
+                        //        .multilineTextAlignment(.center)
+                                .frame(width: annotationTextWidth, height: annotationTextHeight)
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                viewModel.fetchCameras()
+                startMonitoringRegion()
+            }
+            .sheet(item: $selectedCamera) { camera in
+                DetailView(camera: camera)
+            }
+        }
+    }
+
+    private func startMonitoringRegion() {
+        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
+            let currentSpan = region.span
+            if hasRegionSpanChanged(from: lastRegionSpan, to: currentSpan) {
+                lastRegionSpan = currentSpan
+                viewModel.updateClusters(regionSpan: currentSpan)
+            }
+        }
+    }
+
+    private func hasRegionSpanChanged(from oldSpan: MKCoordinateSpan, to newSpan: MKCoordinateSpan) -> Bool {
+        let tolerance: Double = 0.01
+        return abs(oldSpan.latitudeDelta - newSpan.latitudeDelta) > tolerance ||
+            abs(oldSpan.longitudeDelta - newSpan.longitudeDelta) > tolerance
+    }
+}
+
+struct DetailView: View {
+    let camera: CameraData
+    @Environment(\.presentationMode) var presentationMode
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    HStack {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(toolbarActiveImageColor)
+                        Text("Back")
+                            .foregroundColor(toolbarActiveFontColor)
+                        Spacer()
+                    }
+                }
+                .padding()
+                Spacer()
+            }
+            .background(toolbarBackgroundColor)
+            
+            List {
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Location: \(camera.location)")
+                    Text("Latitude: \(camera.latitude)")
+                    Text("Longitude: \(camera.longitude)")
+                    if let view = camera.views.first {
+                        Text("View ID: \(view.viewId)")
+                        HStack {
+                            Text("View URL: ")
+                            Text (view.viewURL)
+                                .foregroundColor(.blue)
+                                .onTapGesture {
+                                    if let url = URL(string: view.viewURL) {
+                                        UIApplication.shared.open(url)
+                                    }
+                                }
+                        }
+                        WebImage (url: URL(string: view.viewURL)) { image in
+                            image.resizable() // Control layout like SwiftUI.AsyncImage
+                            // Must use this modifier or the view will use the image bitmap size
+                        } placeholder: {
+                            Text("Image not available")
+                                .foregroundColor(infoFontColor)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                        // Supports options and context, like `.delayPlaceholder` to show placeholder only when error
+                        .onSuccess { image, data, cacheType in
+                            // Success
+                            // Note: Data exist only when queried from disk cache or network.
+                            // Use `.queryMemoryData` if you really need data
+                        }
+                        .indicator(.activity) // Activity Indicator
+                        .transition(.fade(duration: 0.5)) // Fade Transition with duration
+                        .scaledToFit()
+                    }
+                }
+            }
+        }
     }
 }

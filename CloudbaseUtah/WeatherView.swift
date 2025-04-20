@@ -180,7 +180,7 @@ class SoaringForecastViewModel: ObservableObject {
         let triggerTempPrefix = ":"
         let soaringForecastPrefix = "...then"
         let remarksPrefix = "Remarks..."
-        let soundingSummaryPrefix = "Upper air data from rawinsonde observation taken on "
+        // let soundingSummaryPrefix = "Upper air data from rawinsonde observation taken on "
         // Prefix below skips header rows on sounding table data
         let soundingPrefix = "--------------------------------------------------------------------------------"
         let modelPrefix = "* * * * * * Numerical weather prediction model forecast data valid * * * * * *"
