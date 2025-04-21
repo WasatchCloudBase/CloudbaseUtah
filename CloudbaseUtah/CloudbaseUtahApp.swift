@@ -7,59 +7,59 @@ import SwiftUI
 @main
 struct CloudbaseUtahApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var appState = AppState()
+    @State private var refreshMetadata: Bool = false
     @StateObject private var liftParametersViewModel = LiftParametersViewModel()
     @StateObject private var sunriseSunsetViewModel = SunriseSunsetViewModel()
     @StateObject private var weatherCodesViewModel = WeatherCodesViewModel()
     var body: some Scene {
         WindowGroup {
             
-            BaseAppView()
-            
+            // Call app base view and pass refresh ID
+            BaseAppView(refreshMetadata: $refreshMetadata)
+
                 // Force dark mode
                 .environment(\.colorScheme, .dark)
 
-                // Load thermal lift parameters
+                // Establish metadata view models
                 .environmentObject(liftParametersViewModel)
+                .environmentObject(weatherCodesViewModel)
+                .environmentObject(sunriseSunsetViewModel)
+            
+                // Initial load of metadata
                 .onAppear {
                     liftParametersViewModel.fetchLiftParameters()
-                }
-            
-                // Load weather codes
-                .environmentObject(weatherCodesViewModel)
-                .onAppear {
                     weatherCodesViewModel.fetchWeatherCodes()
-                }
-            
-                // Load sunrise / sunset times
-                .environmentObject(sunriseSunsetViewModel)
-                .onAppear {
                     sunriseSunsetViewModel.fetchSunriseSunset()
+                    initializeLoggingFile()
+                    logRefresh()
                 }
 
-                // Reset logging file
-                .onAppear {
-                    initializeLoggingFile()
+                // Reload metadata when refresh requested
+                .onChange(of: refreshMetadata) { newValue in
+                    if newValue {
+                        liftParametersViewModel.fetchLiftParameters()
+                        weatherCodesViewModel.fetchWeatherCodes()
+                        sunriseSunsetViewModel.fetchSunriseSunset()
+                        logRefresh()
+                        refreshMetadata = false
+                    }
                 }
             
-                // Check for date changes to force app reload
-                .environmentObject(appState)
+                // Check for date changes to force base view to reapper (reloading matadata)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
-                    appState.reload()
+                    refreshMetadata = true
                 }
+            
         }
         .onChange(of: scenePhase) {
-            if scenePhase == .active { appState.reload() }
+            if scenePhase == .active {
+                // TBD what should be reloaded on change between active, background, and inactive
+            }
         }
     }
 }
 
-// Reload app when date changes
-class AppState: ObservableObject {
-    @Published var lastUpdated: Date = Date()
-    func reload() {
-        // Implement your reload logic here
-        lastUpdated = Date()
-        print("App reloaded at \(lastUpdated)")
-    }
+// Log when app refreshes metadata
+func logRefresh() {
+    let lastUpdated = Date()
 }

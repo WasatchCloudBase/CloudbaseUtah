@@ -5,6 +5,7 @@
 import SwiftUI
 
 struct AboutView: View {
+    @Binding var refreshMetadata: Bool
     var body: some View {
         backgroundColor.edgesIgnoringSafeArea(.all)
         List {
@@ -27,6 +28,7 @@ struct AboutView: View {
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
+                // Metadata
                 Button(action: {
                     if let url = URL(string: cloudbaseUtahGoogleSheetLink) {
                         UIApplication.shared.open(url)
@@ -37,6 +39,7 @@ struct AboutView: View {
                         .foregroundColor(rowHeaderColor)
                 }
                 
+                //Github repo
                 Button(action: {
                     if let url = URL(string: cloudbaseUtahGitLink) {
                         UIApplication.shared.open(url)
@@ -47,11 +50,23 @@ struct AboutView: View {
                         .foregroundColor(rowHeaderColor)
                 }
                 
+                // UDOT camera map
                 NavigationLink(destination: UDOTCameraListView()) {
                     Text("UDOT cameras map")
                         .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                 }
+                
+                // Force reload app (e.g., metadata changes)
+                Button(action: {
+                    // Trigger a change to appRefreshID to reload metadata by making BaseAppView reappear
+                    refreshMetadata = true
+                }) {
+                    Text("Reload metadata changes")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                }
+                
             }
         }
     }

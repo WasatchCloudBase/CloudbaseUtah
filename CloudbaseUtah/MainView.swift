@@ -5,13 +5,14 @@
 import SwiftUI
 
 struct BaseAppView: View {
+    @Binding var refreshMetadata: Bool
     @State private var isActive = false
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     var body: some View {
         VStack {
             if isActive {
-                MainView()
+                MainView(refreshMetadata: $refreshMetadata)
             } else {
                 SplashScreenView()
             }
@@ -20,6 +21,16 @@ struct BaseAppView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                 withAnimation {
                     self.isActive = true
+                }
+            }
+        }
+        .onChange(of: refreshMetadata) { newValue in
+            if newValue {
+                self.isActive = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation {
+                        self.isActive = true
+                    }
                 }
             }
         }
@@ -40,7 +51,7 @@ struct SplashScreenView: View {
 
 
 struct MainView: View {
-    @EnvironmentObject var appState: AppState
+    @Binding var refreshMetadata: Bool
     @State var selectedView:NavBarSelectedView = .site
     @State var siteViewActive = true
     @State var weatherViewActive = false
@@ -74,7 +85,8 @@ struct MainView: View {
                     LinkView()
                 }
                 if selectedView == .dev {
-                    AboutView()
+                    // Pass appRefreshID to enable button forcing app refresh
+                    AboutView(refreshMetadata: $refreshMetadata)
                 }
                 Spacer()
                   
