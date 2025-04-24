@@ -11,45 +11,50 @@ struct CloudbaseUtahApp: App {
     @StateObject private var liftParametersViewModel = LiftParametersViewModel()
     @StateObject private var sunriseSunsetViewModel = SunriseSunsetViewModel()
     @StateObject private var weatherCodesViewModel = WeatherCodesViewModel()
+    @StateObject private var sitesViewModel = SitesViewModel()
+    
     var body: some Scene {
         WindowGroup {
             
-            // Call app base view and pass refresh ID
+            // Call app base view and track flag for requests to refresh metadata
             BaseAppView(refreshMetadata: $refreshMetadata)
 
-                // Force dark mode
-                .environment(\.colorScheme, .dark)
+            // Force dark mode
+            .environment(\.colorScheme, .dark)
 
-                // Establish metadata view models
-                .environmentObject(liftParametersViewModel)
-                .environmentObject(weatherCodesViewModel)
-                .environmentObject(sunriseSunsetViewModel)
-            
-                // Initial load of metadata
-                .onAppear {
-                    liftParametersViewModel.fetchLiftParameters()
-                    weatherCodesViewModel.fetchWeatherCodes()
-                    sunriseSunsetViewModel.fetchSunriseSunset()
-                    initializeLoggingFile()
+            // Establish metadata view models
+            .environmentObject(liftParametersViewModel)
+            .environmentObject(weatherCodesViewModel)
+            .environmentObject(sunriseSunsetViewModel)
+            .environmentObject(sitesViewModel)
+        
+            // Initial load of metadata
+            .onAppear {
+                liftParametersViewModel.getLiftParameters()
+                weatherCodesViewModel.getWeatherCodes()
+                sunriseSunsetViewModel.getSunriseSunset()
+                sitesViewModel.getSites()
+                initializeLoggingFile()
+                logRefresh()
+            }
+
+            // Reload metadata when refresh requested
+            .onChange(of: refreshMetadata) { newValue in
+                if newValue {
+                    liftParametersViewModel.getLiftParameters()
+                    weatherCodesViewModel.getWeatherCodes()
+                    sunriseSunsetViewModel.getSunriseSunset()
+                    sitesViewModel.getSites()
                     logRefresh()
+                    refreshMetadata = false
                 }
-
-                // Reload metadata when refresh requested
-                .onChange(of: refreshMetadata) { newValue in
-                    if newValue {
-                        liftParametersViewModel.fetchLiftParameters()
-                        weatherCodesViewModel.fetchWeatherCodes()
-                        sunriseSunsetViewModel.fetchSunriseSunset()
-                        logRefresh()
-                        refreshMetadata = false
-                    }
-                }
-            
-                // Check for date changes to force base view to reapper (reloading matadata)
-                .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
-                    refreshMetadata = true
-                }
-            
+            }
+        
+            // Check for date changes to force base view to reapper (reloading matadata)
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                refreshMetadata = true
+            }
+        
         }
         .onChange(of: scenePhase) {
             if scenePhase == .active {

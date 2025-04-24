@@ -6,6 +6,7 @@
 //
 import SwiftUI
 import Combine
+import Foundation
 
 // Set global constants
 enum NavBarSelectedView:Int {
@@ -25,7 +26,7 @@ let centerLongitude: Double = -111.5
 let windArrow: String = "arrow.up"
     // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
 let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
-let pageRefreshInterval: TimeInterval = 120         // Time in seconds to refresh wind readings (300 for 5 min)
+let pageRefreshInterval: TimeInterval = 150         // Time in seconds to refresh wind readings (300 for 5 min)
 
 // HTTP links and APIs
 let forecastUSMapLink: String = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
@@ -85,7 +86,7 @@ struct LiftParameters: Codable {
 class LiftParametersViewModel: ObservableObject {
     @Published var liftParameters: LiftParameters?
     
-    func fetchLiftParameters() {
+    func getLiftParameters() {
         var liftParameters: LiftParameters = .init(thermalLapseRate: 0, thermalVelocityConstant: 0, initialTriggerTempDiff: 0, ongoingTriggerTempDiff: 0, thermalRampDistance: 0, thermalRampStartPct: 0, cloudbaseLapseRatesDiff: 0, thermalGliderSinkRate: 0)
         let rangeName = "LiftParameters"
         let liftParameterURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
@@ -146,13 +147,10 @@ class WeatherCodesViewModel: ObservableObject {
     @Published var weatherCodes: [WeatherCodes] = []
     private var cancellables = Set<AnyCancellable>()
     let sheetName = "WeatherCodes"
-    init() {
-        fetchWeatherCodes()
-    }
-    func fetchWeatherCodes() {
+    func getWeatherCodes() {
         let weatherCodesURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(sheetName)?alt=json&key=\(googleApiKey)"
         guard let url = URL(string: weatherCodesURLString) else {
-            print("Invalid URL")
+            print("Invalid URL for weather codes")
             return
         }
         URLSession.shared.dataTaskPublisher(for: url)
@@ -210,7 +208,7 @@ class SunriseSunsetViewModel: ObservableObject {
     @Published var sunriseSunset: SunriseSunset?
     
     // Get sunrise / sunset for SLC airport
-    func fetchSunriseSunset() {
+    func getSunriseSunset() {
         var sunriseSunset: SunriseSunset = .init(sunrise: "", sunset: "")
         let urlString = "https://api.sunrise-sunset.org/json?lat=\(sunriseLatitude)&lng=\(sunriseLongitude)&formatted=0"
         guard let url = URL(string: urlString) else {
@@ -235,5 +233,70 @@ class SunriseSunsetViewModel: ObservableObject {
                 }
             }
         }.resume()
+    }
+}
+
+// Get sites metadata
+struct Sites: Codable, Identifiable {
+    var id = UUID()
+    var area: String
+    var siteName: String
+    var readingsNote: String
+    var forecastNote: String
+    var siteType: String
+    var readingsAlt: String
+    var readingsSource: String
+    var readingsStation: String
+    var includeIn5DayForecast: String
+    var pressureZoneReadingTime: String
+    var forecastLat: String
+    var forecastLon: String
+}
+
+struct SitesResponse: Codable {
+    let values: [[String]]
+}
+
+class SitesViewModel: ObservableObject {
+    @Published var sites: [Sites] = []
+    private var cancellables = Set<AnyCancellable>()
+    
+    func getSites() {
+        let rangeName = "Sites"
+        let sitesURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
+        guard let url = URL(string: sitesURLString) else {
+            print("Invalid URL")
+            return
+        }
+        
+        URLSession.shared.dataTaskPublisher(for: url)
+            .map { $0.data }
+            .decode(type: SitesResponse.self, decoder: JSONDecoder())
+            .map { response in
+                response.values.dropFirst().compactMap { row -> Sites? in
+                    // Skip row if data missing
+                    guard row.count >= 12 else { return nil }
+                    // Skip row not to be used in app (e.g., site is not active)
+                    guard row[0] != "Yes" else { return nil }
+                    return Sites(
+                        area: row[1],
+                        siteName: row[2],
+                        readingsNote: row[3],
+                        forecastNote: row[4],
+                        siteType: row[5],
+                        readingsAlt: row[6],
+                        readingsSource: row[7],
+                        readingsStation: row[8],
+                        includeIn5DayForecast: row[8],
+                        pressureZoneReadingTime: row[10],
+                        forecastLat: row[11],
+                        forecastLon: row[12]
+                    )
+                }
+            }
+            .replaceError(with: [])
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.sites, on: self)
+            .store(in: &cancellables)
     }
 }

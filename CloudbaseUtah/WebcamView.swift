@@ -35,7 +35,7 @@ class WeatherCamsViewModel: ObservableObject {
             do {
                 let response = try JSONDecoder().decode(GoogleSheetResponse.self, from: data)
                 
-                // Define the condition to skip rows that should be excluded from app (e.g., cam is not active)
+                // Skip rows that should be excluded from app (e.g., cam is not active)
                 let skipCondition: ([Any]) -> Bool = { row in
                     if let skipRow = row.first as? String {
                         return skipRow == "Yes"

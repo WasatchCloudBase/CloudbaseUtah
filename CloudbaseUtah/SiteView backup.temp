@@ -68,7 +68,7 @@ struct MesonetLatestObservationsValues: Codable {
     }
 }
 
-struct CUASAReadingsData: Codable {
+struct CUASAWindData: Codable {
     var ID: String
     var timestamp: Double
     var windspeed: Double
@@ -91,21 +91,18 @@ class SiteLatestReadingsViewModel: ObservableObject {
     // sites available in this view model
     init(viewModel: SitesViewModel) {
         self.sitesViewModel = viewModel
-        
-        // Get latest readings; these calls are structured to ensure Mesonet function (which resets the latest readings structure)
-        // completes before CUASA function is called.  This prevents a timing issue that would clear out CUASA readings
-        getLatestMesonetReadings {
-            self.getLatestCUASAReadings()
-        }
+        getLatestMesonetReadings()
+        //        self.fetchCUASAData()
     }
 
-    func reloadLatestReadingsData() {
-        getLatestMesonetReadings {
-            self.getLatestCUASAReadings()
+/*    func reloadLatestReadingsData() {
+        DispatchQueue.main.async {
+            self.getLatestMesonetReadings()
+            //            self.fetchCUASAData()
         }
     }
-
-    func getLatestMesonetReadings(completion: @escaping () -> Void) {
+*/
+    func getLatestMesonetReadings() {
         let mesonetSites = sitesViewModel.sites.filter { $0.readingsSource == "Mesonet" && !$0.readingsStation.isEmpty }
         guard !mesonetSites.isEmpty else {
             print ("filtered sites are empty:  none matched 'Mesonet' and had a readingsStation ")
@@ -132,63 +129,54 @@ class SiteLatestReadingsViewModel: ObservableObject {
                         )
                     }
                 }
-                // Use a completion handler to make sure the latestReadings array is reset before CUASA readings are appended
-                completion()
-                
             } catch {
                 print("Failed to decode JSON: \(error)")
             }
         }.resume()
     }
 
-    func getLatestCUASAReadings() {
-        let CUASAStations = sitesViewModel.sites
-            .filter { $0.readingsSource == "CUASA" }
-            .map { $0.readingsStation }
-            .unique()
-        guard !CUASAStations.isEmpty else { return }
+/*
+    func fetchCUASAData() {
+        let CUASASites = sites.filter { $0.readingsSource == "CUASA" && $0.readingsStation != "" }
+        guard !CUASASites.isEmpty else { return }
         
         let readingInterval: Double = 5 * 60 // 5 minutes in seconds
         let readingEnd = Date().timeIntervalSince1970 // current timestamp in seconds
         let readingStart = readingEnd - readingInterval // to ensure at least one reading is returned
         
-        for station in CUASAStations {
-            let urlString = "https://sierragliding.us/api/station/" + station + "/data?start=" + String(readingStart) + "&end=" + String(readingEnd) + "&sample=" + String(readingInterval)
+        for site in CUASASites {
+            let stationID = site.readingsStation
+            let urlString = "https://sierragliding.us/api/station/" + stationID + "/data?start=" + String(readingStart) + "&end=" + String(readingEnd) + "&sample=" + String(readingInterval)
             guard let url = URL(string: urlString) else { continue }
-            
-            URLSession.shared.dataTask(with: url) { data, response, error in
-                guard let data = data, error == nil else {
-                    print("Error fetching data: \(String(describing: error))")
-                    return
-                }
-
-                do {
-                    let readingsDataArray = try JSONDecoder().decode([CUASAReadingsData].self, from: data)
-                    if let latestData = readingsDataArray.max(by: { $0.timestamp < $1.timestamp }) {
-                        
-                        let date = Date(timeIntervalSince1970: latestData.timestamp)
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "h:mm"
-                        let formattedTime = formatter.string(from: date)
-
-                        DispatchQueue.main.async {
-                            let newReading = LatestReadings(
-                                stationID: latestData.ID,
-                                stationName: latestData.ID,
-                                windSpeed: convertKMToMiles(latestData.windspeed_avg).rounded(),
-                                windDirection: latestData.wind_direction_avg,
-                                windGust: convertKMToMiles(latestData.windspeed_max).rounded(),
-                                windTime: formattedTime
-                            )
-                            self.latestReadings.append(newReading)
+            URLSession.shared.dataTaskPublisher(for: url)
+                .map { $0.data }
+                .decode(type: [CUASAWindData].self, decoder: JSONDecoder())
+                .replaceError(with: [])
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] windDataArray in
+                    guard let self = self, let latestWindData = windDataArray.last else { return }
+                    self.sites.indices.forEach { index in
+                        if self.sites[index].readingsStation == stationID {
+                            let windSpeed = convertKMToMiles(latestWindData.windspeed_avg).rounded()
+                            let windDirection = latestWindData.wind_direction_avg + 180
+                            let windGust = convertKMToMiles(latestWindData.windspeed_max).rounded()
+                            self.sites[index].windSpeed = String(Int(windSpeed))
+                            self.sites[index].windColor = windSpeedColor(windSpeed: Int(windSpeed), siteType: self.sites[index].siteType)
+                            self.sites[index].windDirection = String(Int(windDirection))
+                            self.sites[index].windDirectionAngle = Angle(degrees: windDirection)
+                            self.sites[index].windGust = String(Int(windGust))
+                            self.sites[index].windGustColor = windSpeedColor(windSpeed: Int(windGust), siteType: self.sites[index].siteType)
+                            let date = Date(timeIntervalSince1970: latestWindData.timestamp)
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "h:mm"
+                            self.sites[index].windTime = formatter.string(from: date)
                         }
                     }
-                } catch {
-                    print("Error decoding JSON: \(error)")
                 }
-            }.resume()
+                .store(in: &cancellables)
         }
     }
+ */
 }
 
 struct SiteView: View {
@@ -238,69 +226,70 @@ struct SiteView: View {
                                              .fixedSize(horizontal: true, vertical: false)
                                      }
                                      Spacer()
-                                     
-                                     if let latestReading = siteLatestReadingsViewModel.latestReadings.first (where: { $0.stationID == site.readingsStation }) {
-                                         if let windTime = latestReading.windTime {
-                                             // Split keeps hh:mm and strips the trailing "  %p" the JSON parser is creating
-                                             let windTimeText = windTime.split(separator: " ", maxSplits: 1)[0]
-                                             Text(windTimeText)
-                                                 .font(.caption)
-                                                 .foregroundColor(infoFontColor)
-                                                 .lineLimit(1)
-                                                 .fixedSize(horizontal: true, vertical: false)
-                                         }
 
-                                         if let windSpeed = latestReading.windSpeed {
-                                             if windSpeed == 0 {
-                                                 Text("calm")
-                                                     .font(.subheadline)
-                                                     .lineLimit(1)
-                                                     .fixedSize(horizontal: true, vertical: false)
-                                             } else {
-                                                 Text(String(Int(windSpeed)))
-                                                     .font(.subheadline)
-                                                     .foregroundColor(windSpeedColor(windSpeed: Int(windSpeed), siteType: site.siteType))
+                                     if let reading = siteLatestReadingsViewModel.latestReadings.first(where: { $0.stationID == "KSLC" }) {
+//                                     if let latestReading = siteLatestReadingsViewModel.latestReadings.first (where: { $0.stationID == site.readingsStation }) {
+                                         HStack {
+/*
+                                             if let windTime = latestReading.windTime {
+                                                 // Split keeps hh:mm and strips the trailing "  %p" the JSON parser is creating
+                                                 let windTimeText = windTime.split(separator: " ", maxSplits: 1)[0]
+                                                 Text(windTimeText)
+                                                     .font(.caption)
+                                                     .foregroundColor(infoFontColor)
                                                      .lineLimit(1)
                                                      .fixedSize(horizontal: true, vertical: false)
                                              }
-                                         } else {
-                                             Text ("Station down")
-                                                 .font(.caption)
-                                                 .foregroundColor(infoFontColor)
-                                                 .lineLimit(1)
-                                                 .fixedSize(horizontal: true, vertical: false)
-                                         }
-
-                                         if let windGust = latestReading.windGust {
-                                             if windGust > 0 {
-                                                 HStack {
-                                                     Text("g")
+ */
+/*
+                                             if let windSpeed = latestReading.windSpeed {
+                                                 if windSpeed == "0" {
+                                                     Text("calm")
                                                          .font(.subheadline)
-                                                         .foregroundColor(infoFontColor)
                                                          .lineLimit(1)
                                                          .fixedSize(horizontal: true, vertical: false)
-                                                     Text(String(Int(windGust)))
+                                                 } else {
+                                                     Text(windSpeed)
                                                          .font(.subheadline)
-                                                         .foregroundColor(windSpeedColor(windSpeed: Int(windGust), siteType: site.siteType))
+                                                         .foregroundColor(windSpeedColor(windSpeed: windSpeed, siteType: site.siteType))
                                                          .lineLimit(1)
                                                          .fixedSize(horizontal: true, vertical: false)
                                                  }
+                                             } else {
+                                                 Text ("Station down")
+                                                     .font(.caption)
+                                                     .foregroundColor(infoFontColor)
+                                                     .lineLimit(1)
+                                                     .fixedSize(horizontal: true, vertical: false)
                                              }
+                                             if let windGust = latestReading.windGust {
+                                                 if windGust != "0" && windGust != "" {
+                                                     HStack {
+                                                         Text("g")
+                                                             .font(.subheadline)
+                                                             .foregroundColor(infoFontColor)
+                                                             .lineLimit(1)
+                                                             .fixedSize(horizontal: true, vertical: false)
+                                                         Text(windGust)
+                                                             .font(.subheadline)
+                                                             .foregroundColor(windSpeedColor(windSpeed: windGust, siteType: site.siteType))
+                                                             .lineLimit(1)
+                                                             .fixedSize(horizontal: true, vertical: false)
+                                                     }
+                                                     .lineLimit(1)
+                                                     .fixedSize(horizontal: true, vertical: false)
+                                                 }
+                                             }
+                                             if let windDirection = Angle(degrees: Double(Int(latestReading.windDirection)+180)) {
+                                                 Image(systemName: windArrow)
+                                                     .rotationEffect(windDirection)
+                                                     .font(.footnote)
+                                             }
+ */
                                          }
-
-                                         if let windDirection = latestReading.windDirection {
-                                             Image(systemName: windArrow)
-                                                 .rotationEffect(.degrees(windDirection - 180))
-                                                 .font(.footnote)
-                                         }
- 
-                                     } else {
-                                         Text ("Station down")
-                                             .font(.caption)
-                                             .foregroundColor(infoFontColor)
-                                             .lineLimit(1)
-                                             .fixedSize(horizontal: true, vertical: false)
                                      }
+                                     .lineLimit(1)
+                                     .fixedSize(horizontal: true, vertical: false)
                                  }
                                  .contentShape(Rectangle()) // Makes entire area tappable
                                  .onTapGesture { openSiteDetail(site) }
@@ -326,7 +315,7 @@ struct SiteView: View {
             isActive = false
         }
         .sheet(item: $selectedSite, onDismiss: {
-            siteLatestReadingsViewModel.reloadLatestReadingsData()
+//            siteLatestReadingsViewModel.reloadLatestReadingsData()
         }) { site in
             SiteDetailView(site: site)
         }
@@ -337,7 +326,7 @@ struct SiteView: View {
     private func startTimer() {
         DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval) {
             if isActive {
-                siteLatestReadingsViewModel.reloadLatestReadingsData()
+//                siteLatestReadingsViewModel.reloadLatestReadingsData()
             }
         }
     }

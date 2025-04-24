@@ -319,3 +319,11 @@ func convertISODateToLocalTime(isoDateString: String) -> String {
     let localTimeString = localDateFormatter.string(from: date)
     return localTimeString
 }
+
+// Function to determine distinct values from an array
+extension Array where Element: Hashable {
+    func unique() -> [Element] {
+        var seen: Set<Element> = []
+        return filter { seen.insert($0).inserted }
+    }
+}

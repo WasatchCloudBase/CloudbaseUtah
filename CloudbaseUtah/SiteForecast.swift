@@ -459,10 +459,10 @@ class SiteForecastViewModel: ObservableObject {
                         // Maintain status if thermal trigger has been reached for the day
                         thermalTriggerReachedForDay = thermalResult.thermalTriggerReachedForDay
                         
-                        // Format cloudbase data
+                        // Format cloudbase data if present (is a number and not 0 or very large)
                         // Altitudes are / 1000 so they can be displayed like "13k)
                         var formattedCloudbaseAltitude = ""
-                        if thermalResult.cloudbaseAltitude > 0 {
+                        if thermalResult.cloudbaseAltitude > 0 && thermalResult.cloudbaseAltitude < 100000 {
                             formattedCloudbaseAltitude = String(Int((thermalResult.cloudbaseAltitude/1000).rounded())) + "k"
                         }
                         

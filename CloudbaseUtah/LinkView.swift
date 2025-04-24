@@ -50,6 +50,7 @@ struct LinkView: View {
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
+
     var body: some View {
         List {
             ForEach(viewModel.groupedLinks.keys.sorted(), id: \.self) { category in

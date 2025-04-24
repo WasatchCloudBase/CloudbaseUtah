@@ -9,6 +9,8 @@ struct BaseAppView: View {
     @State private var isActive = false
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
+    @EnvironmentObject var sitesViewModel: SitesViewModel
+    
     var body: some View {
         VStack {
             if isActive {
@@ -18,7 +20,7 @@ struct BaseAppView: View {
             }
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 withAnimation {
                     self.isActive = true
                 }
@@ -62,6 +64,7 @@ struct MainView: View {
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
+    @EnvironmentObject var sitesViewModel: SitesViewModel
 
     var body: some View {
         NavigationView {
@@ -70,7 +73,8 @@ struct MainView: View {
 
                 // Call content based on selected navigation
                 if selectedView == .site {
-                    SiteView()
+                    SiteView(sitesViewModel: sitesViewModel)
+                        .environmentObject(sitesViewModel)
                 }
                 if selectedView == .weather {
                     WeatherView()

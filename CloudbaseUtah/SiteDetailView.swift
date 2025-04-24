@@ -8,7 +8,7 @@ import SwiftUI
 import Combine
 import Charts
 
-struct WindData: Codable {
+struct ReadingsData: Codable {
     let STATION: [Station]
 }
 
@@ -23,7 +23,7 @@ struct Observations: Codable {
     let wind_direction_set_1: [Double]
 }
 
-struct WindViewData {
+struct ReadingsHistoryData {
     var times: [String]
     var windSpeed: [Double]
     var windGust: [Double?]
@@ -31,10 +31,8 @@ struct WindViewData {
     var errorMessage: String?
 }
 
-// Note:  CUASAWindData is defined in SiteView file
-
-class WindDataViewModel: ObservableObject {
-    @Published var windViewData = WindViewData(
+class ReadingsHistoryDataModel: ObservableObject {
+    @Published var readingsHistoryData = ReadingsHistoryData(
         times: [],
         windSpeed: [],
         windGust: [],
@@ -44,7 +42,7 @@ class WindDataViewModel: ObservableObject {
     private var cancellable: AnyCancellable?
     private var cancellables = Set<AnyCancellable>()
     
-    func fetchWindData(stationID: String, readingsSource: String) {
+    func GetReadingsHistoryData(stationID: String, readingsSource: String) {
         switch readingsSource {
         case "Mesonet":
             let url = URL(string: "https://api.mesowest.net/v2/station/timeseries?&stid=\(stationID)&recent=420&vars=air_temp,wind_direction,wind_gust,wind_speed&units=english,speed|mph,temp|F&within=120&obtimezone=local&timeformat=%-I:%M %p&token=ef3b9f4584b64e6da12d8688f19d9f4a")!
@@ -58,12 +56,12 @@ class WindDataViewModel: ObservableObject {
                     }
                     return data
                 }
-                .decode(type: WindData.self, decoder: JSONDecoder())
-                .replaceError(with: WindData(STATION: []))
+                .decode(type: ReadingsData.self, decoder: JSONDecoder())
+                .replaceError(with: ReadingsData(STATION: []))
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] data in
                     guard let self = self, let station = data.STATION.first else {
-                        print("No valid data found")
+                        print("No valid data found for station: \(stationID)")
                         return
                     }
                     let recentTimes = Array(station.OBSERVATIONS.date_time.suffix(8))
@@ -73,13 +71,13 @@ class WindDataViewModel: ObservableObject {
                     if let latestTimeString = recentTimes.last,
                        let latestTime = ISO8601DateFormatter().date(from: latestTimeString),
                        Date().timeIntervalSince(latestTime) > 2 * 60 * 60 {
-                        self.windViewData.errorMessage = "Station has not updated in the past 2 hours"
+                        self.readingsHistoryData.errorMessage = "Station \(stationID) has not updated in the past 2 hours"
                     } else {
-                        self.windViewData.times = recentTimes
-                        self.windViewData.windSpeed = recentWindSpeed
-                        self.windViewData.windGust = recentWindGust
-                        self.windViewData.windDirection = recentWindDirection
-                        self.windViewData.errorMessage = nil
+                        self.readingsHistoryData.times = recentTimes
+                        self.readingsHistoryData.windSpeed = recentWindSpeed
+                        self.readingsHistoryData.windGust = recentWindGust
+                        self.readingsHistoryData.windDirection = recentWindDirection
+                        self.readingsHistoryData.errorMessage = nil
                     }
                 }
             // end of let url...URLSession... section
@@ -89,51 +87,51 @@ class WindDataViewModel: ObservableObject {
             let readingStart = readingEnd - (readingInterval * 10) // to ensure >= 8 readings
             let urlString = "https://sierragliding.us/api/station/" + stationID + "/data?start=" + String(readingStart) + "&end=" + String(readingEnd) + "&sample=" + String(readingInterval)
             guard let url = URL(string: urlString) else {
-                self.windViewData.errorMessage = "Invalid URL"
+                self.readingsHistoryData.errorMessage = "Invalid CUASA readings URL"
                 return
             }
             URLSession.shared.dataTaskPublisher(for: url)
                 .map { $0.data }
-                .decode(type: [CUASAWindData].self, decoder: JSONDecoder())
+                .decode(type: [CUASAReadingsData].self, decoder: JSONDecoder())
                 .receive(on: DispatchQueue.main)
                 .sink(receiveCompletion: { completion in
                     switch completion {
                     case .failure(let error):
-                        self.windViewData.errorMessage = error.localizedDescription
+                        self.readingsHistoryData.errorMessage = error.localizedDescription
                     case .finished:
                         break
                     }
-                }, receiveValue: { [weak self] windDataArray in
-                    self?.processWindData(windDataArray)
+                }, receiveValue: { [weak self] readingsHistoryDataArray in
+                    self?.processReadingsHistoryData(readingsHistoryDataArray)
                 })
                 .store(in: &cancellables)
             // end of let url...URLSession... section
         default:
-            print ("Invalid readings source")
+            print ("Invalid readings source for station: \(stationID)")
         }
     }
     
-    private func processWindData(_ windDataArray: [CUASAWindData]) {
-        guard let latestEntry = windDataArray.last else {
-            self.windViewData.errorMessage = "No data available"
+    private func processReadingsHistoryData(_ readingsHistoryDataArray: [CUASAReadingsData]) {
+        guard let latestEntry = readingsHistoryDataArray.last else {
+            self.readingsHistoryData.errorMessage = "No data available"
             return
         }
         let currentTime = Date().timeIntervalSince1970
         let twoHoursInSeconds: Double = 2 * 60 * 60
         if currentTime - latestEntry.timestamp > twoHoursInSeconds {
-            self.windViewData.errorMessage = "Station has not updated in the past 2 hours"
+            self.readingsHistoryData.errorMessage = "Station has not updated in the past 2 hours"
             return
         }
-        let recentEntries = Array(windDataArray.suffix(8))
-        updateWindViewData(with: recentEntries)
+        let recentEntries = Array(readingsHistoryDataArray.suffix(8))
+        updateReadingsHistory(with: recentEntries)
     }
     
-    private func updateWindViewData(with windDataArray: [CUASAWindData]) {
+    private func updateReadingsHistory(with readingsHistoryDataArray: [CUASAReadingsData]) {
         var times = [String]()
         var windSpeed = [Double]()
         var windGust = [Double?]()
         var windDirection = [Double]()
-        for data in windDataArray {
+        for data in readingsHistoryDataArray {
             let date = Date(timeIntervalSince1970: data.timestamp)
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "H:mm"
@@ -142,7 +140,7 @@ class WindDataViewModel: ObservableObject {
             windGust.append(convertKMToMiles(data.windspeed_max))
             windDirection.append(data.wind_direction_avg)
         }
-        self.windViewData = WindViewData(
+        self.readingsHistoryData = ReadingsHistoryData(
             times: times,
             windSpeed: windSpeed,
             windGust: windGust,
@@ -152,17 +150,84 @@ class WindDataViewModel: ObservableObject {
     }
 }
 
+struct ReadingsHistoryBarChartView: View {
+    var readingsHistoryData: ReadingsHistoryData
+    var siteType: String
+
+    var body: some View {
+        let count = min(readingsHistoryData.times.count, 10)
+        let dataRange = (readingsHistoryData.times.count - count)..<readingsHistoryData.times.count
+        
+        Chart {
+            ForEach(dataRange, id: \.self) { index in
+                let windSpeed = readingsHistoryData.windSpeed[index]
+                let windGust = readingsHistoryData.windGust[index] ?? 0.0
+                let windDirection = readingsHistoryData.windDirection[index]
+                let time = readingsHistoryData.times[index]
+                let windColor = windSpeedColor(windSpeed: Int(windSpeed), siteType: siteType)
+                let gustColor = windSpeedColor(windSpeed: Int(windGust), siteType: siteType)
+                
+                BarMark(
+                    x: .value("Time", time),
+                    yStart: .value("Wind Speed", 0),
+                    yEnd: .value("Wind Speed", windSpeed)
+                )
+                .foregroundStyle(windColor)
+                .annotation(position: .bottom) {
+                    VStack {
+                        Text("\(Int(windSpeed))")
+                            .font(.caption)
+                            .foregroundColor(windColor)
+                            .bold()
+                        Image(systemName: windArrow)
+                            .rotationEffect(.degrees(Double(windDirection + 180)))
+                            .foregroundColor(.white)
+                            .bold()
+                            .font(.footnote)
+                        // Replace x-axis values with hh:mm and strip the am/pm
+                        Text(String(time).split(separator: " ", maxSplits: 1).first ?? "")
+                            .font(.caption)
+                    }
+                }
+                if windGust > 0 {
+                    BarMark(
+                        x: .value("Time", time),
+                        yStart: .value("Wind Speed", windSpeed + 1), // Create a gap
+                        yEnd: .value("Wind Gust", windSpeed + windGust + 1)
+                    )
+                    .foregroundStyle(gustColor)
+                    .annotation(position: .top) {
+                        HStack(spacing: 4) {
+                            Text("g")
+                                .font(.caption)
+                            Text("\(Int(windGust))")
+                                .font(.caption)
+                                .foregroundColor(gustColor)
+                                .bold()
+                        }
+                    }
+                }
+            }
+        }
+        .chartYAxis(.hidden) // Remove the y-axis values
+        .chartXAxis(.hidden)
+        .chartXAxis { AxisMarks(stroke: StrokeStyle(lineWidth: 0)) }  // Hide vertical column separators
+        .frame(height: 90) // Reduce the chart height
+    }
+}
+
 struct SiteDetailView: View {
-    var site: Site  // Received from parent view
+    var site: Sites  // Received from parent view
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
-    @ObservedObject var viewModel = WindDataViewModel()
+    @ObservedObject var viewModel = ReadingsHistoryDataModel()
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
     @State private var isActive = false
+    @State private var historyIsLoading = true
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -198,17 +263,22 @@ struct SiteDetailView: View {
                             Text(buildReferenceNote(Alt: site.readingsAlt, Note: site.readingsNote))
                                 .font(.footnote)
                                 .foregroundColor(infoFontColor)
-                            if let errorMessage = viewModel.windViewData.errorMessage {
+                            if historyIsLoading {
+                                Text ("Loading readings history...")
+                                    .padding(.top, 8)
+                                    .font(.caption)
+                                    .foregroundColor(infoFontColor)
+                            } else if let errorMessage = viewModel.readingsHistoryData.errorMessage {
                                 Text("Error message:")
                                     .padding(.top, 8)
                                 Text(errorMessage)
-                            } else if viewModel.windViewData.times.isEmpty {
+                            } else if viewModel.readingsHistoryData.times.isEmpty {
                                 Text("Station down")
                                     .padding(.top, 8)
                                     .font(.caption)
                                     .foregroundColor(infoFontColor)
                             } else {
-                                WindReadingsBarChartView(windViewData: viewModel.windViewData, siteType: site.siteType)
+                                ReadingsHistoryBarChartView(readingsHistoryData: viewModel.readingsHistoryData, siteType: site.siteType)
                             }
                         }
                         VStack (alignment: .center) {
@@ -292,14 +362,17 @@ struct SiteDetailView: View {
             Spacer() // Push the content to the top of the sheet
         }
         .onAppear {
-            viewModel.fetchWindData(stationID: site.readingsStation, readingsSource: site.readingsSource)
+            viewModel.GetReadingsHistoryData(stationID: site.readingsStation, readingsSource: site.readingsSource)
             isActive = true
+            historyIsLoading = true
             startTimer()
+        }
+        .onReceive(viewModel.$readingsHistoryData) { _ in
+            historyIsLoading = false
         }
         .onDisappear {
             isActive = false
-        }
-        // Used to open URL links as an in-app sheet using Safari
+        }        // Used to open URL links as an in-app sheet using Safari
         .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }
     }
     // Used to open URL links as an in-app sheet using Safari
@@ -309,75 +382,8 @@ struct SiteDetailView: View {
     private func startTimer() {
         DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval) {
             if isActive {
-                viewModel.fetchWindData(stationID: site.readingsStation, readingsSource: site.readingsSource)
+                viewModel.GetReadingsHistoryData(stationID: site.readingsStation, readingsSource: site.readingsSource)
             }
         }
-    }
-}
-
-
-struct WindReadingsBarChartView: View {
-    var windViewData: WindViewData
-    var siteType: String
-
-    var body: some View {
-        let count = min(windViewData.times.count, 10)
-        let dataRange = (windViewData.times.count - count)..<windViewData.times.count
-        
-        Chart {
-            ForEach(dataRange, id: \.self) { index in
-                let windSpeed = windViewData.windSpeed[index]
-                let windGust = windViewData.windGust[index] ?? 0.0
-                let windDirection = windViewData.windDirection[index]
-                let time = windViewData.times[index]
-                let windColor = windSpeedColor(windSpeed: Int(windSpeed), siteType: siteType)
-                let gustColor = windSpeedColor(windSpeed: Int(windGust), siteType: siteType)
-                
-                BarMark(
-                    x: .value("Time", time),
-                    yStart: .value("Wind Speed", 0),
-                    yEnd: .value("Wind Speed", windSpeed)
-                )
-                .foregroundStyle(windColor)
-                .annotation(position: .bottom) {
-                    VStack {
-                        Text("\(Int(windSpeed))")
-                            .font(.caption)
-                            .foregroundColor(windColor)
-                            .bold()
-                        Image(systemName: windArrow)
-                            .rotationEffect(.degrees(Double(windDirection + 180)))
-                            .foregroundColor(.white)
-                            .bold()
-                            .font(.footnote)
-                        // Replace x-axis values with hh:mm and strip the am/pm
-                        Text(String(time).split(separator: " ", maxSplits: 1).first ?? "")
-                            .font(.caption)
-                    }
-                }
-                if windGust > 0 {
-                    BarMark(
-                        x: .value("Time", time),
-                        yStart: .value("Wind Speed", windSpeed + 1), // Create a gap
-                        yEnd: .value("Wind Gust", windSpeed + windGust + 1)
-                    )
-                    .foregroundStyle(gustColor)
-                    .annotation(position: .top) {
-                        HStack(spacing: 4) {
-                            Text("g")
-                                .font(.caption)
-                            Text("\(Int(windGust))")
-                                .font(.caption)
-                                .foregroundColor(gustColor)
-                                .bold()
-                        }
-                    }
-                }
-            }
-        }
-        .chartYAxis(.hidden) // Remove the y-axis values
-        .chartXAxis(.hidden)
-        .chartXAxis { AxisMarks(stroke: StrokeStyle(lineWidth: 0)) }  // Hide vertical column separators
-        .frame(height: 90) // Reduce the chart height
     }
 }

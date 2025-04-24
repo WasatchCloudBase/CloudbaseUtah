@@ -511,7 +511,7 @@ struct WeatherView: View {
     @State private var showSynopsis = true
     @State private var showShortTerm = false
     @State private var showLongTerm = false
-    @State private var showAviation = false
+    @State private var showAviation = true
     @State private var showSoaringForecast = true
     @State private var showSoundingData = true
     @State private var showSoaringModelData = false
