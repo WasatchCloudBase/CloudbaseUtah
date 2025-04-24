@@ -1,9 +1,3 @@
-//
-//  CommonData.swift
-//  CloudbaseUtah
-//
-//  Created by Brown, Mike on 3/30/25.
-//
 import SwiftUI
 import Combine
 import Foundation

@@ -1,7 +1,3 @@
-//  CloudbaseUtahApp.swift
-//  CloudbaseUtah
-//  Created by Brown, Mike on 3/6/25.
-
 import SwiftUI
 
 @main
@@ -35,17 +31,15 @@ struct CloudbaseUtahApp: App {
                 sunriseSunsetViewModel.getSunriseSunset()
                 sitesViewModel.getSites()
                 initializeLoggingFile()
-                logRefresh()
             }
 
             // Reload metadata when refresh requested
-            .onChange(of: refreshMetadata) { newValue in
+            .onChange(of: refreshMetadata) { _, newValue in
                 if newValue {
                     liftParametersViewModel.getLiftParameters()
                     weatherCodesViewModel.getWeatherCodes()
                     sunriseSunsetViewModel.getSunriseSunset()
                     sitesViewModel.getSites()
-                    logRefresh()
                     refreshMetadata = false
                 }
             }
@@ -62,9 +56,4 @@ struct CloudbaseUtahApp: App {
             }
         }
     }
-}
-
-// Log when app refreshes metadata
-func logRefresh() {
-    let lastUpdated = Date()
 }

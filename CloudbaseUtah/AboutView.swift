@@ -1,7 +1,3 @@
-//  DevMenuView.swift
-//  CloudbaseUtah
-//  Created by Brown, Mike on 3/15/25.
-
 import SwiftUI
 
 struct AboutView: View {

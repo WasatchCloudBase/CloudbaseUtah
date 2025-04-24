@@ -1,9 +1,3 @@
-//
-//  SiteDailyForecast.swift
-//  CloudbaseUtah
-//
-//  Created by Brown, Mike on 4/12/25.
-//
 import SwiftUI
 import Combine
 

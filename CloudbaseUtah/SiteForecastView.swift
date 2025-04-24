@@ -1,9 +1,3 @@
-//
-//  SiteForecastView.swift
-//  CloudbaseUtah
-//
-//  Created by Brown, Mike on 3/24/25.
-//
 import SwiftUI
 import Combine
 import Charts

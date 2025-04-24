@@ -1,7 +1,3 @@
-//  Theme.swift
-//  CloudbaseUtah
-//  Created by Brown, Mike on 3/9/25.
-
 import SwiftUI
 
 // Title bar colors

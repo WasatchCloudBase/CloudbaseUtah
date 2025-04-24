@@ -54,28 +54,16 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				"SiteView backup.temp",
 			);
 			target = 4572B6652D7A8B5200B2723D /* CloudbaseUtah */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		4576EA7F2DB9A0D50014053D /* Exceptions for "CloudbaseUtah" folder in "Compile Sources" phase from "CloudbaseUtah" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = 4572B6622D7A8B5200B2723D /* Sources */;
-			membershipExceptions = (
-				"SiteView backup.temp",
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4572B6682D7A8B5200B2723D /* CloudbaseUtah */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				4572B68C2D7A8B5300B2723D /* Exceptions for "CloudbaseUtah" folder in "CloudbaseUtah" target */,
-				4576EA7F2DB9A0D50014053D /* Exceptions for "CloudbaseUtah" folder in "Compile Sources" phase from "CloudbaseUtah" target */,
 			);
 			path = CloudbaseUtah;
 			sourceTree = "<group>";

@@ -1,9 +1,3 @@
-//
-//  SiteForecastLog.swift
-//  CloudbaseUtah
-//
-//  Created by Brown, Mike on 4/6/25.
-//
 import SwiftUI
 import Foundation
 

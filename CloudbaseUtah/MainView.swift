@@ -1,7 +1,3 @@
-//  ContentView.swift
-//  CloudbaseUtah
-//  Created by Brown, Mike on 3/6/25.
-
 import SwiftUI
 
 struct BaseAppView: View {
@@ -26,10 +22,10 @@ struct BaseAppView: View {
                 }
             }
         }
-        .onChange(of: refreshMetadata) { newValue in
+        .onChange(of: refreshMetadata) { oldValue, newValue in
             if newValue {
                 self.isActive = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     withAnimation {
                         self.isActive = true
                     }
@@ -80,7 +76,7 @@ struct MainView: View {
                     WeatherView()
                 }
                 if selectedView == .map {
-    //                MapView()
+                    MapView()
                 }
                 if selectedView == .webcam {
                     WebcamView()

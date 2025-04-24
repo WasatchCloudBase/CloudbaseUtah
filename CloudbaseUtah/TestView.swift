@@ -1,7 +1,3 @@
-//  TestApp.swift
-//  CloudbaseUtah
-//  Created by Brown, Mike on 3/20/25.
-
 /*
 import SwiftUI
 import Combine

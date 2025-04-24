@@ -1,6 +1,3 @@
-// DevUtilView.swift
-// CloudbaseUtah
-// Created by Brown, Mike on 3/15/25.
 import SwiftUI
 import MapKit
 import Combine
@@ -93,7 +90,7 @@ class CamerasViewModel: ObservableObject {
 struct UDOTCameraListView: View {
     @StateObject private var viewModel = CamerasViewModel()
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 39.321, longitude: -111.0937),
+        center: CLLocationCoordinate2D(latitude: centerLatitude, longitude: centerLongitude),
         span: MKCoordinateSpan(latitudeDelta: 4.0, longitudeDelta: 6.0)
     )
     @State private var selectedCamera: CameraData?
@@ -123,7 +120,7 @@ struct UDOTCameraListView: View {
                 startMonitoringRegion()
             }
             .sheet(item: $selectedCamera) { camera in
-                DetailView(camera: camera)
+                CameraDetailView(camera: camera)
             }
         }
     }
@@ -145,7 +142,7 @@ struct UDOTCameraListView: View {
     }
 }
 
-struct DetailView: View {
+struct CameraDetailView: View {
     let camera: CameraData
     @Environment(\.presentationMode) var presentationMode
 

@@ -1,44 +1,39 @@
-//  DevUtilView.swift
-//  CloudbaseUtah
-//  Created by Brown, Mike on 3/15/25.
-
 import SwiftUI
 import MapKit
-/*
-struct MapView: View {
-    @State private var mapType: MKMapType = .standard
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: centerLatitude, longitude: centerLongitude), // Utah's approximate center
-        span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)
-    )
-    
-    var body: some View {
-        VStack {
-            BuildMapView(mapType: $mapType, region: $region)
-                .cornerRadius(10)
-            Picker("Map Style", selection: $mapType) {
-                Text("Standard").tag(MKMapType.standard)
-                Text("Hybrid").tag(MKMapType.hybrid)
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding()
-        }
-        .padding(.top, 12)
-    }
-}
+import Combine
+import SDWebImage
+import SDWebImageSwiftUI
 
-struct BuildMapView: UIViewRepresentable {
-    @Binding var mapType: MKMapType
-    @Binding var region: MKCoordinateRegion
-    
-    func makeUIView(context: Context) -> MKMapView {
-        let mapView = MKMapView()
-        mapView.setRegion(region, animated: true)
-        return mapView
+
+struct MapView: View {
+    @State private var region = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: centerLatitude, longitude: centerLongitude),
+        span: MKCoordinateSpan(latitudeDelta: 4.0, longitudeDelta: 6.0)
+    )
+    @State private var selectedCamera: CameraData?
+    @State private var lastRegionSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0)
+
+    var body: some View {
+        NavigationView {
+            Map(coordinateRegion: $region)
+            .onAppear {
+                startMonitoringRegion()
+            }
+        }
     }
-    
-    func updateUIView(_ mapView: MKMapView, context: Context) {
-        mapView.mapType = mapType
+
+    private func startMonitoringRegion() {
+        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
+            let currentSpan = region.span
+            if hasRegionSpanChanged(from: lastRegionSpan, to: currentSpan) {
+                lastRegionSpan = currentSpan
+            }
+        }
+    }
+
+    private func hasRegionSpanChanged(from oldSpan: MKCoordinateSpan, to newSpan: MKCoordinateSpan) -> Bool {
+        let tolerance: Double = 0.01
+        return abs(oldSpan.latitudeDelta - newSpan.latitudeDelta) > tolerance ||
+            abs(oldSpan.longitudeDelta - newSpan.longitudeDelta) > tolerance
     }
 }
-*/
