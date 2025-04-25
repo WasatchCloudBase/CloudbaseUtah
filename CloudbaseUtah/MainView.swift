@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct BaseAppView: View {
     @Binding var refreshMetadata: Bool
@@ -46,7 +47,6 @@ struct SplashScreenView: View {
             .padding(.top, 2)
     }
 }
-
 
 struct MainView: View {
     @Binding var refreshMetadata: Bool

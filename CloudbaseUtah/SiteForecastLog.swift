@@ -1,10 +1,6 @@
 import SwiftUI
 import Foundation
 
-// Set thermal calc logging for development
-let turnOnLogging: Bool = true
-let printForecastURL: Bool = false
-
 // Forecast logging to optimize thermal calculations
 struct LogData: Codable {
     // Core data based on site and forecast API call results

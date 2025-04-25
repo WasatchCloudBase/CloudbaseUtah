@@ -2,6 +2,10 @@ import SwiftUI
 import Combine
 import Foundation
 
+// Set thermal calc logging for development
+let turnOnLogging: Bool = false
+let printForecastURL: Bool = false
+
 // Set global constants
 enum NavBarSelectedView:Int {
     case site = 0
@@ -52,6 +56,9 @@ let dateChangeDividerSize: CGFloat = 1
 let areaChartOpacity: CGFloat = 0.5
 
 // Map parameters
+let layersImage: String = "square.3.layers.3d"
+let playImage: String = "play.fill"
+let pauseImage: String = "pause.fill"
 let annotationCameraImage: String = "camera.circle"
 let annotationTextWidth: CGFloat = 60
 let annotationTextHeight: CGFloat = 14

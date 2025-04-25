@@ -115,6 +115,8 @@ struct UDOTCameraListView: View {
                     }
                 }
             }
+            .cornerRadius(10)
+            .padding(.vertical, 8)
             .onAppear {
                 viewModel.fetchCameras()
                 startMonitoringRegion()
