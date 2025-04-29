@@ -76,7 +76,8 @@ struct MainView: View {
                     WeatherView()
                 }
                 if selectedView == .map {
-                    MapView()
+                    MapView(sitesViewModel: sitesViewModel)
+                        .environmentObject(sitesViewModel)
                 }
                 if selectedView == .webcam {
                     WebcamView()

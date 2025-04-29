@@ -20,6 +20,17 @@ let sectionHeaderColor: Color = .white
 let infoFontColor: Color = .titanium
 let warningFontColor: Color = .warning
 
+// Skew-T chart colors
+let skewTDALRColor: Color = .moodygray
+let skewTDewpointColor: Color = .displayValueGreen
+let skewTTempColor: Color = .displayValueRed
+let skewTGridBorderColor: Color = .grayslime
+let skewTGridLineColor: Color = .grayslime
+let skewTAxisLabelColor: Color = .titanium
+let buttonBackgroundColor: Color = .darksky2
+let buttonTextColor: Color = .white
+let buttonWidth: CGFloat = 100
+
 // Table and chart colors
 let tableBackgroundColor: Color = .gunmetal //Color(.secondarySystemBackground)   //.darkgray
 let tableSectionDividerColor: Color = .grayslime

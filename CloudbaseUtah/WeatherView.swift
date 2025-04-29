@@ -924,6 +924,18 @@ struct WeatherView: View {
                 }
             }
             
+            // High res Skew-T (from Matt Hansen)
+/*            Section(header: Text("High Res Skew-T")
+                .font(.headline)
+                .foregroundColor(sectionHeaderColor)
+                .bold()) {
+                VStack {
+                    SkewTChartView()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            }
+ */
+            
             // Skew-T
             Section(header: Text("SLC Skew-T")
                 .font(.headline)

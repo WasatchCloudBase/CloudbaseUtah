@@ -4,16 +4,30 @@ import Combine
 
 
 struct MapView: View {
+    @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
+    @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
+    @EnvironmentObject var sitesViewModel: SitesViewModel
+    @StateObject var siteLatestReadingsViewModel: SiteLatestReadingsViewModel
+    
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: centerLatitude, longitude: centerLongitude),
         span: MKCoordinateSpan(latitudeDelta: 4.0, longitudeDelta: 6.0)
     )
+
     @State private var isLayerSheetPresented = false
-    @State private var activeLayers: Set<MapLayer> = []
-    @State private var selectedMapType: CustomMapStyle = .standard
     @State private var isPlaying = false
     @State private var animationProgress: Double = 0.0
     @State private var currentTime: String = "00:00"
+    
+    // Set default map type and layer settings
+    @State private var activeLayers: Set<MapLayer> = [.windStations, .paraglidingSites]
+    @State private var selectedMapType: CustomMapStyle = .standard
+
+    
+    init(sitesViewModel: SitesViewModel) {
+        _siteLatestReadingsViewModel = StateObject(wrappedValue: SiteLatestReadingsViewModel(viewModel: sitesViewModel))
+    }
 
     var body: some View {
         ZStack {
@@ -22,7 +36,6 @@ struct MapView: View {
                 .mapStyle(selectedMapType.toMapKitStyle())
                 .cornerRadius(10)
                 .padding(.vertical, 10)
-
 
             // Floating Item Bar
             VStack {
@@ -143,7 +156,6 @@ struct LayerSelectionView: View {
                         )) {
                             VStack(alignment: .leading) {
                                 Text(layer.name)
-                         //           .font(.headline)
                                     .foregroundColor(rowHeaderColor)
                                 Text(layer.description)
                                     .font(.subheadline)
@@ -157,7 +169,14 @@ struct LayerSelectionView: View {
 }
 
 enum MapLayer: String, CaseIterable {
-    case precipitation, cloudCover, tracks, thermalHeatMap, flySkyHyAirspace, windStations, paraglidingSites
+    case
+         precipitation,
+         cloudCover,
+         tracks,
+         thermalHeatMap,
+         flySkyHyAirspace,
+         windStations,
+         paraglidingSites
     
     var name: String {
         switch self {
@@ -173,8 +192,8 @@ enum MapLayer: String, CaseIterable {
     
     var description: String {
         switch self {
-        case .precipitation: return "Past and forecasted precipitation"
-        case .cloudCover: return "Past and forecasted cloud coverage"
+        case .precipitation: return "Past and forecasted precipitation (data provided by www.rainviewer.com)"
+        case .cloudCover: return "Animated past and forecasted cloud coverage"
         case .tracks: return "Tracks from thermal.kk7"
         case .thermalHeatMap: return "Heat map from thermal.kk7"
         case .flySkyHyAirspace: return "Can load into FlySkyHy from Links tab"

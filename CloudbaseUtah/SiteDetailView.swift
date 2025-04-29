@@ -56,6 +56,7 @@ class ReadingsHistoryDataModel: ObservableObject {
                 .sink { [weak self] data in
                     guard let self = self, let station = data.STATION.first else {
                         print("No valid data found for station: \(stationID)")
+                        self?.readingsHistoryData.errorMessage = "No valid data found for station: \(stationID)"
                         return
                     }
                     let recentTimes = Array(station.OBSERVATIONS.date_time.suffix(8))
@@ -66,6 +67,7 @@ class ReadingsHistoryDataModel: ObservableObject {
                        let latestTime = ISO8601DateFormatter().date(from: latestTimeString),
                        Date().timeIntervalSince(latestTime) > 2 * 60 * 60 {
                         self.readingsHistoryData.errorMessage = "Station \(stationID) has not updated in the past 2 hours"
+                        print("Station \(stationID) has not updated in the past 2 hours")
                     } else {
                         self.readingsHistoryData.times = recentTimes
                         self.readingsHistoryData.windSpeed = recentWindSpeed
@@ -82,6 +84,7 @@ class ReadingsHistoryDataModel: ObservableObject {
             let urlString = "https://sierragliding.us/api/station/" + stationID + "/data?start=" + String(readingStart) + "&end=" + String(readingEnd) + "&sample=" + String(readingInterval)
             guard let url = URL(string: urlString) else {
                 self.readingsHistoryData.errorMessage = "Invalid CUASA readings URL"
+                print("Invalid CUASA readings URL")
                 return
             }
             URLSession.shared.dataTaskPublisher(for: url)
@@ -92,35 +95,38 @@ class ReadingsHistoryDataModel: ObservableObject {
                     switch completion {
                     case .failure(let error):
                         self.readingsHistoryData.errorMessage = error.localizedDescription
+                        print("Error fetching CUASA data: \(error.localizedDescription)")
                     case .finished:
                         break
                     }
                 }, receiveValue: { [weak self] readingsHistoryDataArray in
-                    self?.processReadingsHistoryData(readingsHistoryDataArray)
+                    self?.processCUASAReadingsHistoryData(readingsHistoryDataArray)
                 })
                 .store(in: &cancellables)
             // end of let url...URLSession... section
         default:
-            print ("Invalid readings source for station: \(stationID)")
+            print("Invalid readings source for station: \(stationID)")
         }
     }
     
-    private func processReadingsHistoryData(_ readingsHistoryDataArray: [CUASAReadingsData]) {
+    private func processCUASAReadingsHistoryData(_ readingsHistoryDataArray: [CUASAReadingsData]) {
         guard let latestEntry = readingsHistoryDataArray.last else {
             self.readingsHistoryData.errorMessage = "No data available"
+            print("No data available from CUASA")
             return
         }
         let currentTime = Date().timeIntervalSince1970
         let twoHoursInSeconds: Double = 2 * 60 * 60
         if currentTime - latestEntry.timestamp > twoHoursInSeconds {
             self.readingsHistoryData.errorMessage = "Station has not updated in the past 2 hours"
+            print("Station has not updated in the past 2 hours")
             return
         }
         let recentEntries = Array(readingsHistoryDataArray.suffix(8))
-        updateReadingsHistory(with: recentEntries)
+        updateCUASAReadingsHistory(with: recentEntries)
     }
     
-    private func updateReadingsHistory(with readingsHistoryDataArray: [CUASAReadingsData]) {
+    private func updateCUASAReadingsHistory(with readingsHistoryDataArray: [CUASAReadingsData]) {
         var times = [String]()
         var windSpeed = [Double]()
         var windGust = [Double?]()
@@ -175,7 +181,6 @@ struct ReadingsHistoryBarChartView: View {
                             .bold()
                         Image(systemName: windArrow)
                             .rotationEffect(.degrees(Double(windDirection + 180)))
-                            .foregroundColor(.white)
                             .bold()
                             .font(.footnote)
                         // Replace x-axis values with hh:mm and strip the am/pm
@@ -216,13 +221,13 @@ struct SiteDetailView: View {
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
-    @ObservedObject var viewModel = ReadingsHistoryDataModel()
+    @StateObject var viewModel = ReadingsHistoryDataModel()
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
     @State private var isActive = false
     @State private var historyIsLoading = true
-    
+        
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
@@ -361,14 +366,15 @@ struct SiteDetailView: View {
             historyIsLoading = true
             startTimer()
         }
-        .onReceive(viewModel.$readingsHistoryData) { _ in
+        .onReceive(viewModel.$readingsHistoryData) { newData in
             historyIsLoading = false
         }
         .onDisappear {
             isActive = false
-        }        // Used to open URL links as an in-app sheet using Safari
+        }
         .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }
     }
+
     // Used to open URL links as an in-app sheet using Safari
     func openLink(_ url: URL) { externalURL = url; showWebView = true }
     
@@ -377,6 +383,7 @@ struct SiteDetailView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval) {
             if isActive {
                 viewModel.GetReadingsHistoryData(stationID: site.readingsStation, readingsSource: site.readingsSource)
+                startTimer() // Continue the timer loop
             }
         }
     }
