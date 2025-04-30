@@ -53,14 +53,6 @@ struct AboutView: View {
                         .foregroundColor(rowHeaderColor)
                 }
                 
-                // Test Skew-T view
-                NavigationLink(destination: SkewTChartView()) {
-                    Text("Test for Skew-T")
-                        .font(.subheadline)
-                        .foregroundColor(rowHeaderColor)
-                }
-
-                
                 // Force reload app (e.g., metadata changes)
                 Button(action: {
                     // Trigger a change to appRefreshID to reload metadata by making BaseAppView reappear

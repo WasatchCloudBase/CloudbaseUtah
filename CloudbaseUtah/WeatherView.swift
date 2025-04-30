@@ -120,6 +120,7 @@ struct SoaringForecast: Identifiable {
     let soundingData: [SoundingData]
     let richSoundingData: [RichSoundingData]
     let modelData: [ModelData]
+    let forecastMaxTemp: Int
 }
 struct SoaringForecastData: Identifiable {
     let id = UUID()
@@ -250,8 +251,19 @@ class SoaringForecastViewModel: ObservableObject {
         let modelDataString = String(content[modelRange.upperBound..<endRange.lowerBound])
         let modelData = parseModelData(modelDataString)
         
+        // Get forecast max temp for use in Skew-T diagram
+        var forecastMaxTemp = 0
+        let maxTempRange = soaringForecastDataString.lowercased().range(of: "forecast maximum temperature")
+        if maxTempRange != nil {
+            let substringAfterKeyword = soaringForecastDataString[maxTempRange!.upperBound... ]
+            let maxTempPattern = "\\d+"
+            if let maxTempMatch = substringAfterKeyword.range(of: maxTempPattern, options: .regularExpression) {
+                forecastMaxTemp = Int(substringAfterKeyword[maxTempMatch]) ?? 0
+            }
+        }
+        
         DispatchQueue.main.async {
-            self.soaringForecast = SoaringForecast(date: date, soaringForecastFormat: "Rich", triggerTempData: triggerTempString, soaringForecastData: soaringForecast, soundingData: soundingData, richSoundingData: richSoundingData, modelData: modelData)
+            self.soaringForecast = SoaringForecast(date: date, soaringForecastFormat: "Rich", triggerTempData: triggerTempString, soaringForecastData: soaringForecast, soundingData: soundingData, richSoundingData: richSoundingData, modelData: modelData, forecastMaxTemp: forecastMaxTemp)
         }
     }
     
@@ -289,8 +301,8 @@ class SoaringForecastViewModel: ObservableObject {
         }
         let modelData: [ModelData] = []     // Not used in this forecast
         let date = String(content[dateRange.upperBound...].prefix(9)).trimmingCharacters(in: .whitespacesAndNewlines)
-        let soaringForecastDataSring = removeExtraBlankLines(String(content[SoaringForecastRange.upperBound..<soundingRange.lowerBound]))
-        let soaringForecast = parseSimpleSoaringForecastData(soaringForecastDataSring)
+        let soaringForecastDataString = removeExtraBlankLines(String(content[SoaringForecastRange.upperBound..<soundingRange.lowerBound]))
+        let soaringForecast = parseSimpleSoaringForecastData(soaringForecastDataString)
         let soundingDataString = removeExtraBlankLines(String(content[soundingRange.upperBound..<endRange.lowerBound]))
         let soundingData = soundingDataString
             .replacingOccurrences(of: " FT MSL", with: "")
@@ -313,8 +325,18 @@ class SoaringForecastViewModel: ObservableObject {
         var richSoundingData: [RichSoundingData] = []
         richSoundingData.append(RichSoundingData(altitude: 0, temperatureF: 0.0, windDirection: 0, windSpeedKt: 0, thermalIndex: 0.0, liftRateMs: 0.0))
 
+        // Find forecast max temp to use in skew-T diagarm
+        var forecastMaxTemp: Int = 0
+        let pattern = "forecast max temp\\s+(\\d+\\.?\\d*)"
+        let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive)
+        let nsString = soaringForecastDataString as NSString
+        let results = regex?.matches(in: soaringForecastDataString, options: [], range: NSRange(location: 0, length: nsString.length))
+        if let match = results?.first, let range = Range(match.range(at: 1), in: soaringForecastDataString) {
+            forecastMaxTemp = Int(soaringForecastDataString[range]) ?? 0
+        }
+        
         DispatchQueue.main.async {
-            self.soaringForecast = SoaringForecast(date: date, soaringForecastFormat: "Simple", triggerTempData: "", soaringForecastData: soaringForecast, soundingData: soundingData.reversed(), richSoundingData: richSoundingData, modelData: modelData)
+            self.soaringForecast = SoaringForecast(date: date, soaringForecastFormat: "Simple", triggerTempData: "", soaringForecastData: soaringForecast, soundingData: soundingData.reversed(), richSoundingData: richSoundingData, modelData: modelData, forecastMaxTemp: forecastMaxTemp)
         }
     }
     
@@ -923,9 +945,9 @@ struct WeatherView: View {
                     }
                 }
             }
-            
+
             // High res Skew-T (from Matt Hansen)
-/*            Section(header: Text("High Res Skew-T")
+            Section(header: Text("SLC Morning Sounding Skew-T")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
                 .bold()) {
@@ -934,10 +956,9 @@ struct WeatherView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
- */
             
             // Skew-T
-            Section(header: Text("SLC Skew-T")
+            Section(header: Text("SLC Latest Forecast Skew-T")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
                 .bold()) {

@@ -23,6 +23,7 @@ extension Array {
 }
 
 class SkewTChartManager: ObservableObject {
+    var soaringForecastViewModel: SoaringForecastViewModel?
     @Published var dalrFlag = 0
     let surfaceAlt: Double = 4.229
     let maxAlt: Double = 20
@@ -33,8 +34,8 @@ class SkewTChartManager: ObservableObject {
     var margin: (top: CGFloat, bottom: CGFloat, left: CGFloat, right: CGFloat) {
         (top: proportionalHeight * 0.06,
          bottom: proportionalHeight * 0.06,
-         left: screenWidth * 0.1,
-         right: screenWidth * 0.03)
+         left: screenWidth * 0.14,
+         right: screenWidth * 0.08)
     }
     
     var width: CGFloat { screenWidth - margin.left - margin.right }
@@ -84,16 +85,22 @@ class SkewTChartManager: ObservableObject {
     
     // Read user input and updates chart parameters
     func d3Update(userTemp: Double) {
-        if skewTSoundingData.count > 1 {
-            let threshold = (skewTSoundingData[1].Temp_c * 9 / 5) + 32 + 5.4
-            if userTemp > threshold && userTemp < 120 {
-                let userSkewTLiftParameters = getSkewTLiftParameters(temp: userTemp, data: skewTSoundingData)
-                dalrFlag = 1
-                d3Clear()
-                skewTLiftParameters = userSkewTLiftParameters
-                dalrFlag = 0
-            } else {
-                d3Clear()
+print("1")
+        DispatchQueue.main.async {
+print("2")
+            if self.skewTSoundingData.count > 1 {
+                let threshold = (self.skewTSoundingData[1].Temp_c * 9 / 5) + 32 + 5.4
+print("threshold: \(threshold)")
+print("userTemp: \(userTemp)")
+                if userTemp > threshold && userTemp < 120 {
+                    let userSkewTLiftParameters = self.getSkewTLiftParameters(temp: userTemp, data: self.skewTSoundingData)
+                    self.dalrFlag = 1
+                    self.d3Clear()
+                    self.skewTLiftParameters = userSkewTLiftParameters
+                    self.dalrFlag = 0
+                } else {
+                    self.d3Clear()
+                }
             }
         }
     }
@@ -162,23 +169,13 @@ class SkewTChartManager: ObservableObject {
     // populateSoaringForecast() async function equivalent using URLSession
     func populateSoaringForecast() {
         
-        // Get default max temperature
-/*        let maxTempURL = URL(string: "https://storage.googleapis.com/wasatch-wind-static/maxtemp.json")!
-        URLSession.shared.dataTask(with: maxTempURL) { data, response, error in
-            if let data = data {
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let maxtemp = json["maxtemp"] as? Double {
-                    DispatchQueue.main.async {
-                        self.maxTempF = maxtemp
-                    }
-                 }
-             } else {
-                 print("max temp URL build error: \(String(describing: error))")
-             }
-         }.resume()
- */
-        self.maxTempF = 55
-        
+        // Use soaringForecastViewModel to get forecast max temp
+        if let forecastMaxTemp = soaringForecastViewModel?.soaringForecast?.forecastMaxTemp {
+            self.maxTempF = Double(forecastMaxTemp)
+        } else {
+            self.maxTempF = 0 // Default value if not available
+        }
+
         // Get sounding data
         let soundingURL = URL(string: "https://storage.googleapis.com/wasatch-wind-static/raob.json")!
         URLSession.shared.dataTask(with: soundingURL) { data2, response2, error2 in
@@ -204,6 +201,7 @@ class SkewTChartManager: ObservableObject {
 
 struct SkewTChartView: View {
     @StateObject var manager = SkewTChartManager()
+    @ObservedObject private var soaringForecastViewModel = SoaringForecastViewModel()   // Used to get max surface temp for the day
     @State private var userTemp: String = ""
     
     var body: some View {
@@ -361,8 +359,9 @@ struct SkewTChartView: View {
                         .padding(.bottom, 1)
                     Spacer()
                 }
-                .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 24)
             }
 
             // Alternate max temp controls
@@ -370,14 +369,18 @@ struct SkewTChartView: View {
                 .font(.subheadline)
                 .padding(.top)
             HStack (alignment: .center) {
-                TextField("°F", text: $userTemp)
+                TextField("Temp", text: $userTemp)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .cornerRadius(8)
-                    .frame(width: buttonWidth)
+                    .frame(width: buttonWidth * 0.7)
                     .keyboardType(.decimalPad)
+                    .padding(.trailing, 0)
                     .onSubmit {
                         hideKeyboard()
                     }
+                Text("°F ")
+                    .font(.subheadline)
+                    .padding(.leading, 0)
                 Button(action: {
                     hideKeyboard()
                     manager.d3Update(userTemp: Double(userTemp) ?? manager.maxTempF)
@@ -402,12 +405,17 @@ struct SkewTChartView: View {
                 .background(buttonBackgroundColor)
                 .cornerRadius(8)
             }
+            // Setting buttonStyle to work around a SwiftUI bug where both buttons are actioned when either is pressed
+            .buttonStyle(BorderlessButtonStyle())
             .padding(.horizontal)
-            .padding(.bottom)
+            .padding(.top, 0)
+            .padding(.bottom, 8)
         }
+        .padding(.vertical, 0)
         .background(tableBackgroundColor)
         .cornerRadius(8)
         .onAppear {
+            manager.soaringForecastViewModel = soaringForecastViewModel
             manager.populateSoaringForecast()
         }
     }
