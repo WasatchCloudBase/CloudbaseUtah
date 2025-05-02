@@ -193,6 +193,7 @@ struct SiteView: View {
     @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
     @EnvironmentObject var sitesViewModel: SitesViewModel
     @StateObject var siteLatestReadingsViewModel: SiteLatestReadingsViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var selectedSite: Sites?
     @State private var isActive = false
@@ -325,6 +326,11 @@ struct SiteView: View {
             siteLatestReadingsViewModel.reloadLatestReadingsData()
         }) { site in
             SiteDetailView(site: site)
+        }
+        .onChange(of: scenePhase) {
+            if scenePhase == .active {
+                siteLatestReadingsViewModel.reloadLatestReadingsData()
+            }
         }
     }
     func openSiteDetail(_ site: Sites) {

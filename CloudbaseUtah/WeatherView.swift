@@ -776,51 +776,51 @@ struct WeatherView: View {
                     // Process rich format sounding data
                     if ((soaringForecastViewModel.soaringForecast?.soaringForecastFormat) == "Rich") {
                         LazyVGrid(columns: [
-                            GridItem(.fixed(60), spacing: 6, alignment: .trailing),
-                            GridItem(.fixed(52), spacing: 6, alignment: .trailing),
-                            GridItem(.fixed(52), spacing: 6, alignment: .trailing),
-                            GridItem(.fixed(52), spacing: 6, alignment: .trailing),
-                            GridItem(.fixed(52), spacing: 6, alignment: .trailing)
+                            GridItem(.fixed(64), spacing: 5, alignment: .trailing),
+                            GridItem(.fixed(52), spacing: 5, alignment: .trailing),
+                            GridItem(.fixed(52), spacing: 5, alignment: .trailing),
+                            GridItem(.fixed(56), spacing: 5, alignment: .trailing),
+                            GridItem(.fixed(52), spacing: 5, alignment: .trailing)
                         ], spacing: 6) {
                             Text("Altitude")
-                                .font(.subheadline)
+                                .font(.footnote)
                                 .foregroundColor(infoFontColor)
                             Text("Temp")
-                                .font(.subheadline)
+                                .font(.footnote)
                                 .foregroundColor(infoFontColor)
                             Text("Wind (mph)")
-                                .font(.subheadline)
+                                .font(.footnote)
                                 .foregroundColor(infoFontColor)
                             Text("Thermal Index")
-                                .font(.subheadline)
+                                .font(.footnote)
                                 .foregroundColor(infoFontColor)
                                 .multilineTextAlignment(.trailing)
                             Text("Lift (m/s)")
-                                .font(.subheadline)
+                                .font(.footnote)
                                 .foregroundColor(infoFontColor)
                                 .multilineTextAlignment(.trailing)
                             ForEach(soaringForecastViewModel.soaringForecast?.richSoundingData ?? []) { data in
                                 Text("\(data.altitude) ft")
-                                    .font(.subheadline)
+                                    .font(.footnote)
                                 HStack {
                                     Text("\(String(Int(data.temperatureF)))")
-                                        .font(.subheadline)
+                                        .font(.caption)
                                         .foregroundColor(tempColor(Int(data.temperatureF))) +
                                     Text(" ° F")
-                                        .font(.subheadline)
+                                        .font(.footnote)
                                 }
                                 HStack {
                                     Text("\(String(Int(data.windSpeedMph)))")
-                                        .font(.subheadline)
+                                        .font(.footnote)
                                         .foregroundColor(windSpeedColor(windSpeed: Int(data.windSpeedMph), siteType: ""))
                                     Image(systemName: windArrow)
                                         .rotationEffect(Angle(degrees: Double(data.windDirection+180)))
-                                        .font(.footnote)
+                                        .font(.caption)
                                 }
                                 Text(String(format: "%.1f", data.thermalIndex))
-                                    .font(.subheadline)
+                                    .font(.footnote)
                                 Text(String(format: "%.1f", data.liftRateMs))
-                                    .font(.subheadline)
+                                    .font(.footnote)
                                     .foregroundStyle(thermalColor(data.liftRateMs))
                             }
                         }
@@ -906,47 +906,47 @@ struct WeatherView: View {
                 Text("Forecast for the next \(windAloftData.cycle) hours")
                     .font(.footnote)
                     LazyVGrid(columns: [
-                    GridItem(.fixed(60), spacing: 6, alignment: .trailing),
-                    GridItem(.fixed(60), spacing: 6, alignment: .trailing),
-                    GridItem(.fixed(60), spacing: 6, alignment: .trailing),
+                    GridItem(.fixed(64), spacing: 5, alignment: .trailing),
+                    GridItem(.fixed(64), spacing: 5, alignment: .trailing),
+                    GridItem(.fixed(64), spacing: 5, alignment: .trailing),
                 ], spacing: 6) {
                     Text("Altitude")
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundColor(infoFontColor)
                     Text("Temp")
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundColor(infoFontColor)
                     Text("Wind (mph)")
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundColor(infoFontColor)
                     ForEach(windAloftData.readings, id: \.altitude) { reading in
                         Text("\(reading.altitude) ft")
-                            .font(.subheadline)
+                            .font(.footnote)
                         HStack {
                             Text("\(reading.temperature)")
-                                .font(.subheadline)
+                                .font(.footnote)
                                 .foregroundColor(tempColor(reading.temperature)) +
                             Text(" ° F")
-                                .font(.subheadline)
+                                .font(.footnote)
                         }
                         if reading.windDirection == 990 {
                             Text("Light and variable")
-                                .font(.subheadline)
+                                .font(.footnote)
                         } else {
                             HStack {
                                 Text("\(reading.windSpeed)")
-                                    .font(.subheadline)
+                                    .font(.footnote)
                                     .foregroundColor(windSpeedColor(windSpeed: reading.windSpeed, siteType: ""))
                                 Image(systemName: windArrow)
                                     .rotationEffect(Angle(degrees: Double(reading.windDirection)))
-                                    .font(.footnote)
+                                    .font(.caption)
                             }
                         }
                     }
                 }
             }
-
-            // High res Skew-T (from Matt Hansen)
+            
+            // High res Skew-T from morning sounding (from Matt Hansen)
             Section(header: Text("SLC Morning Sounding Skew-T")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
@@ -957,7 +957,7 @@ struct WeatherView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
             
-            // Skew-T
+            // Skew-T from latest forecast model
             Section(header: Text("SLC Latest Forecast Skew-T")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)

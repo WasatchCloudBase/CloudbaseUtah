@@ -52,5 +52,16 @@ let displayValueRed: Color = .displayValueRed
 let repeatDateTimeColor: Color = .titanium
 
 // Map page colors
-let annotationTextColor: Color = .sky
-let cameraColor: Color = .sky
+let cameraAnnotationColor: Color = .sky
+let cameraAnnotationTextColor: Color = cameraAnnotationColor
+let siteAnnotationColor: Color = .sunshine
+let siteAnnotationTextColor: Color = siteAnnotationColor
+let siteAnnotationShadowColor: Color = .black
+
+// Images
+let windArrow: String = "arrow.up"  // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
+let layersImage: String = "square.3.layers.3d"
+let playImage: String = "play.fill"
+let pauseImage: String = "pause.fill"
+let cameraAnnotationImage: String = "camera.circle"
+let siteAnnotationImage: String = "paperplane.fill"  // "mappin"  //"mappin.and.ellipse"  //"mountain.2.circle.fill"

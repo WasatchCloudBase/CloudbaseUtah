@@ -93,13 +93,13 @@ func windSpeedColor(windSpeed: Int, siteType: String) -> Color {
         }
     default:
         switch windSpeed {
-        case 0...13:
+        case 0...11:
             return displayValueGreen
-        case 14...21:
+        case 12...17:
             return displayValueYellow
-        case 22...27:
+        case 18...23:
             return displayValueOrange
-        case 28...:
+        case 24...:
             return displayValueRed
         default:
             return .clear

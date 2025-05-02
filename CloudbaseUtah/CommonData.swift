@@ -19,10 +19,10 @@ let googleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
 let googleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
 let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
 let sunriseLongitude: Double = -111.9801
-let centerLatitude: Double = 39.6                   // Center of Utah for maps
-let centerLongitude: Double = -111.5
-let windArrow: String = "arrow.up"
-    // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
+let mapInitLongitude: Double = 40.53                // Center point for map on initial opening
+let mapInitLatitude: Double = -111.87
+let mapInitLatitudeSpan: Double = 0.60              // Size of map on initial opening
+let mapInitLongitudeSpan: Double = mapInitLatitudeSpan * 1.5
 let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
 let pageRefreshInterval: TimeInterval = 150         // Time in seconds to refresh wind readings (300 for 5 min)
 
@@ -56,10 +56,6 @@ let dateChangeDividerSize: CGFloat = 1
 let areaChartOpacity: CGFloat = 0.5
 
 // Map parameters
-let layersImage: String = "square.3.layers.3d"
-let playImage: String = "play.fill"
-let pauseImage: String = "pause.fill"
-let annotationCameraImage: String = "camera.circle"
 let annotationTextWidth: CGFloat = 60
 let annotationTextHeight: CGFloat = 14
 
@@ -250,8 +246,8 @@ struct Sites: Codable, Identifiable {
     var readingsStation: String
     var includeIn5DayForecast: String
     var pressureZoneReadingTime: String
-    var forecastLat: String
-    var forecastLon: String
+    var siteLat: String
+    var siteLon: String
 }
 
 struct SitesResponse: Codable {
@@ -290,8 +286,8 @@ class SitesViewModel: ObservableObject {
                         readingsStation: row[8],
                         includeIn5DayForecast: row[8],
                         pressureZoneReadingTime: row[10],
-                        forecastLat: row[11],
-                        forecastLon: row[12]
+                        siteLat: row[11],
+                        siteLon: row[12]
                     )
                 }
             }

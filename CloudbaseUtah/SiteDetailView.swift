@@ -222,6 +222,7 @@ struct SiteDetailView: View {
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
     @StateObject var viewModel = ReadingsHistoryDataModel()
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
@@ -324,8 +325,8 @@ struct SiteDetailView: View {
                 {
                     SiteDailyForecastView (
                         weatherCodesViewModel: weatherCodesViewModel,
-                        forecastLat: site.forecastLat,
-                        forecastLon: site.forecastLon,
+                        siteLat: site.siteLat,
+                        siteLon: site.siteLon,
                         forecastNote: site.forecastNote,
                         siteName: site.siteName,
                         siteType: site.siteType )
@@ -340,8 +341,8 @@ struct SiteDetailView: View {
                         liftParametersViewModel: liftParametersViewModel,
                         sunriseSunsetViewModel: sunriseSunsetViewModel,
                         weatherCodesViewModel: weatherCodesViewModel,
-                        forecastLat: site.forecastLat,
-                        forecastLon: site.forecastLon,
+                        siteLat: site.siteLat,
+                        siteLon: site.siteLon,
                         forecastNote: site.forecastNote,
                         siteName: site.siteName,
                         siteType: site.siteType )
@@ -371,6 +372,11 @@ struct SiteDetailView: View {
         }
         .onDisappear {
             isActive = false
+        }
+        .onChange(of: scenePhase) {
+            if scenePhase == .active {
+                viewModel.GetReadingsHistoryData(stationID: site.readingsStation, readingsSource: site.readingsSource)
+            }
         }
         .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }
     }

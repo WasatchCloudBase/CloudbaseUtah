@@ -24,6 +24,17 @@ struct AboutView: View {
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
+                
+                // Force reload app (e.g., metadata changes)
+                Button(action: {
+                    // Trigger a change to appRefreshID to reload metadata by making BaseAppView reappear
+                    refreshMetadata = true
+                }) {
+                    Text("Reload metadata changes")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                }
+                
                 // Metadata
                 Button(action: {
                     if let url = URL(string: cloudbaseUtahGoogleSheetLink) {
@@ -49,16 +60,6 @@ struct AboutView: View {
                 // UDOT camera map
                 NavigationLink(destination: UDOTCameraListView()) {
                     Text("UDOT cameras map")
-                        .font(.subheadline)
-                        .foregroundColor(rowHeaderColor)
-                }
-                
-                // Force reload app (e.g., metadata changes)
-                Button(action: {
-                    // Trigger a change to appRefreshID to reload metadata by making BaseAppView reappear
-                    refreshMetadata = true
-                }) {
-                    Text("Reload metadata changes")
                         .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                 }

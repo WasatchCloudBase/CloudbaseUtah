@@ -338,7 +338,7 @@ struct SkewTChartView: View {
                         .font(.headline)
                         .padding(.bottom, 2)
                     Text("Forecast max temp: \(String(Int(manager.maxTempF)))°F")
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundStyle(infoFontColor)
                         .padding(.bottom, 4)
                     Text("Legend:")

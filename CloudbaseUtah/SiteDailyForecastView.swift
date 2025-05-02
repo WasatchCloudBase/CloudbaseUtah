@@ -107,17 +107,17 @@ class DailyForecastViewModel: ObservableObject {
 struct SiteDailyForecastView: View {
     @ObservedObject var weatherCodesViewModel: WeatherCodesViewModel
     @StateObject private var viewModel: DailyForecastViewModel
-    var forecastLat: String
-    var forecastLon: String
+    var siteLat: String
+    var siteLon: String
     var forecastNote: String
     var siteName: String
     var siteType: String
     
-    init(weatherCodesViewModel: WeatherCodesViewModel, forecastLat: String, forecastLon: String, forecastNote: String, siteName: String, siteType: String) {
+    init(weatherCodesViewModel: WeatherCodesViewModel, siteLat: String, siteLon: String, forecastNote: String, siteName: String, siteType: String) {
         self._weatherCodesViewModel = ObservedObject(wrappedValue: weatherCodesViewModel)
         self._viewModel = StateObject(wrappedValue: DailyForecastViewModel(weatherCodesViewModel: weatherCodesViewModel))
-        self.forecastLat = forecastLat
-        self.forecastLon = forecastLon
+        self.siteLat = siteLat
+        self.siteLon = siteLon
         self.forecastNote = forecastNote
         self.siteName = siteName
         self.siteType = siteType
@@ -233,7 +233,7 @@ struct SiteDailyForecastView: View {
             }
         }
         .onAppear {
-            viewModel.fetchDailyWeatherData(latitude: forecastLat, longitude: forecastLon)
+            viewModel.fetchDailyWeatherData(latitude: siteLat, longitude: siteLon)
         }
     }
 }

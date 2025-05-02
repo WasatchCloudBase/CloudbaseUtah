@@ -50,10 +50,5 @@ struct CloudbaseUtahApp: App {
             }
         
         }
-        .onChange(of: scenePhase) {
-            if scenePhase == .active {
-                // TBD what should be reloaded on change between active, background, and inactive
-            }
-        }
     }
 }

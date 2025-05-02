@@ -90,8 +90,8 @@ class CamerasViewModel: ObservableObject {
 struct UDOTCameraListView: View {
     @StateObject private var viewModel = CamerasViewModel()
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: centerLatitude, longitude: centerLongitude),
-        span: MKCoordinateSpan(latitudeDelta: 4.0, longitudeDelta: 6.0)
+        center: CLLocationCoordinate2D(latitude: mapInitLongitude, longitude: mapInitLatitude),
+        span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
     )
     @State private var selectedCamera: CameraData?
     @State private var lastRegionSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0)
@@ -104,11 +104,11 @@ struct UDOTCameraListView: View {
                         selectedCamera = camera
                     } label: {
                         VStack {
-                            Image(systemName: annotationCameraImage)
-                                .foregroundColor(cameraColor)
+                            Image(systemName: cameraAnnotationImage)
+                                .foregroundColor(cameraAnnotationColor)
                             Text(camera.location)
                                 .font(.footnote)
-                                .foregroundColor(annotationTextColor)
+                                .foregroundColor(cameraAnnotationTextColor)
                         //        .multilineTextAlignment(.center)
                                 .frame(width: annotationTextWidth, height: annotationTextHeight)
                         }
