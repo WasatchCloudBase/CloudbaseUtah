@@ -1,0 +1,345 @@
+import SwiftUI
+import MapKit
+import Combine
+
+// Custom Map Style Enum
+enum CustomMapStyle: String, CaseIterable {
+    case standard, hybrid
+    func toMapKitStyle() -> MapStyle {
+        switch self {
+        case .standard:
+            return .standard(emphasis: .muted)
+        case .hybrid:
+            return .hybrid(elevation: .realistic)
+        }
+    }
+}
+
+// Set up model to retain map settings (center, zoom, layers) when navigating between views)
+// Initial state settings are established in CloudbaseUtahApp file
+class MapSettingsViewModel: ObservableObject {
+    @Published var region: MKCoordinateRegion
+    @Published var activeLayers: Set<MapLayer>
+    @Published var selectedMapType: CustomMapStyle
+    
+    init(region: MKCoordinateRegion,
+         activeLayers: Set<MapLayer>,
+         selectedMapType: CustomMapStyle = .standard)
+    {
+        self.region = region
+        self.activeLayers = activeLayers
+        self.selectedMapType = selectedMapType
+    }
+}
+
+struct mapAnnotationList : Identifiable {
+    let id = UUID()
+    let annotationType: String      // site, station, etc.
+    let annotationID: String        // ID based on the annotationType
+    let annotationName: String
+    let coordinates: CLLocationCoordinate2D
+}
+
+enum MapLayer: String, CaseIterable {
+    case
+        paraglidingSites,
+        windStations,
+        precipitation,
+        cloudCover,
+        tracks,
+        thermalHeatMap,
+        flySkyHyAirspace
+    
+    var name: String {
+        switch self {
+        case .paraglidingSites: return "Paragliding sites"
+        case .windStations: return "Wind stations"
+        case .precipitation: return "Precipitation"
+        case .cloudCover: return "Cloud cover"
+        case .tracks: return "Skyways"
+        case .thermalHeatMap: return "Thermals"
+        case .flySkyHyAirspace: return "FlySkyHy LZs and thermal hotspots"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .paraglidingSites: return "Select site for readings and forecast"
+        case .windStations: return "Current wind readings \n(visible when zoomed in)"
+        case .precipitation: return "Past and forecasted precipitation \n(provided by www.rainviewer.com)"
+        case .cloudCover: return "Past and forecasted cloud coverage \n(provided by www.rainviewer.com)"
+        case .tracks: return "Tracks from thermal.kk7"
+        case .thermalHeatMap: return "Heat map from thermal.kk7"
+        case .flySkyHyAirspace: return "Previe of custom airspace \n(use Links tab to load into FlySkyHy)"
+        }
+    }
+}
+
+struct MapView: View {
+    @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
+    @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
+    @EnvironmentObject var sitesViewModel: SitesViewModel
+    @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
+    @StateObject var siteLatestReadingsViewModel: SiteLatestReadingsViewModel
+    @State private var selectedSite: Sites?
+    @State private var isLayerSheetPresented = false
+    @State private var isPlaying = false
+    @State private var animationProgress: Double = 0.0
+    @State private var currentTime: String = "00:00"
+    @State private var mapAnnotations: [mapAnnotationList] = []
+    
+    init(sitesViewModel: SitesViewModel) {
+        _siteLatestReadingsViewModel = StateObject(wrappedValue: SiteLatestReadingsViewModel(viewModel: sitesViewModel))
+    }
+    
+    var body: some View {
+        
+        Map(coordinateRegion: Binding(
+            // Code to prevent directly modifying the published mapSettingsViewModel.region
+            // (which can create unpredictable SwiftUI behavior)
+            get: { mapSettingsViewModel.region },
+            set: { newRegion in
+                DispatchQueue.main.async {
+                    mapSettingsViewModel.region = newRegion
+                }
+            }
+        ), annotationItems: mapAnnotations) { annotation in
+            MapAnnotation(coordinate: annotation.coordinates) {
+                switch annotation.annotationType {
+                    
+                case "site":
+                    VStack {
+                        Image(systemName: siteAnnotationImage)
+                            .foregroundColor(siteAnnotationColor)
+                            .imageScale(mapSettingsViewModel.region.span.latitudeDelta < 0.5 ? .medium : .small)
+                            .shadow(color: siteAnnotationShadowColor, radius: 2)
+                        
+                        if mapSettingsViewModel.region.span.latitudeDelta < 0.5 {
+                            Text(annotation.annotationName)
+                                .font(.caption)
+                                .foregroundColor(siteAnnotationTextColor)
+                                .shadow(color: siteAnnotationShadowColor, radius: 2)
+                        }
+                    }
+//                    .onTapGesture {
+//                        selectedSite = annotation.annotationID
+//                    }
+
+                case "station":
+                    VStack {
+                        if mapSettingsViewModel.region.span.latitudeDelta > 0.5 {
+                            // Don't display stations when zoomed out to prevent performance issues
+                            /*
+                            Image(systemName: "circle.fill")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 2, height: 2)
+                                .foregroundColor(stationAnnotationColor)
+                                .shadow(color: stationAnnotationShadowColor, radius: 2)
+                             */
+                        } else if mapSettingsViewModel.region.span.latitudeDelta > 0.25 {
+                            Image(systemName: "arrow.up")
+                                .foregroundColor(stationAnnotationColor)
+                                .shadow(color: stationAnnotationShadowColor, radius: 2)
+                        } else {
+                            VStack {
+                                //                                        Text("\(station.windSpeed ?? 0, specifier: "%.1f") m/s")
+                                Image(systemName: "arrow.up")
+                                //                                            .rotationEffect(.degrees(station.windDirection ?? 0))
+                                    .foregroundColor(stationAnnotationTextcolor)
+                                    .shadow(color: stationAnnotationShadowColor, radius: 2)
+                                Text(annotation.annotationName)
+                                    .font(.caption)
+                                    .foregroundColor(stationAnnotationTextcolor)
+                                    .shadow(color: stationAnnotationShadowColor, radius: 2)
+                            }
+                        }
+                    }
+
+                default:
+                    Text("Unknown")
+                }
+            }
+        }
+        .onChange(of: mapSettingsViewModel.activeLayers) { _ in
+            updateMapAnnotations()
+        }
+        .onAppear {
+            updateMapAnnotations()
+        }
+        .sheet(item: $selectedSite) { site in
+            SiteDetailView(site: site)
+        }
+        .cornerRadius(10)
+        .padding(.vertical, 10)
+        
+        // Floating Item Bar
+        VStack {
+            Spacer()
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading) {
+                    Button(action: { isLayerSheetPresented.toggle() }) {
+                        VStack {
+                            Image(systemName: layersImage)
+                                .imageScale(.large)
+                                .foregroundStyle(layersIconColor)
+                            Text("Layers")
+                                .font(.caption)
+                                .foregroundColor(layersFontColor)
+                        }
+                    }
+                    .sheet(isPresented: $isLayerSheetPresented) {
+                        LayerSelectionView(activeLayers: $mapSettingsViewModel.activeLayers, selectedMapType: $mapSettingsViewModel.selectedMapType)
+                    }
+                }
+                .padding()
+                .background(layersIconBackgroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                Spacer()
+                
+                if mapSettingsViewModel.activeLayers.contains(.precipitation) || mapSettingsViewModel.activeLayers.contains(.cloudCover) {
+                    VStack(alignment: .trailing) {
+                        HStack(alignment: .center) {
+                            Button(action: { isPlaying.toggle() }) {
+                                Image(systemName: isPlaying ? pauseImage : playImage)
+                                    .imageScale(.large)
+                            }
+                            .padding(.horizontal, 8)
+                            ProgressView(value: animationProgress)
+                                .frame(width: 100)
+                            Text(currentTime)
+                                .font(.headline)
+                                .foregroundColor(toolbarFontColor)
+                                .padding(.horizontal, 8)
+                        }
+                    }
+                    .padding()
+                    .background(.thinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 16)
+        .padding(.bottom, 24)
+        .sheet(item: $selectedSite, onDismiss: {
+            siteLatestReadingsViewModel.reloadLatestReadingsData()
+        }) { site in
+            SiteDetailView(site: site)
+        }
+    }
+ 
+
+/*
+ func openSiteDetail(_ site: Sites) {
+        selectedSite = site
+    }
+ */
+
+    private func updateMapAnnotations() {
+        mapAnnotations.removeAll()
+        
+        if mapSettingsViewModel.activeLayers.contains(.paraglidingSites) {
+            let filteredSites = sitesViewModel.sites.filter { $0.siteType == "Mountain" || $0.siteType == "Soaring" }
+            for site in filteredSites {
+                if let lat = Double(site.siteLat), let lon = Double(site.siteLon) {
+                    let annotation = mapAnnotationList(
+                        annotationType: "site",
+                        annotationID: site.id.uuidString,           // NEED TO CHANGE TO BE A SITE STRUCTURE TO PASS TO DETAIL SHEET
+                        annotationName: site.siteName,
+                        coordinates: CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                    )
+                    mapAnnotations.append(annotation)
+                }
+            }
+        }
+        
+        if mapSettingsViewModel.activeLayers.contains(.windStations) {
+            siteLatestReadingsViewModel.getLatestMesonetReadings(stationParameters: "") {
+                DispatchQueue.main.async {
+                    for reading in siteLatestReadingsViewModel.latestReadings {
+                        if let lat = Double(reading.stationLatitude), let lon = Double(reading.stationLongitude) {
+                            let annotation = mapAnnotationList(
+                                annotationType: "station",
+                                annotationID: reading.stationID,
+                                annotationName: reading.stationName,
+                                coordinates: CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                            )
+                            mapAnnotations.append(annotation)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+ // Layer and map type selection view
+struct LayerSelectionView: View {
+    @Binding var activeLayers: Set<MapLayer>
+    @Binding var selectedMapType: CustomMapStyle
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    HStack {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(toolbarActiveImageColor)
+                        Text("Back")
+                            .foregroundColor(toolbarActiveFontColor)
+                    }
+                }
+                .padding()
+                Spacer()
+            }
+            .background(toolbarBackgroundColor)
+            
+            List {
+                // Disabling map type; need to determine how to make it work with the annotation layer code
+                /*
+                 Section(header: Text("Map Type")) {
+                 ForEach(CustomMapStyle.allCases, id: \.self) { style in
+                 Button(action: { selectedMapType = style }) {
+                 HStack {
+                 Text(style.rawValue.capitalized)
+                 if selectedMapType == style {
+                 Image(systemName: "checkmark")
+                 .foregroundColor(.blue)
+                 }
+                 }
+                 }
+                 }
+                 }
+                 */
+                
+                Section(header: Text("Map Layers")) {
+                    ForEach(MapLayer.allCases, id: \.self) { layer in
+                        Toggle(isOn: Binding(
+                            get: { activeLayers.contains(layer) },
+                            set: { isActive in
+                                if isActive {
+                                    activeLayers.insert(layer)
+                                } else {
+                                    activeLayers.remove(layer)
+                                }
+                            }
+                        )) {
+                            VStack(alignment: .leading) {
+                                Text(layer.name)
+                                    .foregroundColor(rowHeaderColor)
+                                Text(layer.description)
+                                    .font(.subheadline)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

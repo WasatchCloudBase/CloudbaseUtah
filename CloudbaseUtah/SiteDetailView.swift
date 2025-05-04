@@ -39,7 +39,9 @@ class ReadingsHistoryDataModel: ObservableObject {
     func GetReadingsHistoryData(stationID: String, readingsSource: String) {
         switch readingsSource {
         case "Mesonet":
-            let url = URL(string: "https://api.mesowest.net/v2/station/timeseries?&stid=\(stationID)&recent=420&vars=air_temp,wind_direction,wind_gust,wind_speed&units=english,speed|mph,temp|F&within=120&obtimezone=local&timeformat=%-I:%M %p&token=ef3b9f4584b64e6da12d8688f19d9f4a")!
+            let parameters = "&stid=\(stationID)"
+            let urlString = historyReadingsAPIHeader + parameters + historyReadingsAPITrailer + mesowestAPIToken
+            let url = URL(string: urlString)!
             cancellable = URLSession.shared.dataTaskPublisher(for: url)
                 .map { $0.data }
                 .map { data in

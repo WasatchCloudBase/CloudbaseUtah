@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 @main
 struct CloudbaseUtahApp: App {
@@ -8,6 +9,14 @@ struct CloudbaseUtahApp: App {
     @StateObject private var sunriseSunsetViewModel = SunriseSunsetViewModel()
     @StateObject private var weatherCodesViewModel = WeatherCodesViewModel()
     @StateObject private var sitesViewModel = SitesViewModel()
+    @StateObject private var mapSettingsViewModel = MapSettingsViewModel(
+        region: MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
+            span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
+        ),
+        activeLayers: [.windStations, .paraglidingSites],
+        selectedMapType: .standard
+    )
     
     var body: some Scene {
         WindowGroup {
@@ -15,14 +24,15 @@ struct CloudbaseUtahApp: App {
             // Call app base view and track flag for requests to refresh metadata
             BaseAppView(refreshMetadata: $refreshMetadata)
 
-            // Force dark mode
-            .environment(\.colorScheme, .dark)
-
-            // Establish metadata view models
+            // Establish metadata and map setting view models
             .environmentObject(liftParametersViewModel)
             .environmentObject(weatherCodesViewModel)
             .environmentObject(sunriseSunsetViewModel)
             .environmentObject(sitesViewModel)
+            .environmentObject(mapSettingsViewModel)
+            
+            // Force dark mode
+            .environment(\.colorScheme, .dark)
         
             // Initial load of metadata
             .onAppear {

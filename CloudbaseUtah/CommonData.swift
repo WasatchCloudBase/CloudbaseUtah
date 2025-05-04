@@ -19,10 +19,11 @@ let googleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
 let googleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
 let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
 let sunriseLongitude: Double = -111.9801
-let mapInitLongitude: Double = 40.53                // Center point for map on initial opening
-let mapInitLatitude: Double = -111.87
+let mapInitLatitude: Double = 40.53                // Center point for map on initial opening
+let mapInitLongitude: Double = -111.87
 let mapInitLatitudeSpan: Double = 0.60              // Size of map on initial opening
 let mapInitLongitudeSpan: Double = mapInitLatitudeSpan * 1.5
+let mapEnableRotation: Bool = false
 let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
 let pageRefreshInterval: TimeInterval = 150         // Time in seconds to refresh wind readings (300 for 5 min)
 
@@ -39,8 +40,17 @@ let uDOTCamerasAPI: String = "https://www.udottraffic.utah.gov/api/v2/get/camera
 let uDOTCamerasLink: String = "https://www.udottraffic.utah.gov"
 let cloudbaseUtahGitLink: String = "https://github.com/WasatchCloudBase/CloudbaseUtah"
 let cloudbaseUtahGoogleSheetLink: String = "https://docs.google.com/spreadsheets/d/1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls/edit?gid=0#gid=0"
-var ipCamLink: String = "https://apps.apple.com/us/app/ip-camera-viewer-ipcams/id1045600272"
-var UHGPGAcamsLink: String = "https://www.uhgpga.org/webcams"
+let ipCamLink: String = "https://apps.apple.com/us/app/ip-camera-viewer-ipcams/id1045600272"
+let UHGPGAcamsLink: String = "https://www.uhgpga.org/webcams"
+
+// Build APIs for Mesowest weather readings
+// latestReadings API is header + parameters (stations; can be blank) + trailer + token
+let latestReadingsAPIHeader = "https://api.mesowest.net/v2/station/latest?"
+let latestReadingsAPITrailer =  "&recent=420&vars=air_temp,altimeter,wind_direction,wind_gust,wind_speed&units=english,speed|mph,temp|F&within=120&obtimezone=local&timeformat=%-I:%M%20%p"
+// historyReadings API is header + parameters (station) + trailer + token
+let historyReadingsAPIHeader = "https://api.mesowest.net/v2/station/timeseries?"
+let historyReadingsAPITrailer = "&recent=420&vars=air_temp,wind_direction,wind_gust,wind_speed&units=english,speed|mph,temp|F&within=120&obtimezone=local&timeformat=%-I:%M %p"
+let mesowestAPIToken = "&token=ef3b9f4584b64e6da12d8688f19d9f4a"
 
 // Grid structure sizing parameters
 let headingHeight: CGFloat = 16                                 // Day, date, time rows

@@ -5,6 +5,9 @@ struct LatestReadings: Identifiable {
     let id = UUID()
     let stationID: String
     let stationName: String
+    let stationElevation: String
+    let stationLatitude: String
+    let stationLongitude: String
     let windSpeed: Double?
     let windDirection: Double?
     let windGust: Double?
@@ -82,45 +85,50 @@ struct CUASAReadingsData: Codable {
 
 class SiteLatestReadingsViewModel: ObservableObject {
     @Published var latestReadings: [LatestReadings] = []
+    @Published var stationParameters: String = ""
     var sitesViewModel: SitesViewModel
     
     // sites available in this view model
     init(viewModel: SitesViewModel) {
         self.sitesViewModel = viewModel
         
-        // Get latest readings; these calls are structured to ensure Mesonet function (which resets the latest readings structure)
-        // completes before CUASA function is called.  This prevents a timing issue that would clear out CUASA readings
-        getLatestMesonetReadings {
-            self.getLatestCUASAReadings()
-        }
-    }
-
-    func reloadLatestReadingsData() {
-        getLatestMesonetReadings {
-            self.getLatestCUASAReadings()
-        }
-    }
-
-    func getLatestMesonetReadings(completion: @escaping () -> Void) {
+        // Build list of Mesoewst stations for latest readings API call
         let mesonetSites = sitesViewModel.sites.filter { $0.readingsSource == "Mesonet" && !$0.readingsStation.isEmpty }
         guard !mesonetSites.isEmpty else {
             print ("filtered sites are empty:  none matched 'Mesonet' and had a readingsStation ")
             return
         }
-        let baseURL = "https://api.mesowest.net/v2/station/latest?"
-        let parameters = mesonetSites.map { "&stid=\($0.readingsStation)" }.joined()
-        let trailer = "&recent=420&vars=air_temp,altimeter,wind_direction,wind_gust,wind_speed&units=english,speed|mph,temp|F&within=120&obtimezone=local&timeformat=%-I:%M%20%p&token=ef3b9f4584b64e6da12d8688f19d9f4a"
-        let urlString = baseURL + parameters + trailer
+        let stationParameters = mesonetSites.map { "&stid=\($0.readingsStation)" }.joined()
+        
+        // Get latest readings; these calls are structured to ensure Mesonet function (which resets the latest readings structure)
+        // completes before CUASA function is called.  This prevents a timing issue that would clear out CUASA readings
+        getLatestMesonetReadings(stationParameters: stationParameters) {
+            self.getLatestCUASAReadings()
+        }
+    }
+
+    func reloadLatestReadingsData() {
+        getLatestMesonetReadings (stationParameters: stationParameters) {
+            self.getLatestCUASAReadings()
+        }
+    }
+
+    func getLatestMesonetReadings(stationParameters: String, completion: @escaping () -> Void) {
+        let urlString = latestReadingsAPIHeader + stationParameters + latestReadingsAPITrailer + mesowestAPIToken
         guard let url = URL(string: urlString) else { return }
         URLSession.shared.dataTask(with: url) { data, response, error in
             guard let data = data, error == nil else { return }
             do {
                 let decodedResponse = try JSONDecoder().decode(MesonetLatestResponse.self, from: data)
+                
                 DispatchQueue.main.async {
                     self.latestReadings = decodedResponse.station.map { station in
                         LatestReadings(
                             stationID: station.stationID,
                             stationName: station.stationName,
+                            stationElevation: station.elevation,
+                            stationLatitude: station.latitude,
+                            stationLongitude: station.longitude,
                             windSpeed: station.observations.windSpeed?.value,
                             windDirection: station.observations.windDirection?.value,
                             windGust: station.observations.windGust?.value,
@@ -128,6 +136,7 @@ class SiteLatestReadingsViewModel: ObservableObject {
                         )
                     }
                 }
+                
                 // Use a completion handler to make sure the latestReadings array is reset before CUASA readings are appended
                 completion()
                 
@@ -171,6 +180,9 @@ class SiteLatestReadingsViewModel: ObservableObject {
                             let newReading = LatestReadings(
                                 stationID: latestData.ID,
                                 stationName: latestData.ID,
+                                stationElevation: "0",                  // Not yet implementated for CUASA stations
+                                stationLatitude: "0",
+                                stationLongitude: "0",
                                 windSpeed: convertKMToMiles(latestData.windspeed_avg).rounded(),
                                 windDirection: latestData.wind_direction_avg,
                                 windGust: convertKMToMiles(latestData.windspeed_max).rounded(),
@@ -178,6 +190,7 @@ class SiteLatestReadingsViewModel: ObservableObject {
                             )
                             self.latestReadings.append(newReading)
                         }
+                        
                     }
                 } catch {
                     print("Error decoding JSON: \(error)")

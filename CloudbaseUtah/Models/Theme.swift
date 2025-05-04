@@ -52,11 +52,17 @@ let displayValueRed: Color = .displayValueRed
 let repeatDateTimeColor: Color = .titanium
 
 // Map page colors
+let layersIconColor: Color = toolbarImageColor
+let layersFontColor: Color = toolbarFontColor
+let layersIconBackgroundColor: Color = .black
 let cameraAnnotationColor: Color = .sky
 let cameraAnnotationTextColor: Color = cameraAnnotationColor
-let siteAnnotationColor: Color = .sunshine
-let siteAnnotationTextColor: Color = siteAnnotationColor
+let siteAnnotationColor: UIColor = .sunshine
+let siteAnnotationTextColor: UIColor = siteAnnotationColor
 let siteAnnotationShadowColor: Color = .black
+let stationAnnotationColor: UIColor = .orangetheme
+let stationAnnotationTextcolor: UIColor = stationAnnotationColor
+let stationAnnotationShadowColor: Color = .black
 
 // Images
 let windArrow: String = "arrow.up"  // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
@@ -65,3 +71,5 @@ let playImage: String = "play.fill"
 let pauseImage: String = "pause.fill"
 let cameraAnnotationImage: String = "camera.circle"
 let siteAnnotationImage: String = "paperplane.fill"  // "mappin"  //"mappin.and.ellipse"  //"mountain.2.circle.fill"
+let stationAnnotationImage: String = "wind"
+let defaultAnnotationImage: String = "questionmark"
