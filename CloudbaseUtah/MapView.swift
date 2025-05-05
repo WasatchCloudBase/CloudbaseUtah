@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import Combine
+import UIKit
 
 // Custom Map Style Enum
 enum CustomMapStyle: String, CaseIterable {
@@ -20,7 +21,7 @@ class MapSettingsViewModel: ObservableObject {
     @Published var region: MKCoordinateRegion
     @Published var activeLayers: Set<MapLayer>
     @Published var selectedMapType: CustomMapStyle
-    
+
     init(region: MKCoordinateRegion,
          activeLayers: Set<MapLayer>,
          selectedMapType: CustomMapStyle = .standard)
@@ -49,7 +50,7 @@ enum MapLayer: String, CaseIterable {
          tracks,
          thermalHeatMap,
          flySkyHyAirspace
-    
+
     var name: String {
         switch self {
         case .paraglidingSites: return "Paragliding sites"
@@ -83,45 +84,49 @@ struct MKMapViewWrapper: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
     var annotations: [mapAnnotationList]
     var mapType: MKMapType
-    
+    @Binding var selectedSite: Sites? // Add binding to handle selection
+
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView(frame: .zero)
         mapView.isRotateEnabled = mapEnableRotation
         mapView.delegate = context.coordinator
         mapView.setRegion(region, animated: false)
         mapView.mapType = mapType
-        // Register a marker view.
-        mapView.register(MKMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: "CustomAnnotation")
+        // Register a basic MKAnnotationView for reuse.
+        mapView.register(MKAnnotationView.self, forAnnotationViewWithReuseIdentifier: "CustomAnnotation")
         return mapView
     }
-    
+
     func updateUIView(_ uiView: MKMapView, context: Context) {
-        // Update the map type if needed
         uiView.mapType = mapType
         
-        // Update the region if it has changed
+        // Update region if needed.
         if uiView.region.center.latitude != region.center.latitude ||
             uiView.region.center.longitude != region.center.longitude {
-            uiView.setRegion(region, animated: true)
+            uiView.setRegion(region, animated: false)
         }
         
         // --- Lazy Load Annotations ---
-        // Only add annotations that fall within the current visible map rect
+        // Prevent a potential issue on first layout by checking if the visibleMapRect is valid.
         let visibleMapRect = uiView.visibleMapRect
-        let visibleAnnotations = annotations.filter { annotation in
-            let point = MKMapPoint(annotation.coordinates)
-            return visibleMapRect.contains(point)
+        let visibleAnnotations: [mapAnnotationList]
+        if visibleMapRect.size.width == 0 || visibleMapRect.size.height == 0 {
+            visibleAnnotations = annotations
+        } else {
+            visibleAnnotations = annotations.filter { annotation in
+                let point = MKMapPoint(annotation.coordinates)
+                return visibleMapRect.contains(point)
+            }
         }
         
-        // Remove existing annotations
         uiView.removeAnnotations(uiView.annotations)
         
-        // Convert to CustomMKPointAnnotation so we can set clustering identifiers
+        // Convert to CustomMKPointAnnotation so clustering identifiers can be set.
         let customAnnotations = visibleAnnotations.map { ann -> CustomMKPointAnnotation in
             let customAnnotation = CustomMKPointAnnotation()
             customAnnotation.coordinate = ann.coordinates
             customAnnotation.title = ann.annotationName
-            // Save the annotation type (e.g., "site", "station") in subtitle
+            // Save the annotation type (e.g., "site", "station") in subtitle.
             customAnnotation.subtitle = ann.annotationType
             return customAnnotation
         }
@@ -139,9 +144,8 @@ struct MKMapViewWrapper: UIViewRepresentable {
             self.parent = parent
         }
         
-        // Provide an annotation view with clustering enabled
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            // Skip user location
+            // Skip the user location annotation.
             if annotation is MKUserLocation {
                 return nil
             }
@@ -150,51 +154,53 @@ struct MKMapViewWrapper: UIViewRepresentable {
             
             // Handle cluster annotations separately.
             if let clusterAnnotation = annotation as? MKClusterAnnotation {
-                let clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
-                    ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+                let clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+                    ?? MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+                clusterView.annotation = annotation
                 clusterView.canShowCallout = true
                 
-                // Inspect one of the member annotations to determine the type.
+                // Determine image and color based on one of the members.
                 if let member = clusterAnnotation.memberAnnotations.first as? CustomMKPointAnnotation {
-                    if member.subtitle == "station" {
-                        clusterView.glyphImage = UIImage(systemName: stationAnnotationImage)
-                        clusterView.markerTintColor = stationAnnotationColor
-                        clusterView.displayPriority = .defaultHigh
-                    } else if member.subtitle == "site" {
-                        clusterView.glyphImage = UIImage(systemName: siteAnnotationImage)
-                        clusterView.markerTintColor = siteAnnotationColor
-                        clusterView.displayPriority = .required
+                    if member.subtitle == "site" {
+                        clusterView.image = siteAnnotationUIImage
+                        clusterView.clusteringIdentifier = nil // Do not cluster sites
+                    } else if member.subtitle == "station" {
+                        clusterView.image = UIImage(systemName: stationAnnotationImage)
+                        clusterView.tintColor = UIColor.yellow
+                        clusterView.clusteringIdentifier = "stationCluster"
                     } else {
-                        clusterView.glyphImage = nil
-                        clusterView.markerTintColor = UIColor.gray
+                        clusterView.image = UIImage(systemName: defaultAnnotationImage)
+                        clusterView.tintColor = UIColor.blue
+                        clusterView.clusteringIdentifier = nil
                     }
                 }
                 return clusterView
             }
             
             // Individual annotation view for non-cluster annotations.
-            let annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
-                ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+            let annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+                ?? MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+
+            annotationView.annotation = annotation
             annotationView.canShowCallout = true
-            
+
             if let customAnnotation = annotation as? CustomMKPointAnnotation {
                 switch customAnnotation.subtitle {
-                case "station":
-                    annotationView.clusteringIdentifier = "stationCluster" // Only station annotations cluster.
-                    annotationView.glyphImage = UIImage(systemName: stationAnnotationImage)
-                    annotationView.markerTintColor = stationAnnotationColor
-                    annotationView.displayPriority = .defaultHigh
                 case "site":
-                    annotationView.clusteringIdentifier = nil // Sites do not cluster.
-                    annotationView.glyphImage = UIImage(systemName: siteAnnotationImage)
-                    annotationView.markerTintColor = siteAnnotationColor
-                    annotationView.displayPriority = .required
+                    annotationView.clusteringIdentifier = nil // Do not cluster.
+                    annotationView.image = siteAnnotationUIImage
+                case "station":
+                    annotationView.clusteringIdentifier = "stationCluster" // Enable clustering.
+                    annotationView.image = UIImage(systemName: stationAnnotationImage)?.withTintColor(.yellow, renderingMode: .alwaysTemplate)
+                    annotationView.tintColor = UIColor.yellow
                 default:
                     annotationView.clusteringIdentifier = nil
-                    annotationView.glyphImage = nil
-                    annotationView.markerTintColor = UIColor.gray
+                    annotationView.image = UIImage(systemName: defaultAnnotationImage)
+                    annotationView.tintColor = UIColor.blue
+
                 }
             }
+
             return annotationView
         }
         
@@ -244,22 +250,22 @@ struct MapView: View {
     @State private var animationProgress: Double = 0.0
     @State private var currentTime: String = "00:00"
     @State private var mapAnnotations: [mapAnnotationList] = []
-    
+
     init(sitesViewModel: SitesViewModel) {
         _siteLatestReadingsViewModel = StateObject(wrappedValue: SiteLatestReadingsViewModel(viewModel: sitesViewModel))
     }
-    
+
     var body: some View {
         ZStack {
-            // Use custom MKMapViewWrapper to allow separate markers and clustering based on annotation type
             MKMapViewWrapper(
                 region: $mapSettingsViewModel.region,
                 annotations: mapAnnotations,
-                mapType: mapSettingsViewModel.selectedMapType.toMapKitType()
+                mapType: mapSettingsViewModel.selectedMapType.toMapKitType(),
+                selectedSite: $selectedSite // Pass the binding
             )
             .cornerRadius(10)
             .padding(.vertical, 10)
-            
+
             // Floating Item Bar
             VStack {
                 Spacer()
@@ -285,15 +291,15 @@ struct MapView: View {
                     .padding()
                     .background(layersIconBackgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
+
                     Spacer()
-                    
+
                     if mapSettingsViewModel.activeLayers.contains(.precipitation) ||
                         mapSettingsViewModel.activeLayers.contains(.cloudCover) {
                         VStack(alignment: .trailing) {
                             HStack(alignment: .center) {
                                 Button(action: { isPlaying.toggle() }) {
-                                    Image(systemName: isPlaying ? pauseImage : playImage)
+                                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                                         .imageScale(.large)
                                 }
                                 .padding(.horizontal, 8)
@@ -301,7 +307,6 @@ struct MapView: View {
                                     .frame(width: 100)
                                 Text(currentTime)
                                     .font(.headline)
-                                    .foregroundColor(toolbarFontColor)
                                     .padding(.horizontal, 8)
                             }
                         }
@@ -326,11 +331,11 @@ struct MapView: View {
             SiteDetailView(site: site)
         }
     }
-    
-    // Update the annotations based on the active layers
+
+    // Update the annotations based on the active layers.
     private func updateMapAnnotations() {
         mapAnnotations.removeAll()
-        
+
         if mapSettingsViewModel.activeLayers.contains(.paraglidingSites) {
             let filteredSites = sitesViewModel.sites.filter { $0.siteType == "Mountain" || $0.siteType == "Soaring" }
             for site in filteredSites {
@@ -345,7 +350,7 @@ struct MapView: View {
                 }
             }
         }
-        
+
         if mapSettingsViewModel.activeLayers.contains(.windStations) {
             siteLatestReadingsViewModel.getLatestMesonetReadings(stationParameters: "") {
                 DispatchQueue.main.async {
@@ -370,7 +375,7 @@ struct LayerSelectionView: View {
     @Binding var activeLayers: Set<MapLayer>
     @Binding var selectedMapType: CustomMapStyle
     @Environment(\.presentationMode) var presentationMode
-    
+
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
@@ -379,16 +384,14 @@ struct LayerSelectionView: View {
                 }) {
                     HStack {
                         Image(systemName: "chevron.left")
-                            .foregroundColor(toolbarActiveImageColor)
                         Text("Back")
-                            .foregroundColor(toolbarActiveFontColor)
                     }
                 }
                 .padding()
                 Spacer()
             }
-            .background(toolbarBackgroundColor)
-            
+            .background(Color.blue.opacity(0.2))
+
             List {
                 Section(header: Text("Map Type")) {
                     Picker("Map Type", selection: $selectedMapType) {
@@ -412,7 +415,6 @@ struct LayerSelectionView: View {
                         )) {
                             VStack(alignment: .leading) {
                                 Text(layer.name)
-                                    .foregroundColor(rowHeaderColor)
                                 Text(layer.description)
                                     .font(.subheadline)
                             }

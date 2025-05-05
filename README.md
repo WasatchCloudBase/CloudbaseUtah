@@ -4,7 +4,7 @@ iPhone app for Utah paragliding pilots.  Provides weather forecasts, site readin
 
 # Background
 XCSkies is the best forecasting tool for Utah paragliders, particularly for going XC.
-However, XCSkies has several limitations that this app addresses:
+This app complements XCSkies by addressing several of the limitations of XCSkies.  XCSkies:
   - Does not provide the "big picture" weather forecast
   - Does not provide actual wind readings
   - Does not provide live web cam views of the sky
@@ -21,7 +21,7 @@ This app provides a quick look at all of this for each site.  XCSkies is still r
     - SLC area NWS soaring forecast and sounding data
     - SLC area NWS winds aloft forecast
     - SLC skew-T diagram
-- Detailed weather readings and forecast for Utah paragdling sites and other key stations
+- Detailed weather readings and forecast for Utah paragliding sites and other key stations
     - Readings:
       - Site latest readings
       - Site recent readings history
@@ -32,6 +32,10 @@ This app provides a quick look at all of this for each site.  XCSkies is still r
       - Wind speed and direction (surface and each 2k feet up to 18k)
       - Lift strength (each 2k feet up to 18k)
       - Top of lift
+- Interactive map with layers for:
+      - Paragliding sites
+      - Weather stations
+      - Others TBD
 - Live web cams for real-time skies
 - Links to additional resources
   - Custom airspace file for FlySKyHy that contains LZs, thermal hot spots, Do Not Land areas, and raptor closures across Utah and various other paragliding sites

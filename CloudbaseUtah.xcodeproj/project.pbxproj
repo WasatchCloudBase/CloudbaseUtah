@@ -54,7 +54,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				MapView.backup,
+				MapView.old,
 			);
 			target = 4572B6652D7A8B5200B2723D /* CloudbaseUtah */;
 		};
@@ -65,7 +65,7 @@
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
 			buildPhase = 4572B6622D7A8B5200B2723D /* Sources */;
 			membershipExceptions = (
-				MapView.backup,
+				MapView.old,
 			);
 		};
 /* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */

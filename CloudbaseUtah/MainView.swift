@@ -38,7 +38,7 @@ struct BaseAppView: View {
 
 struct SplashScreenView: View {
     var body: some View {
-        Image("UtahPGicon8")
+        Image("UtahPGicon")
             .resizable()
             .scaledToFit()
         Text("Cloudbase Utah")

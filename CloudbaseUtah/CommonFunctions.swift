@@ -1,6 +1,7 @@
 import SwiftUI
 import Foundation
 import SafariServices
+import UIKit
 
 // Common utility functions
 func tempColor(_ tempF: Int) -> Color {
@@ -321,5 +322,19 @@ extension Array where Element: Hashable {
     func unique() -> [Element] {
         var seen: Set<Element> = []
         return filter { seen.insert($0).inserted }
+    }
+}
+
+// Scale UI Image for map display
+extension UIImage {
+    func scaled(toWidth newWidth: CGFloat) -> UIImage? {
+        let aspectRatio = size.height / size.width
+        let newHeight = newWidth * aspectRatio
+        let newSize = CGSize(width: newWidth, height: newHeight)
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 0.0)
+        draw(in: CGRect(origin: .zero, size: newSize))
+        let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return scaledImage
     }
 }
