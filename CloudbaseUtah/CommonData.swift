@@ -254,7 +254,6 @@ struct Sites: Codable, Identifiable {
     var readingsAlt: String
     var readingsSource: String
     var readingsStation: String
-    var includeIn5DayForecast: String
     var pressureZoneReadingTime: String
     var siteLat: String
     var siteLon: String
@@ -294,16 +293,58 @@ class SitesViewModel: ObservableObject {
                         readingsAlt: row[6],
                         readingsSource: row[7],
                         readingsStation: row[8],
-                        includeIn5DayForecast: row[8],
-                        pressureZoneReadingTime: row[10],
-                        siteLat: row[11],
-                        siteLon: row[12]
+                        pressureZoneReadingTime: row[9],
+                        siteLat: row[10],
+                        siteLon: row[11]
                     )
                 }
             }
             .replaceError(with: [])
             .receive(on: DispatchQueue.main)
             .assign(to: \.sites, on: self)
+            .store(in: &cancellables)
+    }
+}
+
+// Get pilots for live tracking
+struct Pilots: Codable, Identifiable {
+    var id = UUID()
+    var pilotName: String
+    var trackingShareURL: String
+}
+
+struct PilotsResponse: Codable {
+    let values: [[String]]
+}
+
+class PilotsViewModel: ObservableObject {
+    @Published var pilots: [Pilots] = []
+    private var cancellables = Set<AnyCancellable>()
+    
+    func getPilots() {
+        let rangeName = "Pilots"
+        let sitesURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
+        guard let url = URL(string: sitesURLString) else {
+            print("Invalid URL")
+            return
+        }
+        
+        URLSession.shared.dataTaskPublisher(for: url)
+            .map { $0.data }
+            .decode(type: PilotsResponse.self, decoder: JSONDecoder())
+            .map { response in
+                response.values.dropFirst().compactMap { row -> Pilots? in
+                    // Skip row if data missing
+                    guard row.count >= 1 else { return nil }
+                    return Pilots(
+                        pilotName: row[0],
+                        trackingShareURL: row[1]
+                    )
+                }
+            }
+            .replaceError(with: [])
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.pilots, on: self)
             .store(in: &cancellables)
     }
 }

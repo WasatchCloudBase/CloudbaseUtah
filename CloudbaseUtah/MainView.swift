@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 
+
 struct BaseAppView: View {
     @Binding var refreshMetadata: Bool
     @State private var isActive = false
@@ -9,13 +10,22 @@ struct BaseAppView: View {
     @EnvironmentObject var sitesViewModel: SitesViewModel
     
     var body: some View {
-        VStack {
-            if isActive {
-                MainView(refreshMetadata: $refreshMetadata)
-            } else {
-                SplashScreenView()
+        ZStack {
+            // Background color applied to the entire screen
+            backgroundColor.edgesIgnoringSafeArea(.all)
+            VStack {
+                if isActive {
+                    MainView(refreshMetadata: $refreshMetadata)
+                        .preferredColorScheme(.dark) // Forces dark mode
+                } else {
+                    SplashScreenView()
+                        .preferredColorScheme(.dark) // Forces dark mode
+                }
             }
         }
+        .environment(\.colorScheme, .dark)
+        .background(backgroundColor, ignoresSafeAreaEdges: .all)
+
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 withAnimation {
@@ -23,6 +33,7 @@ struct BaseAppView: View {
                 }
             }
         }
+        
         .onChange(of: refreshMetadata) { oldValue, newValue in
             if newValue {
                 self.isActive = false
@@ -38,13 +49,21 @@ struct BaseAppView: View {
 
 struct SplashScreenView: View {
     var body: some View {
-        Image("UtahPGicon")
-            .resizable()
-            .scaledToFit()
-        Text("Cloudbase Utah")
-            .bold()
-            .foregroundColor(titleFontColor)
-            .padding(.top, 2)
+        ZStack {
+            // Background color applied to the entire screen
+            backgroundColor.edgesIgnoringSafeArea(.all)
+            
+            // Content placed on top of the background
+            VStack {
+                Image("UtahPGicon")
+                    .resizable()
+                    .scaledToFit()
+                Text("Cloudbase Utah")
+                    .bold()
+                    .foregroundColor(titleFontColor)
+                    .padding(.top, 2)
+            }
+        }
     }
 }
 
@@ -65,8 +84,7 @@ struct MainView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                backgroundColor.edgesIgnoringSafeArea(.all)
-
+                
                 // Call content based on selected navigation
                 if selectedView == .site {
                     SiteView(sitesViewModel: sitesViewModel)

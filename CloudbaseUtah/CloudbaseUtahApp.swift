@@ -9,12 +9,13 @@ struct CloudbaseUtahApp: App {
     @StateObject private var sunriseSunsetViewModel = SunriseSunsetViewModel()
     @StateObject private var weatherCodesViewModel = WeatherCodesViewModel()
     @StateObject private var sitesViewModel = SitesViewModel()
+    @StateObject private var pilotsViewModel = PilotsViewModel()
     @StateObject private var mapSettingsViewModel = MapSettingsViewModel(
         region: MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
             span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
         ),
-        activeLayers: [.windStations, .paraglidingSites],
+        activeLayers: [.stations, .sites],
         selectedMapType: .standard
     )
     
@@ -29,9 +30,10 @@ struct CloudbaseUtahApp: App {
             .environmentObject(weatherCodesViewModel)
             .environmentObject(sunriseSunsetViewModel)
             .environmentObject(sitesViewModel)
+            .environmentObject(pilotsViewModel)
             .environmentObject(mapSettingsViewModel)
             
-            // Force dark mode
+            // Force dark mode and black background
             .environment(\.colorScheme, .dark)
         
             // Initial load of metadata
@@ -40,6 +42,7 @@ struct CloudbaseUtahApp: App {
                 weatherCodesViewModel.getWeatherCodes()
                 sunriseSunsetViewModel.getSunriseSunset()
                 sitesViewModel.getSites()
+                pilotsViewModel.getPilots()
                 initializeLoggingFile()
             }
 
@@ -50,6 +53,7 @@ struct CloudbaseUtahApp: App {
                     weatherCodesViewModel.getWeatherCodes()
                     sunriseSunsetViewModel.getSunriseSunset()
                     sitesViewModel.getSites()
+                    pilotsViewModel.getPilots()
                     refreshMetadata = false
                 }
             }

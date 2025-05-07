@@ -378,6 +378,8 @@ struct SiteDetailView: View {
         .onChange(of: scenePhase) {
             if scenePhase == .active {
                 viewModel.GetReadingsHistoryData(stationID: site.readingsStation, readingsSource: site.readingsSource)
+            } else {
+                isActive = false
             }
         }
         .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }

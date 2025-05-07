@@ -57,19 +57,24 @@ let layersFontColor: Color = toolbarFontColor
 let layersIconBackgroundColor: Color = .black
 let cameraAnnotationColor: Color = .sky
 let cameraAnnotationTextColor: Color = cameraAnnotationColor
-let siteAnnotationTextColor: UIColor = UIColor(.sunshine)
-let stationAnnotationColor: UIColor = UIColor(.orangetheme)
-let stationAnnotationTextcolor: UIColor = stationAnnotationColor
+//  siteAnnotationColor is not defined here; it is established by the image
+let siteAnnotationTextColor: UIColor = UIColor(.pgiconblue)
+//  stationAnnotationColor not defined here; it is built dynamically based on wind speed
+let stationAnnotationTextColor: UIColor = UIColor(.orangetheme)
+//  pilotAnnotationColor is not define here; it is established by the image
+let pilotAnnotationTextColor: UIColor = .white
+let clusterAnnotationColor: UIColor = stationAnnotationTextColor
 let defaultAnnotationColor: UIColor = UIColor(.black)
+let defaultAnnotationTextColor: UIColor = UIColor(.white)
 
 // Images
-let defaultAnnotationImageWidth: CGFloat = 50
+let defaultAnnotationImageWidth: CGFloat = 60
 let windArrow: String = "arrow.up"  // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
 let layersImage: String = "square.3.layers.3d"
 let playImage: String = "play.fill"
 let pauseImage: String = "pause.fill"
 let cameraAnnotationImage: String = "camera.circle"
 let siteAnnotationUIImage: UIImage = UIImage(named: "roundPGicon")?.scaled(toWidth: defaultAnnotationImageWidth) ?? UIImage(named: "questionmark")!
-            // "site.paperplane.fill"  // "mappin"  //"mappin.and.ellipse"  //"mountain.2.circle.fill"
-let stationAnnotationImage: String = "wind"
+//  stationAnnotationImage not defined here; it is built dynamically based on wind speed/direction
+let pilotAnnotationUIImage: UIImage = UIImage(named: "PGIconNoBorder")?.scaled(toWidth: defaultAnnotationImageWidth) ?? UIImage(named: "questionmark")!
 let defaultAnnotationImage: String = "questionmark"

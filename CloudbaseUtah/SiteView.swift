@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-struct LatestReadings: Identifiable {
+struct StationLatestReadings: Identifiable {
     let id = UUID()
     let stationID: String
     let stationName: String
@@ -83,8 +83,8 @@ struct CUASAReadingsData: Codable {
     var pwm: Double?
 }
 
-class SiteLatestReadingsViewModel: ObservableObject {
-    @Published var latestReadings: [LatestReadings] = []
+class StationLatestReadingsViewModel: ObservableObject {
+    @Published var latestReadings: [StationLatestReadings] = []
     @Published var stationParameters: String = ""
     var sitesViewModel: SitesViewModel
     
@@ -93,12 +93,12 @@ class SiteLatestReadingsViewModel: ObservableObject {
         self.sitesViewModel = viewModel
         
         // Build list of Mesoewst stations for latest readings API call
-        let mesonetSites = sitesViewModel.sites.filter { $0.readingsSource == "Mesonet" && !$0.readingsStation.isEmpty }
-        guard !mesonetSites.isEmpty else {
+        let mesonetStations = sitesViewModel.sites.filter { $0.readingsSource == "Mesonet" && !$0.readingsStation.isEmpty }
+        guard !mesonetStations.isEmpty else {
             print ("filtered sites are empty:  none matched 'Mesonet' and had a readingsStation ")
             return
         }
-        let stationParameters = mesonetSites.map { "&stid=\($0.readingsStation)" }.joined()
+        let stationParameters = mesonetStations.map { "&stid=\($0.readingsStation)" }.joined()
         
         // Get latest readings; these calls are structured to ensure Mesonet function (which resets the latest readings structure)
         // completes before CUASA function is called.  This prevents a timing issue that would clear out CUASA readings
@@ -122,14 +122,20 @@ class SiteLatestReadingsViewModel: ObservableObject {
                 let decodedResponse = try JSONDecoder().decode(MesonetLatestResponse.self, from: data)
                 
                 DispatchQueue.main.async {
-                    self.latestReadings = decodedResponse.station.map { station in
-                        LatestReadings(
+                    self.latestReadings = decodedResponse.station.compactMap { station in
+                        // Only return latest readings for stations where a windSpeed observation exists
+                        // (intended to skip stations on the map that are only temperature stations, etc.)
+                        guard let windSpeed = station.observations.windSpeed?.value,
+                              let windTimeString = station.observations.windSpeed?.dateTime
+                        else { return nil }
+
+                        return StationLatestReadings(
                             stationID: station.stationID,
                             stationName: station.stationName,
                             stationElevation: station.elevation,
                             stationLatitude: station.latitude,
                             stationLongitude: station.longitude,
-                            windSpeed: station.observations.windSpeed?.value,
+                            windSpeed: windSpeed,
                             windDirection: station.observations.windDirection?.value,
                             windGust: station.observations.windGust?.value,
                             windTime: station.observations.windSpeed?.dateTime
@@ -177,7 +183,7 @@ class SiteLatestReadingsViewModel: ObservableObject {
                         let formattedTime = formatter.string(from: date)
 
                         DispatchQueue.main.async {
-                            let newReading = LatestReadings(
+                            let newReading = StationLatestReadings(
                                 stationID: latestData.ID,
                                 stationName: latestData.ID,
                                 stationElevation: "0",                  // Not yet implementated for CUASA stations
@@ -205,14 +211,13 @@ struct SiteView: View {
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
     @EnvironmentObject var sitesViewModel: SitesViewModel
-    @StateObject var siteLatestReadingsViewModel: SiteLatestReadingsViewModel
+    @StateObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
     @Environment(\.scenePhase) private var scenePhase
-
     @State private var selectedSite: Sites?
     @State private var isActive = false
     
     init(sitesViewModel: SitesViewModel) {
-        _siteLatestReadingsViewModel = StateObject(wrappedValue: SiteLatestReadingsViewModel(viewModel: sitesViewModel))
+        _stationLatestReadingsViewModel = StateObject(wrappedValue: StationLatestReadingsViewModel(viewModel: sitesViewModel))
     }
     
     var body: some View {
@@ -249,7 +254,7 @@ struct SiteView: View {
                                      }
                                      Spacer()
                                      
-                                     if let latestReading = siteLatestReadingsViewModel.latestReadings.first (where: { $0.stationID == site.readingsStation }) {
+                                     if let latestReading = stationLatestReadingsViewModel.latestReadings.first (where: { $0.stationID == site.readingsStation }) {
                                          if let windTime = latestReading.windTime {
                                              // Split keeps hh:mm and strips the trailing "  %p" the JSON parser is creating
                                              let windTimeText = windTime.split(separator: " ", maxSplits: 1)[0]
@@ -336,13 +341,15 @@ struct SiteView: View {
             isActive = false
         }
         .sheet(item: $selectedSite, onDismiss: {
-            siteLatestReadingsViewModel.reloadLatestReadingsData()
+            stationLatestReadingsViewModel.reloadLatestReadingsData()
         }) { site in
             SiteDetailView(site: site)
         }
         .onChange(of: scenePhase) {
             if scenePhase == .active {
-                siteLatestReadingsViewModel.reloadLatestReadingsData()
+                stationLatestReadingsViewModel.reloadLatestReadingsData()
+            } else {
+                isActive = false
             }
         }
     }
@@ -352,7 +359,7 @@ struct SiteView: View {
     private func startTimer() {
         DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval) {
             if isActive {
-                siteLatestReadingsViewModel.reloadLatestReadingsData()
+                stationLatestReadingsViewModel.reloadLatestReadingsData()
             }
         }
     }
