@@ -3,139 +3,31 @@ import MapKit
 import Combine
 import UIKit
 
-// Custom Map Style Enum
-enum CustomMapStyle: String, CaseIterable {
-    case standard, hybrid
-    func toMapKitType() -> MKMapType {
-        switch self {
-        case .standard:
-            return .standard
-        case .hybrid:
-            return .hybrid
-        }
-    }
-}
-
-// Model to retain map settings (center, zoom, layers) when navigating between views
-class MapSettingsViewModel: ObservableObject {
-    @Published var region: MKCoordinateRegion
-    @Published var activeLayers: Set<MapLayer>
-    @Published var selectedMapType: CustomMapStyle
-
-    init(region: MKCoordinateRegion,
-         activeLayers: Set<MapLayer>,
-         selectedMapType: CustomMapStyle = .standard)
-    {
-        self.region = region
-        self.activeLayers = activeLayers
-        self.selectedMapType = selectedMapType
-    }
-}
-
 // Annotation data model
 struct mapAnnotationList: Identifiable {
     let id = UUID()
-    let annotationType: String      // e.g., "site" or "station"
-    let annotationID: String        // an identifier based on the type
+    let annotationType: String              // e.g., "site" or "station"
+    let annotationID: String                // an identifier based on the type
     let annotationName: String
     let coordinates: CLLocationCoordinate2D
     let altitude: String
     let readingsNote: String
     let forecastNote: String
     let siteType: String
-    let readingsStation: String           // For site annotations
+    let readingsStation: String             // For site annotations
     let readingsSource: String
-    let readingsImage: UIImage?
-}
-
-// Define map layers
-enum MapLayer: String, CaseIterable {
-    case sites,
-         stations,
-         pilots,
-         precipitation,
-         cloudCover,
-         tracks,
-         thermalHeatMap,
-         flySkyHyAirspace
-
-    var name: String {
-        switch self {
-        case .sites: return "Paragliding sites"
-        case .stations: return "Wind stations"
-        case .pilots: return "Live tracking"
-        case .precipitation: return "Precipitation NOT AVAILABLE"
-        case .cloudCover: return "Cloud cover NOT AVAILABLE"
-        case .tracks: return "Skyways NOT AVAILABLE"
-        case .thermalHeatMap: return "Thermals NOT AVAILABLE"
-        case .flySkyHyAirspace: return "FlySkyHy LZs and thermal hotspots NOT AVAILABLE"
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .sites: return "Select site for readings and forecast"
-        case .stations: return "Select station for readings and forecast"
-        case .pilots: return "inReach GPS live tracking"
-        case .precipitation: return "Past and forecasted precipitation \n(provided by www.rainviewer.com)"
-        case .cloudCover: return "Past and forecasted cloud coverage \n(provided by www.rainviewer.com)"
-        case .tracks: return "Tracks from thermal.kk7"
-        case .thermalHeatMap: return "Heat map from thermal.kk7"
-        case .flySkyHyAirspace: return "Preview of custom airspace \n(use Links tab to load into FlySkyHy)"
-        }
-    }
+    let windSpeed: Double?                  // For station annotations
+    let windDirection: Double?
+    let windGust: Double?
 }
 
 // Custom MKPointAnnotation subclass for attaching clustering identifiers and station rendered wind speed/direction image
 class CustomMKPointAnnotation: MKPointAnnotation {
-    var annotationType: String = "" // Track annotation type (site/station)
-    var stationAnnotationImage: UIImage?
-}
-
-// View to define custom station annotion image format
-struct windReadingImageView: View {
-    var windSpeed: Double
-    var gustSpeed: Double
-    var windDirection: Double
-    
-    var body: some View {
-        HStack(spacing: windArrowSpacing) {
-            VStack(alignment: .trailing, spacing: 1) {
-                Text(String(Int(windSpeed.rounded())))
-                    .font(.caption)
-                    .foregroundStyle(windSpeedColor(windSpeed: Int(windSpeed), siteType: ""))
-                HStack (spacing: 1) {
-                    Text("g")
-                        .font(.caption2)
-                    Text(String(Int(gustSpeed.rounded())))
-                        .font(.caption)
-                        .foregroundStyle(windSpeedColor(windSpeed: Int(gustSpeed), siteType: ""))
-                }
-            }
-            .padding(.vertical, 0)
-            Image(systemName: windArrow)
-                .rotationEffect(.degrees((Double(windDirection)) - 180))
-                .font(.footnote)
-        }
-    }
-}
-
-// Extension to render custom station annotation image (based on view definition above)
-extension View {
-    func asUIImage() -> UIImage {
-        let controller = UIHostingController(rootView: self)
-        let view = controller.view
-
-        let targetSize = controller.view.intrinsicContentSize
-        view?.bounds = CGRect(origin: .zero, size: targetSize)
-        view?.backgroundColor = .clear
-
-        let renderer = UIGraphicsImageRenderer(size: targetSize)
-
-        return renderer.image { _ in
-            view?.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
-        }
-    }
+    var annotationType: String = ""         // Track annotation type (site/station)
+    var windSpeed: Double? = 0.0            // For station annotations
+    var windDirection: Double? = 0.0
+    var windGust: Double? = 0.0
+    var clusteringIdentifier: String?       // Ensure clustering is explicitly supported
 }
 
 // Map wrapper to improve performance through enabling clustering of annotations and lazy loading
@@ -164,52 +56,54 @@ struct MKMapViewWrapper: UIViewRepresentable {
             uiView.region.center.longitude != region.center.longitude {
             uiView.setRegion(region, animated: false)
         }
-
-        let visibleMapRect = uiView.visibleMapRect
-        let visibleAnnotations: [mapAnnotationList]
-
-        if visibleMapRect.size.width == 0 || visibleMapRect.size.height == 0 {
-            visibleAnnotations = annotations
-        } else {
-            visibleAnnotations = annotations.filter { annotation in
-                let point = MKMapPoint(annotation.coordinates)
-                return visibleMapRect.contains(point)
-            }
-        }
-
-        // Remove site annotations if the sites layer is not active
+        
+        // Remove annotations for layers that are no longer active.
         if !mapSettingsViewModel.activeLayers.contains(.sites) {
-            uiView.removeAnnotations(uiView.annotations.filter {
-                guard let customAnnotation = $0 as? CustomMKPointAnnotation else { return false }
-                return customAnnotation.annotationType == "site"
-            })
+            let sitesToRemove = uiView.annotations.compactMap { $0 as? CustomMKPointAnnotation }
+                .filter { $0.annotationType == "site" }
+            uiView.removeAnnotations(sitesToRemove)
         }
-    
-        // Collect existing annotations in a set to prevent duplicates.
-        let existingAnnotations = Set(uiView.annotations.compactMap { $0 as? CustomMKPointAnnotation })
+        
+        if !mapSettingsViewModel.activeLayers.contains(.stations) {
+            let stationsToRemove = uiView.annotations.compactMap { $0 as? CustomMKPointAnnotation }
+                .filter { $0.annotationType == "station" }
+            uiView.removeAnnotations(stationsToRemove)
+        }
+        
+        let visibleMapRect = uiView.visibleMapRect
 
-        // Ensure site annotations remain untouched and avoid re-adding them.
-        let newAnnotations = visibleAnnotations.filter { annotation in
-            let isSite = annotation.annotationType == "site"
-            let alreadyExists = existingAnnotations.contains { $0.title == annotation.annotationID && $0.annotationType == annotation.annotationType }
-            return !isSite || !alreadyExists
-        }.map { ann -> CustomMKPointAnnotation in
-            let customAnnotation = CustomMKPointAnnotation()
-            customAnnotation.coordinate = ann.coordinates
+        let newAnnotations = annotations.compactMap { ann -> CustomMKPointAnnotation? in
+            // For both sites and stations, only add if within visible bounds.
+            let point = MKMapPoint(ann.coordinates)
+            guard visibleMapRect.contains(point) else { return nil }
+            
+            // Check for duplicates with a looser tolerance if needed.
+            let alreadyExists = uiView.annotations.compactMap({ $0 as? CustomMKPointAnnotation }).contains {
+                $0.title == ann.annotationID &&
+                $0.annotationType == ann.annotationType &&
+                abs($0.coordinate.latitude - ann.coordinates.latitude) < 0.00005 &&
+                abs($0.coordinate.longitude - ann.coordinates.longitude) < 0.00005
+            }
+            if alreadyExists { return nil }
+            
+            let customAnnotation = CustomMKPointAnnotation(__coordinate: ann.coordinates)
             customAnnotation.title = ann.annotationID
-            customAnnotation.annotationType = ann.annotationType
             customAnnotation.subtitle = ann.annotationType
+            customAnnotation.windSpeed = ann.windSpeed
+            customAnnotation.windDirection = ann.windDirection
+            customAnnotation.windGust = ann.windGust
+            customAnnotation.annotationType = ann.annotationType
+
+            // For station annotations, set clustering.
+            if ann.annotationType == "station" {
+                customAnnotation.clusteringIdentifier = "stationCluster"
+            }
+            
             return customAnnotation
         }
-
-        uiView.removeAnnotations(uiView.annotations.filter { annotation in
-            guard let customAnnotation = annotation as? CustomMKPointAnnotation else { return false }
-            return customAnnotation.annotationType != "site"
-        })
-
         uiView.addAnnotations(newAnnotations)
     }
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
@@ -226,14 +120,12 @@ struct MKMapViewWrapper: UIViewRepresentable {
                 return nil
             }
             
-            // Handle clustering only for station annotations
             if let clusterAnnotation = annotation as? MKClusterAnnotation {
                 let clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: "ClusterView") as? MKMarkerAnnotationView
                     ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "ClusterView")
                 clusterView.annotation = annotation
                 clusterView.canShowCallout = false
                 clusterView.markerTintColor = clusterAnnotationColor
-                clusterView.clusteringIdentifier = "stationCluster"
                 return clusterView
             }
 
@@ -245,59 +137,143 @@ struct MKMapViewWrapper: UIViewRepresentable {
                 annotationView!.canShowCallout = false
             } else {
                 annotationView!.annotation = annotation
-                // Remove previously added labels to prevent stacking
+                // Remove any leftover labels to prevent stacking.
                 annotationView!.subviews.forEach { if $0 is UILabel { $0.removeFromSuperview() } }
             }
-
+            
             if let customAnnotation = annotation as? CustomMKPointAnnotation {
+                // For station annotations, use our custom station view.
+                if let customAnnotation = annotation as? CustomMKPointAnnotation,
+                   customAnnotation.annotationType == "station" {
+                    let stationView = mapView.dequeueReusableAnnotationView(withIdentifier: "StationAnnotationView") as? StationAnnotationView
+                        ?? StationAnnotationView(annotation: annotation, reuseIdentifier: "StationAnnotationView")
+                    stationView.annotation = annotation
+                    stationView.clusteringIdentifier = "stationCluster"
+                    // Optionally adjust displayPriority based on importance.
+                    stationView.displayPriority = .defaultLow
+                    return stationView
+                }
+                
+                // For non‑station annotations, configure as before.
                 var annotationImage: UIImage?
                 var annotationTextColor: UIColor?
                 
                 switch customAnnotation.annotationType {
                 case "site":
-                    annotationView!.clusteringIdentifier = nil // Keep sites fixed
                     annotationImage = siteAnnotationUIImage
                     annotationTextColor = siteAnnotationTextColor
-                case "station":
-                    annotationView!.clusteringIdentifier = "stationCluster"
-                    annotationView!.displayPriority = .defaultHigh
-                    // Set frame to reduce collisions by changing frame size
-                    annotationView!.frame = CGRect(x: 0, y: 0, width: 40, height: 40)
-                    annotationImage = customAnnotation.stationAnnotationImage
-                    annotationTextColor = stationAnnotationTextColor
                 case "pilot":
-                    annotationView!.clusteringIdentifier = nil // Keep sites fixed
                     annotationImage = pilotAnnotationUIImage
                     annotationTextColor = pilotAnnotationTextColor
                 default:
-                    annotationView!.clusteringIdentifier = nil
                     annotationImage = UIImage(systemName: defaultAnnotationImage)
                     annotationTextColor = defaultAnnotationTextColor
                 }
-
                 annotationView!.image = annotationImage
                 
-                // Add label below annotation image
+                // Add a label below the image as a subview.
                 let label = UILabel()
                 label.text = customAnnotation.title
                 label.textAlignment = .center
-                label.font = UIFont.systemFont(ofSize: 11) //, weight: .bold)
+                label.font = UIFont.systemFont(ofSize: 11)
                 label.textColor = annotationTextColor
                 label.layer.masksToBounds = true
 
-                // Adjust label frame manually (positioning below annotation image)
-                let labelXPosition = 0 - ( (annotationImage?.size.width ?? 20)/2 )
-                let labelYPosition = ( (annotationImage?.size.height ?? 20)/1.4 )
+                let labelXPosition = -((annotationImage?.size.width ?? 20) / 3)
+                let labelYPosition = ((annotationImage?.size.height ?? 20) / 1.3)
                 label.frame = CGRect(x: labelXPosition, y: labelYPosition, width: 100, height: 20)
-
                 annotationView!.addSubview(label)
+                
+                return annotationView
             }
-            return annotationView
+            return nil
+        }
+        
+        // Station custom annotation marker
+        struct StationAnnotationMarker: View {
+            var customAnnotation: CustomMKPointAnnotation
+            
+            var body: some View {
+                HStack (spacing: 1) {
+                    Text(String(Int(customAnnotation.windSpeed?.rounded() ?? 0)))
+                        .font(.caption)
+                        .foregroundStyle(windSpeedColor(windSpeed: Int(customAnnotation.windSpeed?.rounded() ?? 0), siteType: ""))
+                        .bold()
+                    /* Not displaying gusts
+                    Text("g")
+                        .font(.caption2)
+                    Text(String(Int(customAnnotation.windGust?.rounded() ?? 0)))
+                        .font(.caption)
+                        .foregroundStyle(windSpeedColor(windSpeed: Int(customAnnotation.windGust?.rounded() ?? 0), siteType: ""))
+                        .bold()
+                     */
+                    Image(systemName: windArrow)
+                        .rotationEffect(.degrees((Double(customAnnotation.windDirection ?? 180)) - 180))
+                        .font(.footnote)
+                }
+                .padding (4)
+                .frame(width: stationAnnotationWidth, height: stationAnnotationHeight)
+                .background(stationAnnotationColor)
+                .cornerRadius(5)
+                
+            }
+        }
+
+        class StationAnnotationView: MKAnnotationView {
+            private var hostingController: UIHostingController<StationAnnotationMarker>?
+
+            override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+                super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+                clusteringIdentifier = "stationCluster"  // <--- Set clustering identifier here.
+                setupHostingController()
+            }
+
+            required init?(coder aDecoder: NSCoder) {
+                super.init(coder: aDecoder)
+                clusteringIdentifier = "stationCluster"  // <--- And here.
+                setupHostingController()
+            }
+
+            private func setupHostingController() {
+                guard let annotation = annotation as? CustomMKPointAnnotation else { return }
+                let markerView = StationAnnotationMarker(customAnnotation: annotation)
+                let hostingController = UIHostingController(rootView: markerView)
+                hostingController.view.backgroundColor = .clear
+                hostingController.view.translatesAutoresizingMaskIntoConstraints = false
+                addSubview(hostingController.view)
+                
+                NSLayoutConstraint.activate([
+                    hostingController.view.widthAnchor.constraint(equalToConstant: 30),
+                    hostingController.view.heightAnchor.constraint(equalToConstant: 30),
+                    hostingController.view.centerXAnchor.constraint(equalTo: centerXAnchor),
+                    hostingController.view.centerYAnchor.constraint(equalTo: centerYAnchor)
+                ])
+                self.hostingController = hostingController
+            }
+
+            override func prepareForReuse() {
+                super.prepareForReuse()
+                hostingController?.view.removeFromSuperview()
+                hostingController = nil
+            }
         }
         
         // Update region
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-            DispatchQueue.main.async {
+            // Compute the zoom scale based on the width of the visible map rect
+            let zoomScale = mapView.visibleMapRect.size.width / mapView.frame.size.width
+            let threshold: Double = 1200 // This threshold is adjustable
+            
+            // Loop through station annotations to adjust clustering dynamically
+            for annotation in mapView.annotations.compactMap({ $0 as? CustomMKPointAnnotation }) {
+                if annotation.annotationType == "station" {
+                    // Disable clustering when zooming in (low zoomScale value)
+                    annotation.clusteringIdentifier = zoomScale < threshold ? nil : "stationCluster"
+                }
+            }
+            
+            // Batch requests to prevent high volume of requests as user navigates map
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 self.parent.region = mapView.region
             }
         }
@@ -347,7 +323,7 @@ struct MKMapViewWrapper: UIViewRepresentable {
                         readingsNote: "",
                         forecastNote: "",
                         siteType: "",
-                        readingsAlt: selectedSite.altitude,                       // Get from station details....
+                        readingsAlt: selectedSite.altitude,
                         readingsSource: selectedSite.readingsSource,
                         readingsStation: selectedSite.annotationID,
                         pressureZoneReadingTime: "",
@@ -515,7 +491,9 @@ struct MapView: View {
                         siteType: site.siteType,
                         readingsStation: site.readingsStation,
                         readingsSource: site.readingsSource,
-                        readingsImage: nil
+                        windSpeed: 0.0,
+                        windDirection: 0.0,
+                        windGust: 0.0
                     )
                     mapAnnotations.append(annotation)
                 }
@@ -539,14 +517,9 @@ struct MapView: View {
                                 siteType: "",
                                 readingsStation: reading.stationID,
                                 readingsSource: "Mesonet",
-                                readingsImage: UIImage(named: cameraAnnotationImage)
-                                    
-/*                                    windReadingImageView(
-                                    windSpeed: reading.windSpeed ?? 0,
-                                    gustSpeed: reading.windGust ?? 0,
-                                    windDirection: reading.windDirection ?? 0
-                                ).asUIImage()
- */
+                                windSpeed: reading.windSpeed,
+                                windDirection: reading.windDirection,
+                                windGust: reading.windGust
                             )
                             mapAnnotations.append(annotation)
                         }
@@ -569,7 +542,9 @@ struct MapView: View {
                             siteType: "",
                             readingsStation: reading.stationID,
                             readingsSource: "CUASA",
-                            readingsImage: nil
+                            windSpeed: reading.windSpeed,
+                            windDirection: reading.windDirection,
+                            windGust: reading.windGust
                         )
                         mapAnnotations.append(annotation)
                     }
@@ -578,82 +553,10 @@ struct MapView: View {
         }
         
         if mapSettingsViewModel.activeLayers.contains(.pilots) {
-/*
-            let filteredSites = sitesViewModel.sites.filter { $0.siteType == "Mountain" || $0.siteType == "Soaring" }
-            for site in filteredSites {
-                if let lat = Double(site.siteLat), let lon = Double(site.siteLon) {
-                    let annotation = mapAnnotationList(
-                        annotationType: "site",
-                        annotationID: site.siteName,
-                        annotationName: site.siteName,
-                        coordinates: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                        altitude: site.readingsAlt,
-                        readingsNote: site.readingsNote,
-                        forecastNote: site.forecastNote,
-                        siteType: site.siteType,
-                        stationID: site.readingsStation,
-                        readingsSource: site.readingsSource
-                    )
-                    mapAnnotations.append(annotation)
-                }
-            }
- */
+
+            // TBD
+            
         }
 
-    }
-}
-
-struct LayerSelectionView: View {
-    @Binding var activeLayers: Set<MapLayer>
-    @Binding var selectedMapType: CustomMapStyle
-    @Environment(\.presentationMode) var presentationMode
-
-    var body: some View {
-        VStack(alignment: .leading) {
-            HStack {
-                Button(action: {
-                    presentationMode.wrappedValue.dismiss()
-                }) {
-                    HStack {
-                        Image(systemName: "chevron.left")
-                        Text("Back")
-                    }
-                }
-                .padding()
-                Spacer()
-            }
-            .background(Color.blue.opacity(0.2))
-
-            List {
-                Section(header: Text("Map Type")) {
-                    Picker("Map Type", selection: $selectedMapType) {
-                        ForEach(CustomMapStyle.allCases, id: \.self) { style in
-                            Text(style.rawValue.capitalized)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                }
-                Section(header: Text("Map Layers")) {
-                    ForEach(MapLayer.allCases, id: \.self) { layer in
-                        Toggle(isOn: Binding(
-                            get: { activeLayers.contains(layer) },
-                            set: { isActive in
-                                if isActive {
-                                    activeLayers.insert(layer)
-                                } else {
-                                    activeLayers.remove(layer)
-                                }
-                            }
-                        )) {
-                            VStack(alignment: .leading) {
-                                Text(layer.name)
-                                Text(layer.description)
-                                    .font(.subheadline)
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }

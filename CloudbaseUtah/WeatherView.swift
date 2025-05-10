@@ -181,7 +181,7 @@ class SoaringForecastViewModel: ObservableObject {
         // Prefix below skips header rows on sounding table data
         let soundingPrefix = "--------------------------------------------------------------------------------"
         let modelPrefix = "* * * * * * Numerical weather prediction model forecast data valid * * * * * *"
-        let endPrefix = "This product is issued"
+        var endPrefix = "This product is issued"
         guard let startRange = content.range(of: start)
         else {
             print("Soaring forecast: could not parse start date (e.g., no row for \(start))")
@@ -216,6 +216,10 @@ class SoaringForecastViewModel: ObservableObject {
         else {
             print("Soaring forecast: could not parse model forecast data range (e.g., no row for \(soundingPrefix))")
             return
+        }
+        // Forecast had typos on 5/8/2025; added code to fix for this scenario
+        if (content.range(of: endPrefix, range: modelRange.upperBound..<content.endIndex) == nil) {
+            endPrefix = "s product is issued"
         }
         guard let endRange = content.range(of: endPrefix, range: modelRange.upperBound..<content.endIndex)
         else {

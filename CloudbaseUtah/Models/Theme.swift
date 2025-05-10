@@ -57,13 +57,13 @@ let layersFontColor: Color = toolbarFontColor
 let layersIconBackgroundColor: Color = .black
 let cameraAnnotationColor: Color = .sky
 let cameraAnnotationTextColor: Color = cameraAnnotationColor
-//  siteAnnotationColor is not defined here; it is established by the image
-let siteAnnotationTextColor: UIColor = UIColor(.pgiconblue)
-//  stationAnnotationColor not defined here; it is built dynamically based on wind speed
-let stationAnnotationTextColor: UIColor = UIColor(.orangetheme)
+//  siteAnnotationColor not defined here; it is established by the image
+let siteAnnotationTextColor: UIColor = UIColor(.white)
+let stationAnnotationColor: Color = .gunmetal
+let stationAnnotationTextColor: UIColor = UIColor(.gunmetal)
 //  pilotAnnotationColor is not define here; it is established by the image
 let pilotAnnotationTextColor: UIColor = .white
-let clusterAnnotationColor: UIColor = stationAnnotationTextColor
+let clusterAnnotationColor: UIColor = UIColor(stationAnnotationColor)
 let defaultAnnotationColor: UIColor = UIColor(.black)
 let defaultAnnotationTextColor: UIColor = UIColor(.white)
 

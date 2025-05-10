@@ -68,6 +68,8 @@ let areaChartOpacity: CGFloat = 0.5
 // Map parameters
 let annotationTextWidth: CGFloat = 60
 let annotationTextHeight: CGFloat = 14
+let stationAnnotationWidth: CGFloat = 40
+let stationAnnotationHeight: CGFloat = 22
 
 // Get lift parameters for common use
 struct LiftParameterSource: Codable, Identifiable {
