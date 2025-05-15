@@ -36,23 +36,27 @@ class MapSettingsViewModel: ObservableObject {
 enum MapLayer: String, CaseIterable {
     case sites,
          stations,
-         pilots,
+         pilots
+    /*,
          precipitation,
          cloudCover,
          tracks,
          thermalHeatMap,
          flySkyHyAirspace
+     */
 
     var name: String {
         switch self {
         case .sites: return "Paragliding sites"
         case .stations: return "Wind stations"
         case .pilots: return "Live tracking"
-        case .precipitation: return "Precipitation NOT AVAILABLE"
-        case .cloudCover: return "Cloud cover NOT AVAILABLE"
-        case .tracks: return "Skyways NOT AVAILABLE"
-        case .thermalHeatMap: return "Thermals NOT AVAILABLE"
-        case .flySkyHyAirspace: return "FlySkyHy LZs and thermal hotspots NOT AVAILABLE"
+    /*
+        case .precipitation: return "Precipitation"
+        case .cloudCover: return "Cloud cover"
+        case .tracks: return "Skyways"
+        case .thermalHeatMap: return "Thermals"
+        case .flySkyHyAirspace: return "FlySkyHy LZs and thermal hotspots"
+     */
         }
     }
     
@@ -61,11 +65,13 @@ enum MapLayer: String, CaseIterable {
         case .sites: return "Select site for readings and forecast"
         case .stations: return "Select station for readings and forecast"
         case .pilots: return "inReach GPS live tracking"
+    /*
         case .precipitation: return "Past and forecasted precipitation \n(provided by www.rainviewer.com)"
         case .cloudCover: return "Past and forecasted cloud coverage \n(provided by www.rainviewer.com)"
         case .tracks: return "Tracks from thermal.kk7"
         case .thermalHeatMap: return "Heat map from thermal.kk7"
         case .flySkyHyAirspace: return "Preview of custom airspace \n(use Links tab to load into FlySkyHy)"
+     */
         }
     }
 }
@@ -116,6 +122,7 @@ struct LayerSelectionView: View {
                                 Text(layer.name)
                                 Text(layer.description)
                                     .font(.subheadline)
+                                    .foregroundColor(infoFontColor)
                             }
                         }
                     }

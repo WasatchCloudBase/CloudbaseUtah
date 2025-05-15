@@ -2,6 +2,8 @@ import SwiftUI
 import MapKit
 import Combine
 import UIKit
+import CoreGraphics
+import Foundation
 
 // Annotation data model
 struct mapAnnotationList: Identifiable {
@@ -306,6 +308,7 @@ struct MKMapViewWrapper: UIViewRepresentable {
                         pressureZoneReadingTime: "",
                         siteLat: "\(selectedSite.coordinates.latitude)",
                         siteLon: "\(selectedSite.coordinates.longitude)",
+                        sheetRow: 0
                     )
                 }
                 
@@ -329,12 +332,32 @@ struct MKMapViewWrapper: UIViewRepresentable {
                         pressureZoneReadingTime: "",
                         siteLat: "\(selectedSite.coordinates.latitude)",
                         siteLon: "\(selectedSite.coordinates.longitude)",
-                        
+                        sheetRow: 0
                     )
                 }
+
             case "pilot":
-                // NEED TO COMPLETE PILOT SELECT SECTION
-                print("temp")
+                Text("Pilot TBD")
+// Need to update based on revised logic for pilots vs live tracks
+/*
+                guard let selectedPilot = pilotsViewModel.pilots.first(where: { $0.id == customAnnotation.title }) else { return }
+
+                let flightDuration = selectedPilot.coordinates.last.timestamp - selectedPilot.coordinates.first.timestamp
+                
+                DispatchQueue.main.async {
+                    self.parent.selectedPilot = Pilots(
+                        id: selectedPilot.id,
+                        name: selectedPilot.name,
+                        coordinates: selectedPilot.coordinates,
+                        altitude: selectedPilot.altitude,
+                        speed: selectedPilot.speed,
+                        trackingShareURL: selectedPilot.trackingShareURL,
+                        flightStartTime: selectedPilot.coordinates.first?.timestamp ?? "",
+                        flightEndTime: selectedPilot.coordinates.last?.timestamp ?? "",
+                        flightDuration: flightDuration
+                    )
+                }
+ */
                 
             default:
                 return
@@ -350,8 +373,9 @@ struct MapView: View {
     @EnvironmentObject var sitesViewModel: SitesViewModel
     @EnvironmentObject var pilotsViewModel: PilotsViewModel
     @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
-    @StateObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
     @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var stationLatestReadingsViewModel: StationLatestReadingsViewModel
+    @StateObject private var trackingViewModel = PilotTracksViewModel()
     @State private var selectedSite: Sites?
     @State private var selectedPilot: Pilots?
     @State private var isLayerSheetPresented = false
@@ -405,7 +429,7 @@ struct MapView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     Spacer()
-
+/*
                     if mapSettingsViewModel.activeLayers.contains(.precipitation) ||
                         mapSettingsViewModel.activeLayers.contains(.cloudCover) {
                         VStack(alignment: .trailing) {
@@ -426,6 +450,7 @@ struct MapView: View {
                         .background(.thinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+*/
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
@@ -553,10 +578,201 @@ struct MapView: View {
         }
         
         if mapSettingsViewModel.activeLayers.contains(.pilots) {
+            for pilot in pilotsViewModel.pilots {
 
-            // TBD
-            
+                // Get latest tarcking data for pilot
+                self.trackingViewModel.fetchTrackingData(trackingURL: pilot.trackingFeedURL)
+                
+                DispatchQueue.main.async {
+//                    for trackNode in trackingViewModel.trackData? {
+//                        if let lat = Double(reading.stationLatitude), let lon = Double(reading.stationLongitude) {
+//                    }
+                }
+            }
         }
+    }
+}
 
+
+// Pilot live tracking structure
+struct PilotTracks {
+    // Data duplicated for each track point
+    let pilotName: String
+    let oldestDateTime: Date
+    let oldestCoordinates: (latitude: Double, longitude: Double)
+    let newestDateTime: Date
+    let newestCoordinates: (latitude: Double, longitude: Double)
+    let flightDuration: TimeInterval
+    // Data specific to each track point
+    let dateTime: Date
+    let coordinates: (latitude: Double, longitude: Double)
+    let speed: Double
+    let altitude: Double
+    let inEmergency: Bool
+}
+
+class PilotTracksViewModel: ObservableObject {
+    @Published var pilotTracks: [PilotTracks] = []
+    
+    func fetchTrackingData(trackingURL: String) {
+        
+print("starting processing for URL: \(trackingURL)")
+        guard let url = constructURL(trackingURL: trackingURL) else { return }
+        var request = URLRequest(url: url)
+        
+        // Set headers to handle InReach requirements and redirect to data file location
+        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
+        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7", forHTTPHeaderField: "Accept")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        request.setValue("keep-alive", forHTTPHeaderField: "Connection")
+        request.setValue("1", forHTTPHeaderField: "DNT")
+        request.setValue("document", forHTTPHeaderField: "Sec-Fetch-Dest")
+        request.setValue("navigate", forHTTPHeaderField: "Sec-Fetch-Mode")
+        request.setValue("none", forHTTPHeaderField: "Sec-Fetch-Site")
+        request.setValue("?1", forHTTPHeaderField: "Sec-Fetch-User")
+        request.setValue("1", forHTTPHeaderField: "Upgrade-Insecure-Requests")
+        request.setValue("\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"", forHTTPHeaderField: "sec-ch-ua")
+        request.setValue("?0", forHTTPHeaderField: "sec-ch-ua-mobile")
+        request.setValue("\"macOS\"", forHTTPHeaderField: "sec-ch-ua-platform")
+
+        // Query InReach KML feed
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Status code: \(httpResponse.statusCode)")
+                print("Headers: \(httpResponse.allHeaderFields)")
+            }
+            if let data = data, let string = String(data: data, encoding: .utf8) {
+                print("Response body: \(string)")
+            }
+            if let error = error {
+                print("Error: \(error)")
+            }
+        }
+        task.resume()
+        
+/*        let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self, let data = data, error == nil else { return }
+            DispatchQueue.main.async {
+                self.pilotTracks = self.parseKML(data: data)
+            }
+        }
+        task.resume()
+ */
+    }
+    
+    private func constructURL(trackingURL: String) -> URL? {
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime]
+        let date24HoursAgo = Date().addingTimeInterval(TimeInterval(-24 * pilotTrackDays * 60 * 60))
+        let dateString = dateFormatter.string(from: date24HoursAgo)
+        let finalURLString = "\(trackingURL)?d1=\(dateString)"
+        return URL(string: finalURLString)
+    }
+    
+    private func parseKML(data: Data) -> [PilotTracks] {
+
+print("parsing KML for:")
+        
+if let string = String(data: data, encoding: .utf8) {
+    print(string)
+} else {
+    print("Failed to convert Data to String")
+}
+
+        guard let xmlString = String(data: data, encoding: .utf8) else {
+            print("Invalid XML coding for track log")
+            return []
+        }
+print("converted to xml as:")
+print(xmlString)
+        let pilotName = extractValue(from: xmlString, using: "<Folder><name>", endTag: "</name>") ?? "Unknown Pilot"
+        let placemarkStrings = extractAllValues(from: xmlString, using: "<Placemark>", endTag: "</Placemark>")
+        guard !placemarkStrings.isEmpty else {
+            print("No placemarks found in xmlString:")
+            print(xmlString)
+            
+            return []
+        }
+        
+        var oldestDateTime: Date?
+        var newestDateTime: Date?
+        var oldestCoordinates: (latitude: Double, longitude: Double)?
+        var newestCoordinates: (latitude: Double, longitude: Double)?
+        
+        var pilotTracks: [PilotTracks] = []
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime]
+        
+        for placemarkString in placemarkStrings {
+            guard let dateTimeString = extractValue(from: placemarkString, using: "<Time>", endTag: "</Time>"),
+                  let dateTime = dateFormatter.date(from: dateTimeString),
+                  let latitudeString = extractValue(from: placemarkString, using: "<Latitude>", endTag: "</Latitude>"),
+                  let longitudeString = extractValue(from: placemarkString, using: "<Longitude>", endTag: "</Longitude>"),
+                  let latitude = Double(latitudeString),
+                  let longitude = Double(longitudeString),
+                  let speedString = extractValue(from: placemarkString, using: "<Velocity>", endTag: "</Velocity>"),
+                  let speed = Double(speedString),
+                  let altitudeString = extractValue(from: placemarkString, using: "<Elevation>", endTag: "</Elevation>"),
+                  let altitude = Double(altitudeString),
+                  let inEmergencyString = extractValue(from: placemarkString, using: "<InEmergency>", endTag: "</InEmergency>"),
+                  let inEmergency = Bool(inEmergencyString) else {
+                continue
+            }
+            
+            if oldestDateTime == nil || dateTime < oldestDateTime! {
+                oldestDateTime = dateTime
+                oldestCoordinates = (latitude, longitude)
+            }
+            if newestDateTime == nil || dateTime > newestDateTime! {
+                newestDateTime = dateTime
+                newestCoordinates = (latitude, longitude)
+            }
+            
+            let trackPoint = PilotTracks(
+                pilotName: pilotName,
+                oldestDateTime: oldestDateTime!,
+                oldestCoordinates: oldestCoordinates!,
+                newestDateTime: newestDateTime!,
+                newestCoordinates: newestCoordinates!,
+                flightDuration: newestDateTime!.timeIntervalSince(oldestDateTime!),
+                dateTime: dateTime,
+                coordinates: (latitude, longitude),
+                speed: speed,
+                altitude: altitude,
+                inEmergency: inEmergency
+            )
+            pilotTracks.append(trackPoint)
+        }
+        return pilotTracks
+    }
+    
+    private func extractAllValues(from text: String, using startTag: String, endTag: String) -> [String] {
+        var values: [String] = []
+        var searchRange: Range<String.Index>?
+print("extract ALL values called")
+print(text)
+        while let startRange = text.range(of: startTag, options: [], range: searchRange),
+              let endRange = text.range(of: endTag, options: [], range: startRange.upperBound..<text.endIndex) {
+print("1.1")
+            let value = String(text[startRange.upperBound..<endRange.lowerBound])
+print("1.2")
+            values.append(value)
+print("1.3")
+            searchRange = endRange.upperBound..<text.endIndex
+        }
+print("2")
+        return values
+    }
+    
+    private func extractValue(from text: String, using startTag: String, endTag: String) -> String? {
+        
+print("extract value called")
+print(text)
+        
+        guard let startRange = text.range(of: startTag),
+              let endRange = text.range(of: endTag, options: [], range: startRange.upperBound..<text.endIndex) else {
+            return nil
+        }
+        return String(text[startRange.upperBound..<endRange.lowerBound])
     }
 }

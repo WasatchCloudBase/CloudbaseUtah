@@ -350,15 +350,31 @@ struct SiteDetailView: View {
                         siteType: site.siteType )
                 }
                 
-                if site.readingsSource == "Mesonet" {
-                    VStack(alignment: .leading) {
+                VStack(alignment: .leading) {
+                    if site.readingsSource == "Mesonet" {
                         Text("Readings data aggregated by Synoptic")
                             .font(.caption)
                             .foregroundColor(infoFontColor)
                         Text("https://synopticdata.com")
                             .font(.caption)
                             .foregroundColor(infoFontColor)
+                            .padding(.bottom, 8)
                     }
+                    if site.readingsSource == "CUASA" {
+                        Text("Readings data aggregated by CUASA")
+                            .font(.caption)
+                            .foregroundColor(infoFontColor)
+                        Text("https://sierragliding.us/cuasa")
+                            .font(.caption)
+                            .foregroundColor(infoFontColor)
+                            .padding(.bottom, 8)
+                    }
+                    Text("Forecast data provided by Open-meteo")
+                        .font(.caption)
+                        .foregroundColor(infoFontColor)
+                    Text("https://open-meteo.com")
+                        .font(.caption)
+                        .foregroundColor(infoFontColor)
                 }
             }
             Spacer() // Push the content to the top of the sheet

@@ -2,7 +2,8 @@ import SwiftUI
 import Combine
 import Foundation
 
-// Set thermal calc logging for development
+// Set development build flags
+let devMenuAvailable: Bool = true
 let turnOnLogging: Bool = false
 let printForecastURL: Bool = false
 
@@ -26,6 +27,7 @@ let mapInitLongitudeSpan: Double = mapInitLatitudeSpan * 1.5
 let mapEnableRotation: Bool = false
 let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
 let pageRefreshInterval: TimeInterval = 150         // Time in seconds to refresh wind readings (300 for 5 min)
+let pilotTrackDays: Int = 2                         // Defautl days of live tracking to display
 
 // HTTP links and APIs
 let forecastUSMapLink: String = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
@@ -246,7 +248,7 @@ class SunriseSunsetViewModel: ObservableObject {
 }
 
 // Get sites metadata
-struct Sites: Codable, Identifiable {
+struct Sites: Codable, Identifiable, Equatable {
     var id = UUID()
     var area: String
     var siteName: String
@@ -259,6 +261,7 @@ struct Sites: Codable, Identifiable {
     var pressureZoneReadingTime: String
     var siteLat: String
     var siteLon: String
+    var sheetRow: Int // New property to store the row index
 }
 
 struct SitesResponse: Codable {
@@ -281,7 +284,9 @@ class SitesViewModel: ObservableObject {
             .map { $0.data }
             .decode(type: SitesResponse.self, decoder: JSONDecoder())
             .map { response in
-                response.values.dropFirst().compactMap { row -> Sites? in
+                response.values.enumerated().compactMap { index, row -> Sites? in
+                    // Skip the header row
+                    guard index > 0 else { return nil }
                     // Skip row if data missing
                     guard row.count >= 12 else { return nil }
                     // Skip row not to be used in app (e.g., site is not active)
@@ -297,7 +302,8 @@ class SitesViewModel: ObservableObject {
                         readingsStation: row[8],
                         pressureZoneReadingTime: row[9],
                         siteLat: row[10],
-                        siteLon: row[11]
+                        siteLon: row[11],
+                        sheetRow: index + 1 // Store the source row index and add one (Google sheets start at 1, not 0)
                     )
                 }
             }
@@ -313,6 +319,7 @@ struct Pilots: Codable, Identifiable {
     var id = UUID()
     var pilotName: String
     var trackingShareURL: String
+    var trackingFeedURL: String
 }
 
 struct PilotsResponse: Codable {
@@ -337,10 +344,19 @@ class PilotsViewModel: ObservableObject {
             .map { response in
                 response.values.dropFirst().compactMap { row -> Pilots? in
                     // Skip row if data missing
-                    guard row.count >= 1 else { return nil }
+                    guard row.count >= 2 else { return nil }
+                    
+                    let pilotName = row[0]
+                    let trackingShareURL = row[1]
+                    
+                    // Extract pilot name from the share URL
+                    let pilotNameFromURL = trackingShareURL.components(separatedBy: "/").last ?? ""
+                    let trackingFeedURL = "https://share.garmin.com/Feed/Share/\(pilotNameFromURL)"
+                    
                     return Pilots(
-                        pilotName: row[0],
-                        trackingShareURL: row[1]
+                        pilotName: pilotName,
+                        trackingShareURL: trackingShareURL,
+                        trackingFeedURL: trackingFeedURL
                     )
                 }
             }
