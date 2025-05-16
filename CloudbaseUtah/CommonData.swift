@@ -27,7 +27,7 @@ let mapInitLongitudeSpan: Double = mapInitLatitudeSpan * 1.5
 let mapEnableRotation: Bool = false
 let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
 let pageRefreshInterval: TimeInterval = 150         // Time in seconds to refresh wind readings (300 for 5 min)
-let pilotTrackDays: Int = 2                         // Defautl days of live tracking to display
+let pilotTrackDays: Int = 5                         // Defautl days of live tracking to display
 
 // HTTP links and APIs
 let forecastUSMapLink: String = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"

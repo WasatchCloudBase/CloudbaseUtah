@@ -271,6 +271,18 @@ func roundNumbersInString (in data: String) -> String {
     return newString
 }
 
+// Extracts the first number (integer or decimal) from a string
+func extractNumber(from input: String) -> Double? {
+    let pattern = #"(\d+(\.\d+)?)"#
+    guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+    let range = NSRange(input.startIndex..., in: input)
+    if let match = regex.firstMatch(in: input, range: range),
+       let numberRange = Range(match.range(at: 1), in: input) {
+        return Double(input[numberRange])
+    }
+    return nil
+}
+
 // Created for site forecast results that occassionally contain null for a weather code
 func replaceNullsInJSON(data: Data) -> Data? {
     // Convert Data to String

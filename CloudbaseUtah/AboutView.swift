@@ -3,6 +3,8 @@ import SwiftUI
 struct AboutView: View {
     @Binding var refreshMetadata: Bool
     @EnvironmentObject var sitesViewModel: SitesViewModel
+    @EnvironmentObject var pilotsViewModel: PilotsViewModel
+    @StateObject private var pilotTracksViewModel = PilotTracksViewModel()
     
     var body: some View {
         backgroundColor.edgesIgnoringSafeArea(.all)
@@ -76,8 +78,9 @@ struct AboutView: View {
                     }
                  
                     // UDOT camera map
-                    NavigationLink(destination: PilotTracksView()) {
-                        Text("Test of pilot tracks")
+                    NavigationLink(destination: PilotTracksView(pilotTracksViewModel: pilotTracksViewModel)
+                        .environmentObject(pilotsViewModel)) {
+                        Text("Pilot track node list")
                             .font(.subheadline)
                             .foregroundColor(rowHeaderColor)
                     }
