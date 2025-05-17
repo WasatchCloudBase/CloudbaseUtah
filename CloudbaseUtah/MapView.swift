@@ -22,6 +22,7 @@ struct mapAnnotationList: Identifiable {
     let windDirection: Double?
     let windGust: Double?
     let inEmergency: Bool?                  // For pilot track annotations
+    let trackdateTime: Date?
 }
 
 // Custom MKPointAnnotation subclass for attaching clustering identifiers and station rendered wind speed/direction image
@@ -31,6 +32,10 @@ class CustomMKPointAnnotation: MKPointAnnotation {
     var windDirection: Double? = 0.0
     var windGust: Double? = 0.0
     var clusteringIdentifier: String?       // Ensure clustering is explicitly supported
+    var pilotName: String?                  // For pilot live tracking annotations
+    var trackDateTime: Date?
+    var altitude: String?
+    var inEmergency: Bool?
 }
 
 // Map wrapper to improve performance through enabling clustering of annotations and lazy loading
@@ -39,7 +44,7 @@ struct MKMapViewWrapper: UIViewRepresentable {
     @Binding var annotations: [mapAnnotationList]
     var mapType: MKMapType
     @Binding var selectedSite: Sites?
-    @Binding var selectedPilot: Pilots?
+    @Binding var selectedPilotTrack: PilotTracks?
     @ObservedObject var mapSettingsViewModel: MapSettingsViewModel
 
     func makeUIView(context: Context) -> MKMapView {
@@ -123,7 +128,7 @@ struct MKMapViewWrapper: UIViewRepresentable {
                 return nil
             }
             
-            if let clusterAnnotation = annotation as? MKClusterAnnotation {
+            if annotation is MKClusterAnnotation {
                 let clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: "ClusterView") as? MKMarkerAnnotationView
                     ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "ClusterView")
                 clusterView.annotation = annotation
@@ -227,13 +232,13 @@ struct MKMapViewWrapper: UIViewRepresentable {
 
             override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
                 super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
-                clusteringIdentifier = "stationCluster"  // <--- Set clustering identifier here.
+                clusteringIdentifier = "stationCluster"
                 setupHostingController()
             }
 
             required init?(coder aDecoder: NSCoder) {
                 super.init(coder: aDecoder)
-                clusteringIdentifier = "stationCluster"  // <--- And here.
+                clusteringIdentifier = "stationCluster"
                 setupHostingController()
             }
 
@@ -291,8 +296,9 @@ struct MKMapViewWrapper: UIViewRepresentable {
             switch customAnnotation.subtitle {
                 
             case "site":
+print("selected site: \(String(describing: customAnnotation.title))")
                 guard let selectedSite = parent.annotations.first(where: { $0.annotationID == customAnnotation.title }) else {
-                    print("Could not find site/station annotation")
+                    print("Could not find site/station annotation for: \(String(describing: customAnnotation.title))")
                     return
                 }
                 DispatchQueue.main.async {
@@ -338,27 +344,25 @@ struct MKMapViewWrapper: UIViewRepresentable {
                 }
 
             case "pilot":
-                Text("Pilot TBD")
-// Need to update based on revised logic for pilots vs live tracks
-/*
-                guard let selectedPilot = pilotsViewModel.pilots.first(where: { $0.id == customAnnotation.title }) else { return }
-
-                let flightDuration = selectedPilot.coordinates.last.timestamp - selectedPilot.coordinates.first.timestamp
-                
+                // Return selectedSite for stations as well as sites to pass to siteDetail view for readings and forecast
+                guard let selectedPilotTrack = parent.annotations.first(where: { $0.annotationID == customAnnotation.title }) else {
+                    print("Could not find pilot annotation")
+                    return
+                }
                 DispatchQueue.main.async {
-                    self.parent.selectedPilot = Pilots(
-                        id: selectedPilot.id,
-                        name: selectedPilot.name,
-                        coordinates: selectedPilot.coordinates,
-                        altitude: selectedPilot.altitude,
-                        speed: selectedPilot.speed,
-                        trackingShareURL: selectedPilot.trackingShareURL,
-                        flightStartTime: selectedPilot.coordinates.first?.timestamp ?? "",
-                        flightEndTime: selectedPilot.coordinates.last?.timestamp ?? "",
-                        flightDuration: flightDuration
+                    self.parent.selectedPilotTrack = PilotTracks(
+                        pilotName: customAnnotation.pilotName ?? "Unknown",
+                        oldestDateTime: Date(), // Assuming you have logic to determine this
+                        oldestCoordinates: (latitude: 0.0, longitude: 0.0), // Assuming you have logic to determine this
+                        flightDuration: 0.0, // Assuming you have logic to determine this
+                        dateTime: customAnnotation.trackDateTime ?? Date(),
+                        coordinates: (customAnnotation.coordinate.latitude, customAnnotation.coordinate.longitude),
+                        speed: customAnnotation.windSpeed ?? 0.0,
+                        altitude: Double(customAnnotation.altitude ?? "") ?? 0.0,
+                        heading: customAnnotation.windDirection ?? 0.0,
+                        inEmergency: customAnnotation.inEmergency ?? false
                     )
                 }
- */
                 
             default:
                 return
@@ -378,7 +382,7 @@ struct MapView: View {
     @StateObject private var stationLatestReadingsViewModel: StationLatestReadingsViewModel
     @StateObject private var pilotTracksViewModel: PilotTracksViewModel
     @State private var selectedSite: Sites?
-    @State private var selectedPilot: Pilots?
+    @State private var selectedPilotTrack: PilotTracks?
     @State private var isLayerSheetPresented = false
     @State private var isPlaying = false
     @State private var animationProgress: Double = 0.0
@@ -399,7 +403,7 @@ struct MapView: View {
                 annotations: $mapAnnotations,
                 mapType: mapSettingsViewModel.selectedMapType.toMapKitType(),
                 selectedSite: $selectedSite,
-                selectedPilot: $selectedPilot,
+                selectedPilotTrack: $selectedPilotTrack,
                 mapSettingsViewModel: mapSettingsViewModel
             )
             .cornerRadius(10)
@@ -487,17 +491,18 @@ struct MapView: View {
             SiteDetailView(site: site)
 
         }
-        
-        // Monitor for changes to pilot tracks and update annotations
+        .sheet(item: $selectedPilotTrack) { pilotTrack in
+            PilotDetailView(pilotTrack: pilotTrack)
+        }
+
+        // Monitor for changes to live tracks and update annotations
         .onReceive(pilotTracksViewModel.$pilotTracks) { pilotTracks in
-            mapAnnotations = pilotTracks.map { trackNode in
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy MM dd HH:mm:ss"
-                let dateString = formatter.string(from: trackNode.dateTime)
-                return mapAnnotationList(
+            // Append new pilot track annotations to the existing annotation list
+            let newPilotAnnotations = pilotTracks.map { trackNode in
+                mapAnnotationList(
                     annotationType: "pilot",
-                    annotationID: trackNode.pilotName + " " + dateString,
-                    annotationName: trackNode.pilotName + " " + dateString,
+                    annotationID: String(trackNode.pilotName.prefix(6)),
+                    annotationName: trackNode.pilotName,
                     coordinates: CLLocationCoordinate2D(latitude: trackNode.coordinates.latitude, longitude: trackNode.coordinates.longitude),
                     altitude: String(trackNode.altitude),
                     readingsNote: "",
@@ -508,9 +513,11 @@ struct MapView: View {
                     windSpeed: trackNode.speed,
                     windDirection: trackNode.heading,
                     windGust: 0.0,
-                    inEmergency: trackNode.inEmergency
+                    inEmergency: trackNode.inEmergency,
+                    trackdateTime: trackNode.dateTime
                 )
             }
+            mapAnnotations.append(contentsOf: newPilotAnnotations)
         }
     }
     
@@ -551,7 +558,8 @@ struct MapView: View {
                         windSpeed: 0.0,
                         windDirection: 0.0,
                         windGust: 0.0,
-                        inEmergency: false
+                        inEmergency: false,
+                        trackdateTime: nil
                     )
                     mapAnnotations.append(annotation)
                 }
@@ -577,7 +585,8 @@ struct MapView: View {
                                 windSpeed: reading.windSpeed,
                                 windDirection: reading.windDirection,
                                 windGust: reading.windGust,
-                                inEmergency: false
+                                inEmergency: false,
+                                trackdateTime: nil
                             )
                             mapAnnotations.append(annotation)
                         }
@@ -603,7 +612,8 @@ struct MapView: View {
                             windSpeed: reading.windSpeed,
                             windDirection: reading.windDirection,
                             windGust: reading.windGust,
-                            inEmergency: false
+                            inEmergency: false,
+                            trackdateTime: nil
                         )
                         mapAnnotations.append(annotation)
                     }

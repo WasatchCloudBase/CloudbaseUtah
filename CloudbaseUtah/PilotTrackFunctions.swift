@@ -3,7 +3,8 @@ import Combine
 import SwiftUI
 
 // Pilot live tracking structure
-struct PilotTracks {
+struct PilotTracks: Identifiable {
+    let id: UUID = UUID()
     // Data duplicated for each track point
     let pilotName: String
     let oldestDateTime: Date
@@ -86,9 +87,7 @@ class PilotTracksViewModel: ObservableObject {
 
         // First pass: Find oldest/newest date and coordinates, and pilot name
         var oldestDateTime: Date?
-        var newestDateTime: Date?
         var oldestCoordinates: (latitude: Double, longitude: Double)?
-        var newestCoordinates: (latitude: Double, longitude: Double)?
         var pilotName: String?
 
         var placemarkData: [(placemarkString: String, dateTime: Date?, latitude: Double?, longitude: Double?)] = []
@@ -109,15 +108,11 @@ class PilotTracksViewModel: ObservableObject {
 
             placemarkData.append((placemarkString, dateTime, latitude, longitude))
 
-            // Update oldest/newest
+            // Update oldest date/time and coordinates for this flight
             if let dt = dateTime, let lat = latitude, let lon = longitude {
                 if oldestDateTime == nil || dt < oldestDateTime! {
                     oldestDateTime = dt
                     oldestCoordinates = (lat, lon)
-                }
-                if newestDateTime == nil || dt > newestDateTime! {
-                    newestDateTime = dt
-                    newestCoordinates = (lat, lon)
                 }
             }
         }
@@ -140,9 +135,7 @@ class PilotTracksViewModel: ObservableObject {
                   let course = extractNumber(from: courseString),
                   let inEmergency = Bool(inEmergencyString.lowercased()),
                   let oldestDateTime = oldestDateTime,
-                  let newestDateTime = newestDateTime,
-                  let oldestCoordinates = oldestCoordinates,
-                  let newestCoordinates = newestCoordinates
+                  let oldestCoordinates = oldestCoordinates
             else {
                 // ignore placemark entries that failed parsing (likely did not have a valid dateTime)
                 continue
