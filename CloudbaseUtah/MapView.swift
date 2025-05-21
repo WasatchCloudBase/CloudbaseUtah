@@ -3,6 +3,7 @@ import MapKit
 import Combine
 import UIKit
 import CoreGraphics
+import CoreLocation
 import Foundation
 
 // Annotation data model
@@ -10,19 +11,20 @@ struct mapAnnotationList: Identifiable {
     let id = UUID()
     let annotationType: String              // e.g., "site" or "station"
     let annotationID: String                // an identifier based on the type
-    let annotationName: String
+    let annotationName: String              // Pilot name for pilot track annotations
     let coordinates: CLLocationCoordinate2D
     let altitude: String
-    let readingsNote: String
+    let readingsNote: String                // For site annotations; track message for pilot track annotations
     let forecastNote: String
     let siteType: String
     let readingsStation: String             // For site annotations
     let readingsSource: String
-    let windSpeed: Double?                  // For station annotations
-    let windDirection: Double?
+    let windSpeed: Double?                  // For station annotations; track speed for pilot track annotations
+    let windDirection: Double?              // Heading for pilot track annotations
     let windGust: Double?
     let inEmergency: Bool?                  // For pilot track annotations
-    let trackdateTime: Date?
+    let message: String?
+    let trackDateTime: Date?
 }
 
 // Custom MKPointAnnotation subclass for attaching clustering identifiers and station rendered wind speed/direction image
@@ -36,6 +38,7 @@ class CustomMKPointAnnotation: MKPointAnnotation {
     var trackDateTime: Date?
     var altitude: String?
     var inEmergency: Bool?
+    var message: String?
 }
 
 // Map wrapper to improve performance through enabling clustering of annotations and lazy loading
@@ -101,6 +104,7 @@ struct MKMapViewWrapper: UIViewRepresentable {
             customAnnotation.windDirection = ann.windDirection
             customAnnotation.windGust = ann.windGust
             customAnnotation.annotationType = ann.annotationType
+            customAnnotation.trackDateTime = ann.trackDateTime
 
             // For station annotations, set clustering.
             if ann.annotationType == "station" {
@@ -172,7 +176,14 @@ struct MKMapViewWrapper: UIViewRepresentable {
                     annotationTextColor = siteAnnotationTextColor
                 case "pilot":
                     annotationImage = pilotAnnotationUIImage
+                    // Override image if the track point has a text message
+                    if customAnnotation.message != nil {
+                        annotationImage = pilotMessageAnnotationUIImage
+                    }
                     annotationTextColor = pilotAnnotationTextColor
+                    if customAnnotation.inEmergency ?? false {
+                        annotationTextColor = pilotEmergencyAnnotationTextColor
+                    }
                 default:
                     annotationImage = UIImage(systemName: defaultAnnotationImage)
                     annotationTextColor = defaultAnnotationTextColor
@@ -296,7 +307,6 @@ struct MKMapViewWrapper: UIViewRepresentable {
             switch customAnnotation.subtitle {
                 
             case "site":
-print("selected site: \(String(describing: customAnnotation.title))")
                 guard let selectedSite = parent.annotations.first(where: { $0.annotationID == customAnnotation.title }) else {
                     print("Could not find site/station annotation for: \(String(describing: customAnnotation.title))")
                     return
@@ -344,23 +354,22 @@ print("selected site: \(String(describing: customAnnotation.title))")
                 }
 
             case "pilot":
-                // Return selectedSite for stations as well as sites to pass to siteDetail view for readings and forecast
-                guard let selectedPilotTrack = parent.annotations.first(where: { $0.annotationID == customAnnotation.title }) else {
-                    print("Could not find pilot annotation")
+                guard let selectedPilotTrack = parent.annotations.first(where: { $0.annotationID == customAnnotation.title &&
+                        $0.trackDateTime == customAnnotation.trackDateTime}) else {
+                    print("Could not find pilot annotation for: \(String(describing: customAnnotation.title)) and \(String(describing: customAnnotation.trackDateTime))")
                     return
                 }
                 DispatchQueue.main.async {
                     self.parent.selectedPilotTrack = PilotTracks(
-                        pilotName: customAnnotation.pilotName ?? "Unknown",
-                        oldestDateTime: Date(), // Assuming you have logic to determine this
-                        oldestCoordinates: (latitude: 0.0, longitude: 0.0), // Assuming you have logic to determine this
-                        flightDuration: 0.0, // Assuming you have logic to determine this
-                        dateTime: customAnnotation.trackDateTime ?? Date(),
-                        coordinates: (customAnnotation.coordinate.latitude, customAnnotation.coordinate.longitude),
-                        speed: customAnnotation.windSpeed ?? 0.0,
-                        altitude: Double(customAnnotation.altitude ?? "") ?? 0.0,
-                        heading: customAnnotation.windDirection ?? 0.0,
-                        inEmergency: customAnnotation.inEmergency ?? false
+                        pilotName: selectedPilotTrack.annotationName,
+                        dateTime: selectedPilotTrack.trackDateTime ?? Date(),
+                        coordinates: (latitude: selectedPilotTrack.coordinates.latitude,
+                                      longitude: selectedPilotTrack.coordinates.longitude),
+                        speed: selectedPilotTrack.windSpeed ?? 0.0,
+                        altitude: Double(selectedPilotTrack.altitude) ?? 0.0,
+                        heading: selectedPilotTrack.windDirection ?? 0.0,
+                        inEmergency: selectedPilotTrack.inEmergency ?? false,
+                        message: selectedPilotTrack.readingsNote
                     )
                 }
                 
@@ -389,6 +398,7 @@ struct MapView: View {
     @State private var currentTime: String = "00:00"
     @State private var mapAnnotations: [mapAnnotationList] = []
     @State private var isActive = false
+    @State private var pilotTrackDays: Double = defaultPilotTrackDays
     private var cancellables = Set<AnyCancellable>()
 
     init(sitesViewModel: SitesViewModel) {
@@ -436,34 +446,88 @@ struct MapView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     Spacer()
-/*
-                    if mapSettingsViewModel.activeLayers.contains(.precipitation) ||
-                        mapSettingsViewModel.activeLayers.contains(.cloudCover) {
-                        VStack(alignment: .trailing) {
-                            HStack(alignment: .center) {
-                                Button(action: { isPlaying.toggle() }) {
-                                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                                        .imageScale(.large)
+                    
+                    VStack(alignment: .trailing) {
+                        if mapSettingsViewModel.activeLayers.contains(.pilots) {
+                            // Slider for selecting number of days
+                            VStack (alignment: .trailing) {
+                                HStack {
+                                    VStack {
+                                        Text("Track")
+                                            .font(.caption)
+                                            .foregroundColor(layersFontColor)
+                                        
+                                        Text("Days")
+                                            .font(.caption)
+                                            .foregroundColor(layersFontColor)
+                                    }
+                                    .padding(.horizontal)
+                                    VStack {
+                                        Slider(value: $pilotTrackDays, in: 1...3, step: 1)
+                                            .tint(layersIconColor)
+                                            .onChange(of: pilotTrackDays) { newValue, oldValue in
+                                                // Remove previous pilot annotations
+                                                mapAnnotations.removeAll { $0.annotationType == "pilot" }
+                                                // Reload tracking data
+                                                for pilot in pilotsViewModel.pilots {
+                                                    pilotTracksViewModel.fetchTrackingData(trackingURL: pilot.trackingFeedURL, days: newValue)
+                                                }
+                                            }
+                                        HStack {
+                                            Text("1")
+                                                .font(.caption)
+                                                .foregroundColor(layersFontColor)
+                                                .padding(.leading, 10)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                            Text("2")
+                                                .font(.caption)
+                                                .foregroundColor(layersFontColor)
+                                                .frame(maxWidth: .infinity, alignment: .center)
+                                            Text("3")
+                                                .font(.caption)
+                                                .foregroundColor(layersFontColor)
+                                                .padding(.trailing, 10)
+                                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                        }
+                                        .font(.caption)
+                                    }
+                                    .padding(.horizontal)
                                 }
-                                .padding(.horizontal, 8)
-                                ProgressView(value: animationProgress)
-                                    .frame(width: 100)
-                                Text(currentTime)
-                                    .font(.headline)
-                                    .padding(.horizontal, 8)
                             }
+                            .padding(.horizontal)
+                            .padding(.vertical, 12)
+                            .background(.thinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                        .padding()
-                        .background(.thinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+/*
+                        if mapSettingsViewModel.activeLayers.contains(.precipitation) ||
+                            mapSettingsViewModel.activeLayers.contains(.cloudCover) {
+                            VStack(alignment: .trailing) {
+                                HStack(alignment: .center) {
+                                    Button(action: { isPlaying.toggle() }) {
+                                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                            .imageScale(.large)
+                                    }
+                                    .padding(.horizontal, 8)
+                                    ProgressView(value: animationProgress)
+                                        .frame(width: 100)
+                                    Text(currentTime)
+                                        .font(.headline)
+                                        .padding(.horizontal, 8)
+                                }
+                            }
+                            .padding()
+                            .background(.thinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+ */
                     }
-*/
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
             }
         }
-        .onChange(of: mapSettingsViewModel.activeLayers) { _ in
+        .onChange(of: mapSettingsViewModel.activeLayers) {
             updateMapAnnotations()
         }
         .onChange(of: scenePhase) {
@@ -492,7 +556,7 @@ struct MapView: View {
 
         }
         .sheet(item: $selectedPilotTrack) { pilotTrack in
-            PilotDetailView(pilotTrack: pilotTrack)
+            PilotTrackNodeView(pilotTrack: pilotTrack)
         }
 
         // Monitor for changes to live tracks and update annotations
@@ -505,7 +569,7 @@ struct MapView: View {
                     annotationName: trackNode.pilotName,
                     coordinates: CLLocationCoordinate2D(latitude: trackNode.coordinates.latitude, longitude: trackNode.coordinates.longitude),
                     altitude: String(trackNode.altitude),
-                    readingsNote: "",
+                    readingsNote: trackNode.message ?? "",
                     forecastNote: "",
                     siteType: "",
                     readingsStation: "",
@@ -514,11 +578,14 @@ struct MapView: View {
                     windDirection: trackNode.heading,
                     windGust: 0.0,
                     inEmergency: trackNode.inEmergency,
-                    trackdateTime: trackNode.dateTime
+                    message: trackNode.message,
+                    trackDateTime: trackNode.dateTime
                 )
             }
             mapAnnotations.append(contentsOf: newPilotAnnotations)
         }
+        // Make sure pilot live track view model is published
+        .environmentObject(pilotTracksViewModel)
     }
     
     // Timer to reload readings and live tracks if page stays active
@@ -530,13 +597,13 @@ struct MapView: View {
                 }
                 if mapSettingsViewModel.activeLayers.contains(.pilots) {
                     for pilot in pilotsViewModel.pilots {
-                        pilotTracksViewModel.fetchTrackingData(trackingURL: pilot.trackingFeedURL)
+                        pilotTracksViewModel.fetchTrackingData(trackingURL: pilot.trackingFeedURL, days: pilotTrackDays)
                     }
                 }
             }
         }
     }
-    
+
     // Update the annotations based on the active layers.
     private func updateMapAnnotations() {
         mapAnnotations.removeAll()
@@ -559,7 +626,8 @@ struct MapView: View {
                         windDirection: 0.0,
                         windGust: 0.0,
                         inEmergency: false,
-                        trackdateTime: nil
+                        message: "",
+                        trackDateTime: nil
                     )
                     mapAnnotations.append(annotation)
                 }
@@ -586,7 +654,8 @@ struct MapView: View {
                                 windDirection: reading.windDirection,
                                 windGust: reading.windGust,
                                 inEmergency: false,
-                                trackdateTime: nil
+                                message: "",
+                                trackDateTime: nil
                             )
                             mapAnnotations.append(annotation)
                         }
@@ -613,7 +682,8 @@ struct MapView: View {
                             windDirection: reading.windDirection,
                             windGust: reading.windGust,
                             inEmergency: false,
-                            trackdateTime: nil
+                            message: "",
+                            trackDateTime: nil
                         )
                         mapAnnotations.append(annotation)
                     }
@@ -622,7 +692,600 @@ struct MapView: View {
         }
         if mapSettingsViewModel.activeLayers.contains(.pilots) {
             for pilot in pilotsViewModel.pilots {
-                pilotTracksViewModel.fetchTrackingData(trackingURL: pilot.trackingFeedURL)
+                pilotTracksViewModel.fetchTrackingData(trackingURL: pilot.trackingFeedURL, days: pilotTrackDays)
+            }
+        }
+    }
+}
+
+
+
+
+
+
+// Pilot live tracking structure
+struct PilotTracks: Identifiable {
+    let id: UUID = UUID()
+    let pilotName: String
+    let dateTime: Date
+    let coordinates: (latitude: Double, longitude: Double)
+    let speed: Double
+    let altitude: Double
+    let heading: Double
+    let inEmergency: Bool
+    let message: String?
+}
+
+// Used to identify discrete live track points, and not create duplicates
+struct PilotTrackKey: Hashable {
+    let pilotName: String
+    let dateTime: Date
+}
+
+class PilotTracksViewModel: ObservableObject {
+    @Published var pilotTracks: [PilotTracks] = []
+    
+    func fetchTrackingData(trackingURL: String, days: Double) {
+        guard let url = constructURL(trackingURL: trackingURL, days: days) else { return }
+        var request = URLRequest(url: url)
+
+        // Set headers to handle InReach requirements and redirect to data file location
+        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
+        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7", forHTTPHeaderField: "Accept")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        request.setValue("keep-alive", forHTTPHeaderField: "Connection")
+        request.setValue("1", forHTTPHeaderField: "DNT")
+        request.setValue("document", forHTTPHeaderField: "Sec-Fetch-Dest")
+        request.setValue("navigate", forHTTPHeaderField: "Sec-Fetch-Mode")
+        request.setValue("none", forHTTPHeaderField: "Sec-Fetch-Site")
+        request.setValue("?1", forHTTPHeaderField: "Sec-Fetch-User")
+        request.setValue("1", forHTTPHeaderField: "Upgrade-Insecure-Requests")
+        request.setValue("\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"", forHTTPHeaderField: "sec-ch-ua")
+        request.setValue("?0", forHTTPHeaderField: "sec-ch-ua-mobile")
+        request.setValue("\"macOS\"", forHTTPHeaderField: "sec-ch-ua-platform")
+
+        // Query InReach KML feed
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self, let data = data, error == nil else { return }
+            DispatchQueue.main.async {
+                let newTracks = self.parseKML(data: data)
+                // Check if track node already exists for pilot and time stamp; if so, don't append
+                let existingKeys: Set<PilotTrackKey> = Set(self.pilotTracks.map { PilotTrackKey(pilotName: $0.pilotName, dateTime: $0.dateTime) })
+                let uniqueNewTracks = newTracks.filter { !existingKeys.contains(PilotTrackKey(pilotName: $0.pilotName, dateTime: $0.dateTime)) }
+                self.pilotTracks.append(contentsOf: uniqueNewTracks)
+            }
+        }
+        task.resume()
+    }
+
+    private func constructURL(trackingURL: String, days: Double) -> URL? {
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime]
+        let dateSelectedDaysAgo = Date().addingTimeInterval(TimeInterval(-24 * days * 60 * 60))
+        let dateString = dateFormatter.string(from: dateSelectedDaysAgo)
+        let finalURLString = "\(trackingURL)?d1=\(dateString)"
+        return URL(string: finalURLString)
+    }
+
+    private func parseKML(data: Data) -> [PilotTracks] {
+        guard let xmlString = String(data: data, encoding: .utf8) else {
+            print("Invalid XML coding for track log")
+            return []
+        }
+
+        let placemarkStrings = extractAllValues(from: xmlString, using: "<Placemark>", endTag: "</Placemark>")
+        guard !placemarkStrings.isEmpty else {
+            return []
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M/d/yyyy h:mm:ss a"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+
+        var pilotTracks: [PilotTracks] = []
+        for placemarkString in placemarkStrings {
+            guard let pilotName = extractValue(from: placemarkString, using: "<Data name=\"Name\">", endTag: "</Data>"),
+                  let dateTimeString = extractValue(from: placemarkString, using: "<Data name=\"Time\">", endTag: "</Data>"),
+                  let latitudeString = extractValue(from: placemarkString, using: "<Data name=\"Latitude\">", endTag: "</Data>"),
+                  let longitudeString = extractValue(from: placemarkString, using: "<Data name=\"Longitude\">", endTag: "</Data>")
+            else {
+                // ignore placemark entries that failed parsing (likely did not have a valid dateTime)
+                continue
+            }
+
+            // Format data for track point
+            let dateTime = formatter.date(from: dateTimeString) ?? Date()
+            let speedString = extractValue(from: placemarkString, using: "<Data name=\"Velocity\">", endTag: "</Data>") ?? ""
+            let speed = extractNumber(from: speedString) ?? 0.0
+            let speedMph = convertKMToMiles(speed).rounded()
+            let altitudeString = extractValue(from: placemarkString, using: "<Data name=\"Elevation\">", endTag: "</Data>") ?? ""
+            let altitude = extractNumber(from: altitudeString) ?? 0.0
+            let altitudeFeet = Double(convertMetersToFeet(altitude))
+            let latitude = Double(latitudeString) ?? 0.0
+            let longitude = Double(longitudeString) ?? 0.0
+            let courseString = extractValue(from: placemarkString, using: "<Data name=\"Course\">", endTag: "</Data>") ?? ""
+            let course = extractNumber(from: courseString) ?? 0.0
+            let inEmergencyString = extractValue(from: placemarkString, using: "<Data name=\"In Emergency\">", endTag: "</Data>")?.lowercased()
+            let inEmergency = Bool(inEmergencyString ?? "false") ?? false
+            let message = extractValue(from: placemarkString, using: "<Data name=\"Text\">", endTag: "</Data>") ?? ""
+
+            let trackPoint = PilotTracks(
+                pilotName: pilotName,
+                dateTime: dateTime,
+                coordinates: (latitude, longitude),
+                speed: speedMph,
+                altitude: altitudeFeet,
+                heading: course,
+                inEmergency: inEmergency,
+                message: message
+            )
+            pilotTracks.append(trackPoint)
+        }
+        return pilotTracks
+    }
+    
+    private func extractAllValues(from text: String, using startTag: String, endTag: String) -> [String] {
+        var values: [String] = []
+        var searchRange: Range<String.Index>?
+        while let startRange = text.range(of: startTag, options: [], range: searchRange),
+              let endRange = text.range(of: endTag, options: [], range: startRange.upperBound..<text.endIndex) {
+            let value = String(text[startRange.upperBound..<endRange.lowerBound])
+            values.append(value)
+            searchRange = endRange.upperBound..<text.endIndex
+        }
+        return values
+    }
+    
+    private func extractValue(from text: String, using startTag: String, endTag: String) -> String? {
+        
+        // Get string within tag
+        guard let startRange = text.range(of: startTag),
+              let endRange = text.range(of: endTag, options: [], range: startRange.upperBound..<text.endIndex) else {
+            //print("range lookup failed for startTag: \(startTag), endTag: \(endTag)")
+            return nil
+        }
+        let tagString = String(text[startRange.upperBound..<endRange.lowerBound])
+
+        // The string is in the format <value>xxx</value>
+        // Only return the section between the value tags
+        guard let startRange = tagString.range(of: "<value>"),
+              let endRange = tagString.range(of: "</value>", options: [], range: startRange.upperBound..<tagString.endIndex) else {
+            //print("value range lookup failed for startTag: \(startTag), endTag: \(endTag)")
+            return nil
+        }
+        let valueString = String(tagString[startRange.upperBound..<endRange.lowerBound])
+        
+        return valueString
+    }
+}
+
+
+// Structure to process API call to elevation for a set of coordinates
+struct ElevationResponse: Codable {
+    let elevation: [Double]
+}
+
+// Display selected pilot live track node details
+struct PilotTrackNodeView: View {
+    @EnvironmentObject var pilotsViewModel: PilotsViewModel
+    @EnvironmentObject var pilotTracksViewModel: PilotTracksViewModel
+    @Environment(\.presentationMode) var presentationMode
+    var pilotTrack: PilotTracks
+    @State private var groundElevation: Int? = 0
+    @State private var cancellables = Set<AnyCancellable>()
+
+    var body: some View {
+
+        let colWidth: CGFloat = 140
+        let rowVerticalPadding: CGFloat = 4
+        let (flightStartDateTime, flightLatestDateTime, formattedFlightDuration, flightDistance) = getPilotTrackInfo(pilotTrack: pilotTrack)
+        var trackingShareURL: String { pilotsViewModel.trackingShareURL(for: pilotTrack.pilotName) ?? "" }
+        var formattedNodeDate: String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "M/d/yyyy"
+            return formatter.string(from: pilotTrack.dateTime)
+        }
+        var formattedNodeTime: String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "h:mm a" // 12-hour format with AM/PM
+            return formatter.string(from: pilotTrack.dateTime)
+        }
+    
+        VStack(alignment: .leading) {
+            
+            HStack {
+                Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    HStack {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(toolbarActiveImageColor)
+                        Text("Back")
+                            .foregroundColor(toolbarActiveFontColor)
+                        Spacer()
+                        Text(pilotTrack.pilotName)
+                            .foregroundColor(sectionHeaderColor)
+                            .bold()
+                    }
+                }
+                .padding()
+                Spacer()
+            }
+            .background(toolbarBackgroundColor)
+            .padding(0)
+            
+            List {
+                
+                if pilotTrack.inEmergency {
+                    Section(header: Text("Emergency Status")
+                        .font(.headline)
+                        .foregroundColor(sectionHeaderColor)
+                        .bold())
+                    {
+                        Text("InReach is in emergency status; track points not provided (except to emergency services)")
+                            .foregroundColor(warningFontColor)
+                            .bold()
+                            .padding(.vertical, rowVerticalPadding)
+                    }
+                }
+                
+                Section(header: Text("Track point")
+                    .font(.headline)
+                    .foregroundColor(sectionHeaderColor)
+                    .bold())
+                {
+                    VStack(alignment: .leading, spacing: 0) {
+                        
+                        HStack {
+                            Text("Date")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text(formattedNodeDate)
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Time")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text(formattedNodeTime)
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Coordinates")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text("\(pilotTrack.coordinates.latitude), \(pilotTrack.coordinates.longitude)")
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Speed")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text("\(Int(pilotTrack.speed.rounded())) mph")
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Altitude")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text("\(Int(pilotTrack.altitude)) ft")
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        if let groundElevation = groundElevation {
+                            HStack {
+                                Text("Surface")
+                                    .multilineTextAlignment(.trailing)
+                                    .font(.subheadline)
+                                    .padding(.trailing, 2)
+                                    .foregroundColor(infoFontColor)
+                                    .frame(width: colWidth, alignment: .trailing)
+                                Text("\(groundElevation) ft")
+                                    .font(.subheadline)
+                                    .padding(.leading, 2)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(.vertical, rowVerticalPadding)
+                            
+                            HStack {
+                                Text("Height")
+                                    .multilineTextAlignment(.trailing)
+                                    .font(.subheadline)
+                                    .padding(.trailing, 2)
+                                    .foregroundColor(infoFontColor)
+                                    .frame(width: colWidth, alignment: .trailing)
+                                Text("\(Int(pilotTrack.altitude) - groundElevation) ft")
+                                    .font(.subheadline)
+                                    .padding(.leading, 2)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(.vertical, rowVerticalPadding)
+                        }
+                        
+                        if let message = pilotTrack.message, !message.isEmpty {
+                            HStack {
+                                Text("Message")
+                                    .multilineTextAlignment(.trailing)
+                                    .font(.subheadline)
+                                    .padding(.trailing, 2)
+                                    .foregroundColor(infoFontColor)
+                                    .frame(width: colWidth, alignment: .trailing)
+                                Text(message)
+                                    .font(.subheadline)
+                                    .padding(.leading, 2)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(.vertical, rowVerticalPadding)
+                        }
+                        
+                    }
+                }
+                
+                Section(header: Text("Track")
+                    .font(.headline)
+                    .foregroundColor(sectionHeaderColor)
+                    .bold())
+                {
+                    VStack(alignment: .leading, spacing: 0) {
+                        
+                        HStack {
+                            Text("Start")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text(flightStartDateTime.formatted())
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Latest")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text(flightLatestDateTime.formatted())
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Duration")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text("\(formattedFlightDuration)")
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Distance")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text("\(Int(flightDistance)) km")
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                    }
+                }
+                
+                Section(header: Text("Links")
+                    .font(.headline)
+                    .foregroundColor(sectionHeaderColor)
+                    .bold())
+                {
+                    
+                    Button(action: {
+                        if let url = URL(string: trackingShareURL) {
+                            UIApplication.shared.open(url)
+                        }
+                    }) {
+                        Text("InReach share page")
+                            .multilineTextAlignment(.trailing)
+                            .font(.subheadline)
+                            .foregroundColor(rowHeaderColor)
+                    }
+                    Button(action: {
+                        UIPasteboard.general.string = "\(pilotTrack.coordinates.latitude),\(pilotTrack.coordinates.longitude)"
+                    }) {
+                        Text("Copy coordinates to clipboard")
+                            .multilineTextAlignment(.trailing)
+                            .font(.subheadline)
+                            .foregroundColor(rowHeaderColor)
+                    }
+                    Button(action: openGoogleMaps) {
+                        Text("Open track point in Google Maps")
+                            .multilineTextAlignment(.trailing)
+                            .font(.subheadline)
+                            .foregroundColor(rowHeaderColor)
+                    }
+                    Button(action: openAppleMaps) {
+                        Text("Open track point in Apple Maps")
+                            .multilineTextAlignment(.trailing)
+                            .font(.subheadline)
+                            .foregroundColor(rowHeaderColor)
+                    }
+                }
+            }
+            .padding(0)
+            .onAppear {
+                fetchGroundElevation(latitude: pilotTrack.coordinates.latitude, longitude: pilotTrack.coordinates.longitude)
+            }
+        }
+        Spacer()
+    }
+    
+    private func fetchGroundElevation(latitude: Double, longitude: Double) {
+        let urlString = "https://api.open-meteo.com/v1/elevation?latitude=\(latitude)&longitude=\(longitude)"
+        guard let url = URL(string: urlString) else { return }
+        
+        URLSession.shared.dataTaskPublisher(for: url)
+            .map { $0.data }
+            .decode(type: ElevationResponse.self, decoder: JSONDecoder())
+            .map { $0.elevation.first }
+            .replaceError(with: nil)
+            .receive(on: DispatchQueue.main)
+            .sink { elevation in
+                self.groundElevation = convertMetersToFeet(elevation ?? 0)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func getPilotTrackInfo(pilotTrack: PilotTracks) -> (
+        flightStartDateTime: Date,
+        flightLatestDateTime: Date,
+        formattedFlightDuration: String,
+        flightDistance: CLLocationDistance
+    ) {
+        guard let oldestTrack = pilotTracksViewModel.pilotTracks
+                .   filter({ $0.pilotName == pilotTrack.pilotName })
+                .min(by: { $0.dateTime < $1.dateTime }) else {
+            return (Date(), Date(), "", 0)
+        }
+        guard let latestTrack = pilotTracksViewModel.pilotTracks
+                .   filter({ $0.pilotName == pilotTrack.pilotName })
+                .max(by: { $0.dateTime < $1.dateTime }) else {
+            return (Date(), Date(), "", 0)
+        }
+
+        let flightStartDateTime = oldestTrack.dateTime
+        let flightLatestDateTime = latestTrack.dateTime
+        let flightDuration = Int(flightLatestDateTime.timeIntervalSince(flightStartDateTime))
+        let flightHours = flightDuration / 3600
+        let flightMinutes = (flightDuration % 3600) / 60
+        let formattedFlightDuration = String(format: "%d:%02d", flightHours, flightMinutes)
+
+        let startCoordinates = CLLocation(latitude: oldestTrack.coordinates.latitude, longitude: oldestTrack.coordinates.longitude)
+        let latestCoordinates = CLLocation(latitude: pilotTrack.coordinates.latitude, longitude: pilotTrack.coordinates.longitude)
+        let flightDistance = startCoordinates.distance(from: latestCoordinates) / 1000  // convert m to km
+
+        return (flightStartDateTime, flightLatestDateTime, formattedFlightDuration, flightDistance)
+    }
+    
+    private func openGoogleMaps() {
+        let latitude = pilotTrack.coordinates.latitude
+        let longitude = pilotTrack.coordinates.longitude
+        if let url = URL(string: "https://www.google.com/maps/search/?api=1&query=\(latitude),\(longitude)") {
+            UIApplication.shared.open(url)
+        }
+    }
+    
+    private func openAppleMaps() {
+        let latitude = pilotTrack.coordinates.latitude
+        let longitude = pilotTrack.coordinates.longitude
+        if let url = URL(string: "https://maps.apple.com/?q=Track&ll=\(latitude),\(longitude)") {
+            UIApplication.shared.open(url)
+        }
+    }
+}
+
+// Developer view to check on pilot live track nodes being created
+struct PilotTracksView: View {
+    @EnvironmentObject var pilotsViewModel: PilotsViewModel
+    @ObservedObject var pilotTracksViewModel: PilotTracksViewModel
+    let pilotTrackDays: Double
+    @State private var hasFetched = false
+    
+    var body: some View {
+        VStack {
+            if pilotTracksViewModel.pilotTracks.isEmpty {
+                Text("No pilot track data loaded.")
+            } else {
+                List(pilotTracksViewModel.pilotTracks, id: \.dateTime) { track in
+                    
+                    var trackingShareURL: String { pilotsViewModel.trackingShareURL(for: track.pilotName) ?? "" }
+                    
+                    VStack(alignment: .leading) {
+                        Text("Pilot: \(track.pilotName)")
+                            .font(.subheadline)
+                            .bold()
+                        Text("Time: \(track.dateTime.formatted())")
+                            .font(.caption)
+                        Text("Coordinates: \(track.coordinates.latitude), \(track.coordinates.longitude)")
+                            .font(.caption)
+                        Text("Speed: \(track.speed)")
+                            .font(.caption)
+                        Text("Altitude: \(track.altitude)")
+                            .font(.caption)
+                        if track.message != nil {
+                            Text("Message: \(track.message ?? "")")
+                                .font(.caption)
+                        }
+                        if track.inEmergency {
+                            Text("InReach is in emergency status; track points not provided (except to emergency services)")
+                                .font(.subheadline)
+                                .foregroundColor(warningFontColor)
+                                .bold()
+                        }
+                        Button(action: {
+                            if let url = URL(string: trackingShareURL) {
+                                UIApplication.shared.open(url)
+                            }
+                        }) {
+                            Text("InReach share page")
+                                .font(.caption)
+                                .foregroundColor(rowHeaderColor)
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear {
+            guard !hasFetched else { return }
+            hasFetched = true
+            for pilot in pilotsViewModel.pilots {
+                pilotTracksViewModel.fetchTrackingData(trackingURL: pilot.trackingFeedURL, days: pilotTrackDays)
             }
         }
     }

@@ -28,7 +28,7 @@ struct DevSiteCoordView: View {
                     Text(site.siteName)
                 }
             }
-            .onChange(of: selectedSite) { _ in
+            .onChange(of: selectedSite) {
                 showMapSheet = true
             }
             .sheet(isPresented: $showMapSheet) {
@@ -198,11 +198,6 @@ struct SiteMapView: View {
                 return
             }
             print("Coordinates updated successfully.")
-print(body)
-print("---------")
-print(data)
-print("---------")
-print(response)
         }.resume()
     }
 }

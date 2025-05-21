@@ -63,6 +63,7 @@ let stationAnnotationColor: Color = .gunmetal
 let stationAnnotationTextColor: UIColor = UIColor(.gunmetal)
 //  pilotAnnotationColor is not define here; it is established by the image
 let pilotAnnotationTextColor: UIColor = .white
+let pilotEmergencyAnnotationTextColor: UIColor = UIColor(.poppy)
 let clusterAnnotationColor: UIColor = UIColor(stationAnnotationColor)
 let defaultAnnotationColor: UIColor = UIColor(.black)
 let defaultAnnotationTextColor: UIColor = UIColor(.white)
@@ -77,4 +78,5 @@ let cameraAnnotationImage: String = "camera.circle"
 let siteAnnotationUIImage: UIImage = UIImage(named: "roundPGicon")?.scaled(toWidth: defaultAnnotationImageWidth) ?? UIImage(named: "questionmark")!
 //  stationAnnotationImage not defined here; it is built dynamically based on wind speed/direction
 let pilotAnnotationUIImage: UIImage = UIImage(named: "PGIconNoBorder")?.scaled(toWidth: defaultAnnotationImageWidth) ?? UIImage(named: "questionmark")!
+let pilotMessageAnnotationUIImage: UIImage = UIImage(named: "bubble.fill")?.scaled(toWidth: defaultAnnotationImageWidth) ?? UIImage(named: "questionmark")!
 let defaultAnnotationImage: String = "questionmark"

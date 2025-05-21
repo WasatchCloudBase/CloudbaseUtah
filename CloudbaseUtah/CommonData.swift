@@ -18,16 +18,16 @@ enum NavBarSelectedView:Int {
 }
 let googleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
 let googleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
-let sunriseLatitude: Double = 40.7862               // SLC airport coordinates
+let sunriseLatitude: Double = 40.7862                   // SLC airport coordinates
 let sunriseLongitude: Double = -111.9801
-let mapInitLatitude: Double = 40.53                // Center point for map on initial opening
+let mapInitLatitude: Double = 40.53                     // Center point for map on initial opening
 let mapInitLongitude: Double = -111.87
-let mapInitLatitudeSpan: Double = 0.60              // Size of map on initial opening
+let mapInitLatitudeSpan: Double = 0.60                  // Size of map on initial opening
 let mapInitLongitudeSpan: Double = mapInitLatitudeSpan * 1.5
 let mapEnableRotation: Bool = false
-let defaultTopOfLiftAltitude = 18000.0              // Use in lift area graph when top of lift isn't reached in calculations
-let pageRefreshInterval: TimeInterval = 150         // Time in seconds to refresh wind readings (300 for 5 min)
-let pilotTrackDays: Int = 2                         // Defautl days of live tracking to display
+let defaultTopOfLiftAltitude = 18000.0                  // Use in lift area graph when top of lift isn't reached in calculations
+let pageRefreshInterval: TimeInterval = 150             // Time in seconds to refresh wind readings (300 for 5 min)
+let defaultPilotTrackDays: Double = 1.0             // Default days of live tracking to display
 
 // HTTP links and APIs
 let forecastUSMapLink: String = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
@@ -364,5 +364,9 @@ class PilotsViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .assign(to: \.pilots, on: self)
             .store(in: &cancellables)
+    }
+    
+    func trackingShareURL(for pilotName: String) -> String? {
+        return pilots.first(where: { $0.pilotName == pilotName })?.trackingShareURL
     }
 }

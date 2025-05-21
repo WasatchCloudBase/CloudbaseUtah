@@ -125,8 +125,8 @@ class StationLatestReadingsViewModel: ObservableObject {
                     self.latestReadings = decodedResponse.station.compactMap { station in
                         // Only return latest readings for stations where a windSpeed observation exists
                         // (intended to skip stations on the map that are only temperature stations, etc.)
-                        guard let windSpeed = station.observations.windSpeed?.value,
-                              let windTimeString = station.observations.windSpeed?.dateTime
+                        guard let _ = station.observations.windSpeed?.value,
+                              let _ = station.observations.windSpeed?.dateTime
                         else { return nil }
 
                         return StationLatestReadings(
@@ -135,7 +135,7 @@ class StationLatestReadingsViewModel: ObservableObject {
                             stationElevation: station.elevation,
                             stationLatitude: station.latitude,
                             stationLongitude: station.longitude,
-                            windSpeed: windSpeed,
+                            windSpeed: station.observations.windSpeed?.value,
                             windDirection: station.observations.windDirection?.value,
                             windGust: station.observations.windGust?.value,
                             windTime: station.observations.windSpeed?.dateTime

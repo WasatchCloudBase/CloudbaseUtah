@@ -77,8 +77,12 @@ struct AboutView: View {
                             .foregroundColor(rowHeaderColor)
                     }
                  
-                    // UDOT camera map
-                    NavigationLink(destination: PilotTracksView(pilotTracksViewModel: pilotTracksViewModel)
+                    // Pilot track listing
+                    NavigationLink(destination:
+                                   PilotTracksView(
+                                       pilotTracksViewModel: pilotTracksViewModel,
+                                       pilotTrackDays: defaultPilotTrackDays
+                                   )
                         .environmentObject(pilotsViewModel)) {
                         Text("Pilot track node list")
                             .font(.subheadline)
