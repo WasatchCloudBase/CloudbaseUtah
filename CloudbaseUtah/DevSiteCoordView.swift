@@ -76,7 +76,7 @@ struct MapViewRepresentable: UIViewRepresentable {
             let annotation = MKPointAnnotation()
             annotation.coordinate = markerCoordinate
             uiView.addAnnotation(annotation)
-        }
+        }        
     }
 
     class Coordinator: NSObject, MKMapViewDelegate {

@@ -17,7 +17,7 @@ struct CloudbaseUtahApp: App {
         ),
         activeLayers: [.sites, .pilots],
 //        activeLayers: [.stations, .sites],
-        selectedMapType: .standard
+        selectedMapType: .standard,
     )
     
     var body: some Scene {
