@@ -21,14 +21,17 @@ class MapSettingsViewModel: ObservableObject {
     @Published var region: MKCoordinateRegion
     @Published var activeLayers: Set<MapLayer>
     @Published var selectedMapType: CustomMapStyle
+    @Published var pilotTrackDays: Double
 
     init(region: MKCoordinateRegion,
          activeLayers: Set<MapLayer>,
-         selectedMapType: CustomMapStyle = .standard)
+         selectedMapType: CustomMapStyle = .standard,
+         pilotTrackDays: Double = defaultPilotTrackDays)
     {
         self.region = region
         self.activeLayers = activeLayers
         self.selectedMapType = selectedMapType
+        self.pilotTrackDays = pilotTrackDays
     }
 }
 
@@ -79,6 +82,7 @@ enum MapLayer: String, CaseIterable {
 struct LayerSelectionView: View {
     @Binding var activeLayers: Set<MapLayer>
     @Binding var selectedMapType: CustomMapStyle
+    @Binding var pilotTrackDays: Double
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
@@ -108,21 +112,58 @@ struct LayerSelectionView: View {
                 }
                 Section(header: Text("Map Layers")) {
                     ForEach(MapLayer.allCases, id: \.self) { layer in
-                        Toggle(isOn: Binding(
-                            get: { activeLayers.contains(layer) },
-                            set: { isActive in
-                                if isActive {
-                                    activeLayers.insert(layer)
-                                } else {
-                                    activeLayers.remove(layer)
+                        VStack {
+                            Toggle(isOn: Binding(
+                                get: { activeLayers.contains(layer) },
+                                set: { isActive in
+                                    if isActive {
+                                        activeLayers.insert(layer)
+                                    } else {
+                                        activeLayers.remove(layer)
+                                    }
+                                }
+                            )) {
+                                VStack(alignment: .leading) {
+                                    Text(layer.name)
+                                    Text(layer.description)
+                                        .font(.subheadline)
+                                        .foregroundColor(infoFontColor)
                                 }
                             }
-                        )) {
-                            VStack(alignment: .leading) {
-                                Text(layer.name)
-                                Text(layer.description)
-                                    .font(.subheadline)
-                                    .foregroundColor(infoFontColor)
+                            if layer == .pilots && activeLayers.contains(.pilots) {
+                                VStack (alignment: .trailing) {
+                                    HStack {
+                                        VStack {
+                                            Text("Track")
+                                                .font(.subheadline)
+                                            
+                                            Text("Days")
+                                                .font(.subheadline)
+                                        }
+                                        .padding(.horizontal)
+                                        VStack {
+                                            Slider(value: $pilotTrackDays, in: 1.0...3.0, step: 1.0)
+                                            HStack {
+                                                Text("1")
+                                                    .font(.subheadline)
+                                                    .padding(.leading, 10)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                Text("2")
+                                                    .font(.subheadline)
+                                                    .frame(maxWidth: .infinity, alignment: .center)
+                                                Text("3")
+                                                    .font(.subheadline)
+                                                    .padding(.trailing, 10)
+                                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                                            }
+                                        }
+                                        .padding(.horizontal)
+                                    }
+                                }
+                                .padding(.horizontal)
+                                .padding(.vertical, 12)
+                                .background(tableBackgroundColor)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                         }
                     }

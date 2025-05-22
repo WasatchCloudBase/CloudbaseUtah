@@ -32,9 +32,9 @@ let buttonTextColor: Color = .white
 let buttonWidth: CGFloat = 100
 
 // Table and chart colors
-let tableBackgroundColor: Color = .gunmetal //Color(.secondarySystemBackground)   //.darkgray
+let tableBackgroundColor: Color = .gunmetal
 let tableSectionDividerColor: Color = .grayslime
-let tableLabelFontColor: Color = .white  // table data color is white, and changed bsaed on conditional formatting
+let tableLabelFontColor: Color = .white  // table data color is white, and changed based on conditional formatting
 let tableMajorDividerColor: Color = .titanium
 let tableMinorDividerColor: Color = tableBackgroundColor
 let chartGradientStartColor: Color = Color(.tertiarySystemBackground)
@@ -51,7 +51,7 @@ let displayValueOrange: Color = .displayValueOrange
 let displayValueRed: Color = .displayValueRed
 let repeatDateTimeColor: Color = .titanium
 
-// Map page colors
+// Map page colors and format
 let layersIconColor: Color = toolbarImageColor
 let layersFontColor: Color = toolbarFontColor
 let layersIconBackgroundColor: Color = .black
@@ -61,22 +61,34 @@ let cameraAnnotationTextColor: Color = cameraAnnotationColor
 let siteAnnotationTextColor: UIColor = UIColor(.white)
 let stationAnnotationColor: Color = .gunmetal
 let stationAnnotationTextColor: UIColor = UIColor(.gunmetal)
-//  pilotAnnotationColor is not define here; it is established by the image
+let pilotNodeAnnotationColor: Color = .white
 let pilotAnnotationTextColor: UIColor = .white
 let pilotEmergencyAnnotationTextColor: UIColor = UIColor(.poppy)
+let pilotTrackColor: UIColor = UIColor(.white)
+let pilotTrackWidth: CGFloat = 1
 let clusterAnnotationColor: UIColor = UIColor(stationAnnotationColor)
 let defaultAnnotationColor: UIColor = UIColor(.black)
 let defaultAnnotationTextColor: UIColor = UIColor(.white)
 
 // Images
-let defaultAnnotationImageWidth: CGFloat = 60
-let windArrow: String = "arrow.up"  // options are:  arrowshape.up.fill, arrow.up, arrow.up.circle.fill, arrow.up.circle, arrow.up.circle.dotted, arrowshape.up.circle
+let defaultAnnotationImageWidth: CGFloat = 50
+let pilotNodeAnnotationImageWidth: CGFloat = 20
+let pilotLaunchAnnotationImageWidth: CGFloat = 40
+let pilotLatestAnnotationImageWidth: CGFloat = 40
+let windArrow: String = "arrow.up"
 let layersImage: String = "square.3.layers.3d"
 let playImage: String = "play.fill"
 let pauseImage: String = "pause.fill"
 let cameraAnnotationImage: String = "camera.circle"
-let siteAnnotationUIImage: UIImage = UIImage(named: "roundPGicon")?.scaled(toWidth: defaultAnnotationImageWidth) ?? UIImage(named: "questionmark")!
-//  stationAnnotationImage not defined here; it is built dynamically based on wind speed/direction
-let pilotAnnotationUIImage: UIImage = UIImage(named: "PGIconNoBorder")?.scaled(toWidth: defaultAnnotationImageWidth) ?? UIImage(named: "questionmark")!
-let pilotMessageAnnotationUIImage: UIImage = UIImage(named: "bubble.fill")?.scaled(toWidth: defaultAnnotationImageWidth) ?? UIImage(named: "questionmark")!
-let defaultAnnotationImage: String = "questionmark"
+let defaultAnnotationUIImage:  UIImage = UIImage(systemName: "questionmark")!
+let siteAnnotationUIImage: UIImage = UIImage(named: "roundPGicon")?.scaled(toWidth: defaultAnnotationImageWidth)
+        ?? defaultAnnotationUIImage
+let pilotLaunchAnnotationUIImage: UIImage = UIImage(systemName: "arrow.up.right.circle.fill")?.scaled(toWidth: pilotLaunchAnnotationImageWidth)
+        ?? defaultAnnotationUIImage
+let pilotNodeAnnotationUIImage: UIImage = UIImage(systemName: "circle.fill")?.scaled(toWidth: pilotNodeAnnotationImageWidth)
+        ?? defaultAnnotationUIImage
+let pilotLatestAnnotationUIImage: UIImage = UIImage(named: "PGIconNoBorder")?.scaled(toWidth: pilotLatestAnnotationImageWidth)
+        ?? defaultAnnotationUIImage
+let pilotMessageAnnotationUIImage: UIImage = UIImage(systemName: "bubble.fill")?.scaled(toWidth: defaultAnnotationImageWidth)
+        ?? defaultAnnotationUIImage
+
