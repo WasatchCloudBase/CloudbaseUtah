@@ -98,7 +98,8 @@ struct UDOTCameraListView: View {
 
     var body: some View {
         NavigationView {
-            Map(coordinateRegion: $region, annotationItems: viewModel.clusteredCameras) { camera in
+/* Need to rebuild based on current map and annotation structures */
+/*            Map(coordinateRegion: $region, annotationItems: viewModel.clusteredCameras) { camera in
                 MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: camera.latitude, longitude: camera.longitude)) {
                     Button {
                         selectedCamera = camera
@@ -124,6 +125,7 @@ struct UDOTCameraListView: View {
             .sheet(item: $selectedCamera) { camera in
                 CameraDetailView(camera: camera)
             }
+ */
         }
     }
 

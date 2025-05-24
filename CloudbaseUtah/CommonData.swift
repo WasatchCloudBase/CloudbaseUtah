@@ -27,7 +27,7 @@ let mapInitLongitudeSpan: Double = mapInitLatitudeSpan * 1.5
 let mapEnableRotation: Bool = false
 let defaultTopOfLiftAltitude = 18000.0                  // Use in lift area graph when top of lift isn't reached in calculations
 let pageRefreshInterval: TimeInterval = 150             // Time in seconds to refresh wind readings (300 for 5 min)
-let defaultPilotTrackDays: Double = 1.0             // Default days of live tracking to display
+let defaultPilotTrackDays: Double = 1.0                 // Default days of live tracking to display
 
 // HTTP links and APIs
 let forecastUSMapLink: String = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
@@ -72,6 +72,11 @@ let annotationTextWidth: CGFloat = 60
 let annotationTextHeight: CGFloat = 14
 let stationAnnotationWidth: CGFloat = 40
 let stationAnnotationHeight: CGFloat = 22
+
+// Background processing custom queues
+let backgroundQueue = DispatchQueue(label: "backgroundQueue", qos: .background)
+let stationReadingsQueue = DispatchQueue(label: "stationReadingsQueue", qos: .background)
+let pilotTracksQueue = DispatchQueue(label: "pilotTracksQueue", qos: .background)
 
 // Get lift parameters for common use
 struct LiftParameterSource: Codable, Identifiable {

@@ -21,7 +21,7 @@ struct PilotTrackNodeView: View {
 
         let colWidth: CGFloat = 140
         let rowVerticalPadding: CGFloat = 4
-        let (flightStartDateTime, flightLatestDateTime, formattedFlightDuration, flightDistance) = getPilotTrackInfo(pilotTrack: pilotTrack)
+        let (flightStartDateTime, flightLatestDateTime, formattedFlightDuration, startToEndDistance, maxAltitude, totalDistance) = getPilotTrackInfo(pilotTrack: pilotTrack)
         var trackingShareURL: String { pilotsViewModel.trackingShareURL(for: pilotTrack.pilotName) ?? "" }
         var formattedNodeDate: String {
             let formatter = DateFormatter()
@@ -220,7 +220,7 @@ struct PilotTrackNodeView: View {
                         .padding(.vertical, rowVerticalPadding)
                         
                         HStack {
-                            Text("Latest")
+                            Text("End")
                                 .multilineTextAlignment(.trailing)
                                 .font(.subheadline)
                                 .padding(.trailing, 2)
@@ -248,13 +248,41 @@ struct PilotTrackNodeView: View {
                         .padding(.vertical, rowVerticalPadding)
                         
                         HStack {
-                            Text("Distance")
+                            Text("Max altitude")
                                 .multilineTextAlignment(.trailing)
                                 .font(.subheadline)
                                 .padding(.trailing, 2)
                                 .foregroundColor(infoFontColor)
                                 .frame(width: colWidth, alignment: .trailing)
-                            Text("\(Int(flightDistance)) km")
+                            Text("\(Int(maxAltitude)) ft")
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+
+                        HStack {
+                            Text("Distance flown")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text("\(Int(totalDistance)) km")
+                                .font(.subheadline)
+                                .padding(.leading, 2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+
+                        HStack {
+                            Text("Start to end")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            Text("\(Int(startToEndDistance)) km")
                                 .font(.subheadline)
                                 .padding(.leading, 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -268,7 +296,7 @@ struct PilotTrackNodeView: View {
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
-                    
+
                     Button(action: {
                         if let url = URL(string: trackingShareURL) {
                             UIApplication.shared.open(url)
@@ -325,25 +353,18 @@ struct PilotTrackNodeView: View {
             .store(in: &cancellables)
     }
     
-    private func getPilotTrackInfo(pilotTrack: PilotTracks) -> (
-        flightStartDateTime: Date,
-        flightLatestDateTime: Date,
-        formattedFlightDuration: String,
-        flightDistance: CLLocationDistance
-    ) {
+    private func getPilotTrackInfo(pilotTrack: PilotTracks) -> (flightStartDateTime: Date, flightLatestDateTime: Date, formattedFlightDuration: String, startToEndDistance: CLLocationDistance, maxAltitude: Double, totalDistance: CLLocationDistance) {
         // Get the oldest and newest tracks for the same pilot and the same date
         let calendar = Calendar.current
         let targetDate = pilotTrack.dateTime
         let sameDayTracks = pilotTracksViewModel.pilotTracks
-            .filter {
-                $0.pilotName == pilotTrack.pilotName &&
-                calendar.isDate($0.dateTime, inSameDayAs: targetDate)
-            }
+            .filter { $0.pilotName == pilotTrack.pilotName && calendar.isDate($0.dateTime, inSameDayAs: targetDate) }
+
         guard let oldestTrack = sameDayTracks.min(by: { $0.dateTime < $1.dateTime }) else {
-            return (Date(), Date(), "", 0)
+            return (Date(), Date(), "", 0, 0, 0)
         }
         guard let latestTrack = sameDayTracks.max(by: { $0.dateTime < $1.dateTime }) else {
-            return (Date(), Date(), "", 0)
+            return (Date(), Date(), "", 0, 0, 0)
         }
 
         let flightStartDateTime = oldestTrack.dateTime
@@ -352,11 +373,28 @@ struct PilotTrackNodeView: View {
         let flightHours = flightDuration / 3600
         let flightMinutes = (flightDuration % 3600) / 60
         let formattedFlightDuration = String(format: "%d:%02d", flightHours, flightMinutes)
+        
+        // Calculate start to end distance
         let startCoordinates = CLLocation(latitude: oldestTrack.coordinates.latitude, longitude: oldestTrack.coordinates.longitude)
         let latestCoordinates = CLLocation(latitude: latestTrack.coordinates.latitude, longitude: latestTrack.coordinates.longitude)
-        let flightDistance = startCoordinates.distance(from: latestCoordinates) / 1000  // convert m to km
+        let startToEndDistance = startCoordinates.distance(from: latestCoordinates) / 1000  // convert m to km
 
-        return (flightStartDateTime, flightLatestDateTime, formattedFlightDuration, flightDistance)
+        // Calculate maximum altitude
+        let maxAltitude = sameDayTracks.map { $0.altitude }.max() ?? 0.0
+
+        // Calculate total distance flown
+        var totalDistance: CLLocationDistance = 0
+        for (index, track) in sameDayTracks.enumerated() {
+            if index > 0 {
+                let previousTrack = sameDayTracks[index - 1]
+                let previousCoordinates = CLLocation(latitude: previousTrack.coordinates.latitude, longitude: previousTrack.coordinates.longitude)
+                let currentCoordinates = CLLocation(latitude: track.coordinates.latitude, longitude: track.coordinates.longitude)
+                totalDistance += previousCoordinates.distance(from: currentCoordinates)
+            }
+        }
+        totalDistance = totalDistance / 1000 // Convert meters to kilometers
+
+        return (flightStartDateTime, flightLatestDateTime, formattedFlightDuration, startToEndDistance, maxAltitude, totalDistance)
     }
     
     private func openGoogleMaps() {

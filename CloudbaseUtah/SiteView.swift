@@ -102,33 +102,30 @@ class StationLatestReadingsViewModel: ObservableObject {
         
         // Get latest readings; these calls are structured to ensure Mesonet function (which resets the latest readings structure)
         // completes before CUASA function is called.  This prevents a timing issue that would clear out CUASA readings
-        getLatestMesonetReadings(stationParameters: stationParameters) {
-            self.getLatestCUASAReadings()
+        self.getLatestMesonetReadings(stationParameters: stationParameters) {
+            self.getLatestCUASAReadings() {}
         }
     }
 
     func reloadLatestReadingsData() {
-        getLatestMesonetReadings (stationParameters: stationParameters) {
-            self.getLatestCUASAReadings()
-        }
+            self.getLatestMesonetReadings (stationParameters: self.stationParameters) {
+                self.getLatestCUASAReadings() {}
+            }
     }
 
     func getLatestMesonetReadings(stationParameters: String, completion: @escaping () -> Void) {
         let urlString = latestReadingsAPIHeader + stationParameters + latestReadingsAPITrailer + mesowestAPIToken
         guard let url = URL(string: urlString) else { return }
         URLSession.shared.dataTask(with: url) { data, response, error in
-            guard let data = data, error == nil else { return }
-            do {
-                let decodedResponse = try JSONDecoder().decode(MesonetLatestResponse.self, from: data)
-                
-                DispatchQueue.main.async {
-                    self.latestReadings = decodedResponse.station.compactMap { station in
-                        // Only return latest readings for stations where a windSpeed observation exists
-                        // (intended to skip stations on the map that are only temperature stations, etc.)
+            stationReadingsQueue.async {
+                guard let data = data, error == nil else { return }
+                do {
+                    let decodedResponse = try JSONDecoder().decode(MesonetLatestResponse.self, from: data)
+                    let latestReadings: [StationLatestReadings] = decodedResponse.station.compactMap { station in
                         guard let _ = station.observations.windSpeed?.value,
                               let _ = station.observations.windSpeed?.dateTime
                         else { return nil }
-
+                        
                         return StationLatestReadings(
                             stationID: station.stationID,
                             stationName: station.stationName,
@@ -141,18 +138,21 @@ class StationLatestReadingsViewModel: ObservableObject {
                             windTime: station.observations.windSpeed?.dateTime
                         )
                     }
+                    DispatchQueue.main.async {
+                        self.latestReadings = latestReadings
+                        completion()
+                    }
+                } catch {
+                    print("Failed to decode JSON: \(error)")
+                    DispatchQueue.main.async {
+                        completion()
+                    }
                 }
-                
-                // Use a completion handler to make sure the latestReadings array is reset before CUASA readings are appended
-                completion()
-                
-            } catch {
-                print("Failed to decode JSON: \(error)")
             }
         }.resume()
     }
 
-    func getLatestCUASAReadings() {
+    func getLatestCUASAReadings(completion: @escaping () -> Void) {
         let CUASAStations = sitesViewModel.sites
             .filter { $0.readingsSource == "CUASA" }
             .map { $0.readingsStation }
@@ -168,21 +168,20 @@ class StationLatestReadingsViewModel: ObservableObject {
             guard let url = URL(string: urlString) else { continue }
             
             URLSession.shared.dataTask(with: url) { data, response, error in
-                guard let data = data, error == nil else {
-                    print("Error fetching data: \(String(describing: error))")
-                    return
-                }
-
-                do {
-                    let readingsDataArray = try JSONDecoder().decode([CUASAReadingsData].self, from: data)
-                    if let latestData = readingsDataArray.max(by: { $0.timestamp < $1.timestamp }) {
-                        
-                        let date = Date(timeIntervalSince1970: latestData.timestamp)
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "h:mm"
-                        let formattedTime = formatter.string(from: date)
-
-                        DispatchQueue.main.async {
+                DispatchQueue.main.async {
+                    guard let data = data, error == nil else {
+                        print("Error fetching data: \(String(describing: error))")
+                        return
+                    }
+                    
+                    do {
+                        let readingsDataArray = try JSONDecoder().decode([CUASAReadingsData].self, from: data)
+                        if let latestData = readingsDataArray.max(by: { $0.timestamp < $1.timestamp }) {
+                            
+                            let date = Date(timeIntervalSince1970: latestData.timestamp)
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "h:mm"
+                            let formattedTime = formatter.string(from: date)
                             let newReading = StationLatestReadings(
                                 stationID: latestData.ID,
                                 stationName: latestData.ID,
@@ -194,12 +193,17 @@ class StationLatestReadingsViewModel: ObservableObject {
                                 windGust: convertKMToMiles(latestData.windspeed_max).rounded(),
                                 windTime: formattedTime
                             )
-                            self.latestReadings.append(newReading)
+                            DispatchQueue.main.async {
+                                self.latestReadings.append(newReading)
+                                completion()
+                            }
                         }
-                        
+                    } catch {
+                        print("Error decoding JSON: \(error)")
+                        DispatchQueue.main.async {
+                            completion()
+                        }
                     }
-                } catch {
-                    print("Error decoding JSON: \(error)")
                 }
             }.resume()
         }

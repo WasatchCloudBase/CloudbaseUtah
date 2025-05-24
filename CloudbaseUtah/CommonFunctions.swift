@@ -329,6 +329,21 @@ func convertISODateToLocalTime(isoDateString: String) -> String {
     return localTimeString
 }
 
+func getDateForDays(days: Double) -> Date {
+    // Get date string based on "days" value:
+    // Days = 1, today
+    // Days = 2, today and yesterday
+    // Days = 3, today, yesterday, and prior day
+    let dateFormatter = ISO8601DateFormatter()
+    dateFormatter.formatOptions = [.withInternetDateTime]
+    var calendar = Calendar.current
+    calendar.timeZone = TimeZone.current
+    // Set the base date to today at 12:01 AM, then subtract (days - 1)
+    let baseDate = calendar.date(bySettingHour: 0, minute: 1, second: 0, of: Date()) ?? Date()
+    let targetDate = calendar.date(byAdding: .day, value: -(Int(days) - 1), to: baseDate)!
+    return targetDate
+}
+
 // Function to determine distinct values from an array
 extension Array where Element: Hashable {
     func unique() -> [Element] {

@@ -56,7 +56,7 @@ struct PilotTracksView: View {
             guard !hasFetched else { return }
             hasFetched = true
             for pilot in pilotsViewModel.pilots {
-                pilotTracksViewModel.fetchTrackingData(trackingURL: pilot.trackingFeedURL, days: pilotTrackDays)
+                pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: pilotTrackDays) {}
             }
         }
     }
