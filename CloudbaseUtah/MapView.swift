@@ -1,21 +1,36 @@
-/* Data flow for pilot map annotations:
- App on appear:  List of pilots loaded
+/* Data flow for map annotations:
+ 
+ App on appear:  List of sites and pilots loaded
+ 
  MapView:
-    Pilot list passed in as environment object
+    Site list and pilot list passed in as environment object
     Map built using MKMapViewWrapper
     On appear, timer is started to periodically update annotations
-    updateMapAnnotations is called on appear, change of scene, or change of map parameters
+    updateMapAnnotations is called on appear, change of scene, or change of map parameters to manage mapAnnotation structure
+    Publish any changes to pilotTracksViewModel
  
-        updateMapAnnotations manages the mapAnnotation [MapAnnotation] structure as follows:
-            Removes all existing mapAnnotations
-            Based on which map layers are active, asynchronously performs:
-                Fetches source data (calls fetchTrackingData for pilot tracks, etc.)
-                Appends mapAnnotations for those layers
-        *** Note:  Performance could potentially be optimized by not removing all mapAnnotations, and adding logic to determine
-        *** which to remove and append.
+ updateMapAnnotations manages the mapAnnotation [MapAnnotation] structure:
+    Removes all existing mapAnnotations
+    Based on which map layers are active:
+        Fetches source data (calls fetchTrackingData for pilot tracks, latest readings for station readings, etc.)
+            Update pilot tracks to pilotTracksViewModel
+        Appends mapAnnotations for active layers
+
+ MKMapViewWrapper manages the map and annotation display and events:
+    func makeUIView
+    func updateUIView
+    func makeCoordinator
+    class Coordinator
+        @objc func labelTapped
+        struct StationAnnotationMarker: View
+        class StationAnnotationView: MKAnnotationView
+            private func setupHostingController()
+        func updatePolylines
+        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay)
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation)
+        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool)
+        func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation)
  
-            fetchTrackingData manages the pilotTracks [PilotTracks] structure as follows:
-                Removes all existing pilotTracks
  
  *** Implement throttle functionality on async functions that are called when use pan/zooms map
  *** Determine when to use main or background async threads for various asynch processes
@@ -86,11 +101,13 @@ struct MKMapViewWrapper: UIViewRepresentable {
 
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView(frame: .zero)
+        // Configure the map view as needed, for example:
         mapView.isRotateEnabled = mapEnableRotation
         mapView.delegate = context.coordinator
         mapView.setRegion(region, animated: false)
         mapView.mapType = mapType
         mapView.register(MKAnnotationView.self, forAnnotationViewWithReuseIdentifier: "CustomAnnotation")
+        context.coordinator.mapView = mapView
         return mapView
     }
 
@@ -181,197 +198,24 @@ struct MKMapViewWrapper: UIViewRepresentable {
     }
     
     class Coordinator: NSObject, MKMapViewDelegate {
+        weak var mapView: MKMapView?
         var parent: MKMapViewWrapper
-        
+
         init(_ parent: MKMapViewWrapper) {
             self.parent = parent
         }
         
-        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-            if let polyline = overlay as? MKPolyline {
-                let renderer = MKPolylineRenderer(polyline: polyline)
-                renderer.strokeColor = pilotTrackColor
-                renderer.lineWidth = pilotTrackWidth
-                return renderer
+        // When annotation label is tapped, treat as if annotation marker is tapped
+        @objc func labelTapped(_ sender: UITapGestureRecognizer) {
+            guard let label = sender.view as? UILabel,
+                  let annotationView = label.superview as? MKAnnotationView,
+                  let annotation = annotationView.annotation,
+                  let customAnnotation = annotation as? CustomMKPointAnnotation,
+                  let mapView = self.mapView  // Use the stored mapView reference
+            else { return }
+            if let annotationView = label.superview as? MKAnnotationView {
+                mapView.selectAnnotation(annotationView.annotation!, animated: true)
             }
-            return MKOverlayRenderer()
-        }
-        
-        func updatePolylines(on mapView: MKMapView) {
-            // Remove all previous overlays
-            mapView.overlays.forEach { mapView.removeOverlay($0) }
-            
-            // Group pilot annotations by pilot name and the start of day of their timestamp
-            var groupedAnnotations = [PilotTrackKey: [(index: Int, annotation: MapAnnotation)]]()
-            
-            // Loop through the parent's annotations with indices
-            for (index, ann) in parent.annotations.enumerated() {
-                if ann.annotationType == "pilot" {
-                    let key = PilotTrackKey(
-                        pilotName: ann.annotationName,
-                        date: Calendar.current.startOfDay(for: ann.trackDateTime ?? Date())
-                    )
-                    groupedAnnotations[key, default: []].append((index, ann))
-                }
-            }
-            
-            // Now process each group
-            for (_, group) in groupedAnnotations {
-                // Sort group based on the timestamp
-                let sortedGroup = group.sorted {
-                    ($0.annotation.trackDateTime ?? Date()) < ($1.annotation.trackDateTime ?? Date())
-                }
-                
-                guard sortedGroup.count > 1 else { continue }
-                
-                // Update the parent's annotations array directly using the index:
-//                parent.annotations[sortedGroup.first!.index].nodePosition = "first"
-//                parent.annotations[sortedGroup.last!.index].nodePosition = "last"
-                
-                // Create a polyline for the track
-                let coordinates = sortedGroup.map { $0.annotation.coordinates }
-                let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
-                mapView.addOverlay(polyline)
-            }
-        }
-        
-        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            if annotation is MKUserLocation {
-                return nil
-            }
-            
-            if annotation is MKClusterAnnotation {
-                let clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: "ClusterView") as? MKMarkerAnnotationView
-                    ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "ClusterView")
-                clusterView.annotation = annotation
-                clusterView.canShowCallout = false
-                clusterView.markerTintColor = clusterAnnotationColor
-                return clusterView
-            }
-
-            let identifier = "CustomAnnotation"
-            var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
-            
-            if annotationView == nil {
-                annotationView = MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
-                annotationView!.canShowCallout = false
-            } else {
-                annotationView!.annotation = annotation
-                // Remove any leftover labels to prevent stacking.
-                annotationView!.subviews.forEach { if $0 is UILabel { $0.removeFromSuperview() } }
-            }
-            
-            if let customAnnotation = annotation as? CustomMKPointAnnotation {
-                // For station annotations, use our custom station view.
-                if let customAnnotation = annotation as? CustomMKPointAnnotation,
-                   customAnnotation.annotationType == "station" {
-                    let stationView = mapView.dequeueReusableAnnotationView(withIdentifier: "StationAnnotationView") as? StationAnnotationView
-                        ?? StationAnnotationView(annotation: annotation, reuseIdentifier: "StationAnnotationView")
-                    stationView.annotation = annotation
-                    stationView.clusteringIdentifier = "stationCluster"
-                    // Optionally adjust displayPriority based on importance.
-                    stationView.displayPriority = .defaultLow
-                    return stationView
-                }
-                
-                // For non‑station annotations, configure as before.
-                var annotationImage: UIImage?
-                var annotationTextColor: UIColor?
-                
-                switch customAnnotation.annotationType {
-                case "site":
-                    annotationImage = siteAnnotationUIImage
-                    annotationTextColor = siteAnnotationTextColor
-                case "pilot":
-                    
-                    // Determine image based on position
-                    switch customAnnotation.nodePosition {
-                    case "first":
-                        annotationImage = pilotLaunchAnnotationUIImage
-                    case "last":
-                        annotationImage = pilotLatestAnnotationUIImage
-                    default:
-                        annotationImage = pilotNodeAnnotationUIImage
-                        // Override image if the track point has a text message
-                        if customAnnotation.message != nil {
-                            annotationImage = pilotMessageAnnotationUIImage
-                        }
-                    }
-                    
-                    annotationTextColor = pilotAnnotationTextColor
-                    if customAnnotation.inEmergency ?? false {
-                        annotationTextColor = pilotEmergencyAnnotationTextColor
-                    }
-                default:
-                    annotationImage = defaultAnnotationUIImage
-                    annotationTextColor = defaultAnnotationTextColor
-                }
-                annotationView!.image = annotationImage
-                
-                // Add a label below the image as a subview.
-                let label = UILabel()
-                let labelText = customAnnotation.title
-
-                if customAnnotation.annotationType == "pilot" {
-                    
-                    let attributedText = NSMutableAttributedString()
-                    
-                    let pilotName = (labelText?.components(separatedBy: " ").first ?? labelText) ?? "Pilot"
-                    let labelLine1 = NSMutableAttributedString(
-                        string: pilotName + "\n",
-                        attributes: [
-                            .font: UIFont.systemFont(ofSize: 11),
-                            .foregroundColor: annotationTextColor ?? .white
-                        ]
-                    )
-                    attributedText.append(labelLine1)
-
-                    let dateFormatter = DateFormatter()
-                    dateFormatter.dateFormat = "h:mm"
-                    let labelLine2 = NSMutableAttributedString(
-                        string: dateFormatter.string(from: customAnnotation.trackDateTime ?? Date()) + "\n",
-                        attributes: [
-                            .font: UIFont.systemFont(ofSize: 10),
-                            .foregroundColor: UIColor.red
-                        ]
-                    )
-                    attributedText.append(labelLine2)
-                    
-                    let labelLine3 = NSMutableAttributedString(
-                        string: "\(customAnnotation.altitude ?? "0")",
-                        attributes: [
-                            .font: UIFont.systemFont(ofSize: 10),
-                            .foregroundColor: UIColor.yellow                        ]
-                    )
-                    attributedText.append(labelLine3)
-
-                    label.attributedText = attributedText
-                    label.numberOfLines = 0                 // Allow unlimited lines
-                    label.lineBreakMode = .byWordWrapping   // Wrap at word boundaries
-                    label.backgroundColor = UIColor.black.withAlphaComponent(0.7)
-                    label.layer.cornerRadius = 6
-                    let labelXPosition = -((annotationImage?.size.width ?? 20) / 1.2)
-                    let labelYPosition = ((annotationImage?.size.height ?? 20) / 1.3)
-                    label.frame = CGRect(x: labelXPosition, y: labelYPosition, width: 60, height: 40)
-                    
-                } else {
-                    
-                    label.text = labelText
-                    label.font = UIFont.systemFont(ofSize: 11)
-                    label.textColor = annotationTextColor
-                    let labelXPosition = -((annotationImage?.size.width ?? 20) / 2)
-                    let labelYPosition = ((annotationImage?.size.height ?? 20) / 1.3)
-                    label.frame = CGRect(x: labelXPosition, y: labelYPosition, width: 100, height: 20)
-                    
-                }
-                
-                label.textAlignment = .center
-                label.layer.masksToBounds = true
-                annotationView!.addSubview(label)
-                
-                return annotationView
-            }
-            return nil
         }
         
         // Station custom annotation marker
@@ -441,6 +285,200 @@ struct MKMapViewWrapper: UIViewRepresentable {
                 hostingController?.view.removeFromSuperview()
                 hostingController = nil
             }
+        }
+        
+        func updatePolylines(on mapView: MKMapView) {
+            // Remove all previous overlays
+            mapView.overlays.forEach { mapView.removeOverlay($0) }
+            
+            // Group pilot annotations by pilot name and the start of day of their timestamp
+            var groupedAnnotations = [PilotTrackKey: [(index: Int, annotation: MapAnnotation)]]()
+            
+            // Loop through the parent's annotations with indices
+            for (index, ann) in parent.annotations.enumerated() {
+                if ann.annotationType == "pilot" {
+                    let key = PilotTrackKey(
+                        pilotName: ann.annotationName,
+                        date: Calendar.current.startOfDay(for: ann.trackDateTime ?? Date())
+                    )
+                    groupedAnnotations[key, default: []].append((index, ann))
+                }
+            }
+            
+            // Now process each group
+            for (_, group) in groupedAnnotations {
+                // Sort group based on the timestamp
+                let sortedGroup = group.sorted {
+                    ($0.annotation.trackDateTime ?? Date()) < ($1.annotation.trackDateTime ?? Date())
+                }
+                
+                guard sortedGroup.count > 1 else { continue }
+                
+                // Update the parent's annotations array directly using the index:
+//                parent.annotations[sortedGroup.first!.index].nodePosition = "first"
+//                parent.annotations[sortedGroup.last!.index].nodePosition = "last"
+                
+                // Create a polyline for the track
+                let coordinates = sortedGroup.map { $0.annotation.coordinates }
+                let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+                mapView.addOverlay(polyline)
+            }
+        }
+        
+        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            if let polyline = overlay as? MKPolyline {
+                let renderer = MKPolylineRenderer(polyline: polyline)
+                renderer.strokeColor = pilotTrackColor
+                renderer.lineWidth = pilotTrackWidth
+                return renderer
+            }
+            return MKOverlayRenderer()
+        }
+
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            if annotation is MKUserLocation {
+                return nil
+            }
+            
+            if annotation is MKClusterAnnotation {
+                let clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: "ClusterView") as? MKMarkerAnnotationView
+                    ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "ClusterView")
+                clusterView.annotation = annotation
+                clusterView.canShowCallout = false
+                clusterView.markerTintColor = clusterAnnotationColor
+                return clusterView
+            }
+
+            let identifier = "CustomAnnotation"
+            var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+            
+            if annotationView == nil {
+                annotationView = MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+                annotationView!.canShowCallout = false
+            } else {
+                annotationView!.annotation = annotation
+                // Remove any leftover labels to prevent stacking.
+                annotationView!.subviews.forEach { if $0 is UILabel { $0.removeFromSuperview() } }
+            }
+            
+            if let customAnnotation = annotation as? CustomMKPointAnnotation {
+                // For station annotations, use our custom station view.
+                if let customAnnotation = annotation as? CustomMKPointAnnotation,
+                   customAnnotation.annotationType == "station" {
+                    let stationView = mapView.dequeueReusableAnnotationView(withIdentifier: "StationAnnotationView") as? StationAnnotationView
+                        ?? StationAnnotationView(annotation: annotation, reuseIdentifier: "StationAnnotationView")
+                    stationView.annotation = annotation
+                    stationView.clusteringIdentifier = "stationCluster"
+                    // Optionally adjust displayPriority based on importance.
+                    stationView.displayPriority = .defaultLow
+                    return stationView
+                }
+                
+                var annotationImage: UIImage?
+                var annotationTextColor: UIColor?
+                
+                switch customAnnotation.annotationType {
+                case "site":
+                    annotationImage = siteAnnotationUIImage
+                    annotationTextColor = siteAnnotationTextColor
+                case "pilot":
+                    
+                    // Determine image based on position
+                    switch customAnnotation.nodePosition {
+                    case "first":
+                        annotationImage = pilotLaunchAnnotationUIImage
+                    case "last":
+                        annotationImage = pilotLatestAnnotationUIImage
+                    default:
+                        annotationImage = pilotNodeAnnotationUIImage
+                        annotationTextColor = pilotNodeAnnotationColor
+                        // Override image if the track point has a text message
+                        if customAnnotation.message != nil {
+                            annotationImage = pilotMessageAnnotationUIImage
+                        }
+                    }
+                    
+                    annotationTextColor = pilotLabelNameTextColor
+                    if customAnnotation.inEmergency ?? false {
+                        annotationTextColor = pilotEmergencyAnnotationTextColor
+                    }
+                default:
+                    annotationImage = defaultAnnotationUIImage
+                    annotationTextColor = defaultAnnotationTextColor
+                }
+                annotationView!.image = annotationImage
+                
+                // Add a label below the image as a subview.
+                let label = UILabel()
+                let labelText = customAnnotation.title
+
+                if customAnnotation.annotationType == "pilot" {
+                    
+                    let attributedText = NSMutableAttributedString()
+                    
+                    let pilotName = (labelText?.components(separatedBy: " ").first ?? labelText) ?? "Pilot"
+                    let labelLine1 = NSMutableAttributedString(
+                        string: pilotName + "\n",
+                        attributes: [
+                            .font: UIFont.systemFont(ofSize: 11),
+                            .foregroundColor: pilotLabelNameTextColor
+                        ]
+                    )
+                    attributedText.append(labelLine1)
+
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.dateFormat = "h:mm"
+                    let labelLine2 = NSMutableAttributedString(
+                        string: dateFormatter.string(from: customAnnotation.trackDateTime ?? Date()) + "\n",
+                        attributes: [
+                            .font: UIFont.systemFont(ofSize: 10),
+                            .foregroundColor: pilotLabelDateTextColor
+                        ]
+                    )
+                    attributedText.append(labelLine2)
+                    
+                    let labelLine3 = NSMutableAttributedString(
+                        string: "\(customAnnotation.altitude ?? "0")",
+                        attributes: [
+                            .font: UIFont.systemFont(ofSize: 10),
+                            .foregroundColor: pilotLabelAltTextColor
+                        ]
+                    )
+                    attributedText.append(labelLine3)
+
+                    label.attributedText = attributedText
+                    label.numberOfLines = 0                 // Allow unlimited lines
+                    label.lineBreakMode = .byWordWrapping   // Wrap at word boundaries
+                    label.backgroundColor = pilotLabelBackgroundColor
+                    label.layer.cornerRadius = 6
+                    let labelXPosition = -((annotationImage?.size.width ?? 20) / 1.2)
+                    let labelYPosition = ((annotationImage?.size.height ?? 20) / 1.3)
+                    label.frame = CGRect(x: labelXPosition, y: labelYPosition, width: 60, height: 40)
+                    
+                } else {
+                    
+                    label.text = labelText
+                    label.font = UIFont.systemFont(ofSize: 11)
+                    label.textColor = annotationTextColor
+                    let labelXPosition = -((annotationImage?.size.width ?? 20) / 2)
+                    let labelYPosition = ((annotationImage?.size.height ?? 20) / 1.3)
+                    label.frame = CGRect(x: labelXPosition, y: labelYPosition, width: 100, height: 20)
+                    
+                }
+                
+                label.textAlignment = .center
+                label.layer.masksToBounds = true
+                
+                // Enable user interaction and add tap gesture
+                label.isUserInteractionEnabled = true
+                let tapGesture = UITapGestureRecognizer(target: self, action: #selector(labelTapped(_:)))
+                label.addGestureRecognizer(tapGesture)
+                        
+                annotationView!.addSubview(label)
+                
+                return annotationView
+            }
+            return nil
         }
         
         // Update region
@@ -731,9 +769,20 @@ struct MapView: View {
         }
         
         if mapSettingsViewModel.activeLayers.contains(.stations) {
-            
-            // Mesonet readings
+    
+            // Set readings dispatch group to determine when all readings calls are completed before updating annotations
+            let readingsGroup = DispatchGroup()
+            readingsGroup.enter()
+
             stationLatestReadingsViewModel.getLatestMesonetReadings(stationParameters: "") {
+                stationLatestReadingsViewModel.getLatestCUASAReadings() {
+                    readingsGroup.leave()
+                }
+            }
+
+            // When all CUASA readings are received, update annotations
+            readingsGroup.notify(queue: .main) {
+                // Create annotations for each latest reading
                 for reading in stationLatestReadingsViewModel.latestReadings {
                     if let lat = Double(reading.stationLatitude), let lon = Double(reading.stationLongitude) {
                         let annotation = MapAnnotation(
@@ -741,12 +790,12 @@ struct MapView: View {
                             annotationID: reading.stationID,
                             annotationName: reading.stationName,
                             coordinates: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                            altitude: String(Int(Double(reading.stationElevation) ?? 0.0)),
+                            altitude: reading.stationElevation,
                             readingsNote: "",
                             forecastNote: "",
                             siteType: "",
                             readingsStation: reading.stationID,
-                            readingsSource: "Mesonet",
+                            readingsSource: reading.readingsSource,
                             windSpeed: reading.windSpeed,
                             windDirection: reading.windDirection,
                             windGust: reading.windGust,
@@ -755,33 +804,6 @@ struct MapView: View {
                             trackDateTime: nil
                         )
                         mapAnnotations.append(annotation)
-                    }
-                }
-                
-                // CUASA readings within Mesonet call to ensure annotations are cleared and reloaded before processing CUASA
-                self.stationLatestReadingsViewModel.getLatestCUASAReadings() {
-                    for reading in stationLatestReadingsViewModel.latestReadings {
-                        if let lat = Double(reading.stationLatitude), let lon = Double(reading.stationLongitude) {
-                            let annotation = MapAnnotation(
-                                annotationType: "station",
-                                annotationID: reading.stationID,
-                                annotationName: reading.stationName,
-                                coordinates: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                                altitude: String(Int(Double(reading.stationElevation) ?? 0.0)),
-                                readingsNote: "",
-                                forecastNote: "",
-                                siteType: "",
-                                readingsStation: reading.stationID,
-                                readingsSource: "Mesonet",
-                                windSpeed: reading.windSpeed,
-                                windDirection: reading.windDirection,
-                                windGust: reading.windGust,
-                                inEmergency: false,
-                                message: "",
-                                trackDateTime: nil
-                            )
-                            mapAnnotations.append(annotation)
-                        }
                     }
                 }
             }
@@ -822,166 +844,3 @@ struct MapView: View {
         }
     }
 }
-
-
-// Pilot live tracking structure
-struct PilotTracks: Identifiable {
-    let id: UUID = UUID()
-    let pilotName: String
-    let dateTime: Date
-    let coordinates: (latitude: Double, longitude: Double)
-    let speed: Double
-    let altitude: Double
-    let heading: Double
-    let inEmergency: Bool
-    let message: String?
-}
-
-class PilotTracksViewModel: ObservableObject {
-    @Published var pilotTracks: [PilotTracks] = []
-    
-    func getPilotTrackingData(pilotName: String, trackingURL: String, days: Double, completion: @escaping () -> Void) {
-
-        // Clear all pilot tracks to reload
-        // (in case days is reduced or time has elapsed)
-        self.pilotTracks.removeAll()
-        
-        guard let url = constructURL(trackingURL: trackingURL, days: days) else { return }
-        var request = URLRequest(url: url)
-
-        // Set headers to handle InReach requirements and redirect to data file location
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
-        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7", forHTTPHeaderField: "Accept")
-        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-        request.setValue("keep-alive", forHTTPHeaderField: "Connection")
-        request.setValue("1", forHTTPHeaderField: "DNT")
-        request.setValue("document", forHTTPHeaderField: "Sec-Fetch-Dest")
-        request.setValue("navigate", forHTTPHeaderField: "Sec-Fetch-Mode")
-        request.setValue("none", forHTTPHeaderField: "Sec-Fetch-Site")
-        request.setValue("?1", forHTTPHeaderField: "Sec-Fetch-User")
-        request.setValue("1", forHTTPHeaderField: "Upgrade-Insecure-Requests")
-        request.setValue("\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"", forHTTPHeaderField: "sec-ch-ua")
-        request.setValue("?0", forHTTPHeaderField: "sec-ch-ua-mobile")
-        request.setValue("\"macOS\"", forHTTPHeaderField: "sec-ch-ua-platform")
-
-        // Query InReach KML feed
-        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self, let data = data, error == nil else { return }
-            let newTracks = self.parseKML(pilotName: pilotName, data: data)
-            // Check if track node already exists for pilot and time stamp; if so, don't append
-            let existingKeys: Set<PilotTrackKey> = Set(self.pilotTracks.map { PilotTrackKey(pilotName: $0.pilotName, date: $0.dateTime) })
-            let uniqueNewTracks = newTracks.filter { !existingKeys.contains(PilotTrackKey(pilotName: $0.pilotName, date: $0.dateTime)) }
-            DispatchQueue.main.async {
-                self.pilotTracks.append(contentsOf: uniqueNewTracks)
-                completion()
-            }
-        }
-        task.resume()
-    }
-
-    private func constructURL(trackingURL: String, days: Double) -> URL? {
-        let targetDate = getDateForDays(days: days)
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime]
-        let dateString = dateFormatter.string(from: targetDate)
-        let finalURLString = "\(trackingURL)?d1=\(dateString)"
-        return URL(string: finalURLString)
-    }
-
-    private func parseKML(pilotName: String, data: Data) -> [PilotTracks] {
-        guard let xmlString = String(data: data, encoding: .utf8) else {
-            print("Invalid XML coding for track log")
-            return []
-        }
-
-        let placemarkStrings = extractAllValues(from: xmlString, using: "<Placemark>", endTag: "</Placemark>")
-        guard !placemarkStrings.isEmpty else {
-            return []
-        }
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "M/d/yyyy h:mm:ss a"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-
-        var pilotTracks: [PilotTracks] = []
-        for placemarkString in placemarkStrings {
-            guard var trackPilotName = extractValue(from: placemarkString, using: "<Data name=\"Name\">", endTag: "</Data>"),
-                  let dateTimeString = extractValue(from: placemarkString, using: "<Data name=\"Time\">", endTag: "</Data>"),
-                  let latitudeString = extractValue(from: placemarkString, using: "<Data name=\"Latitude\">", endTag: "</Data>"),
-                  let longitudeString = extractValue(from: placemarkString, using: "<Data name=\"Longitude\">", endTag: "</Data>")
-            else {
-                // ignore placemark entries that failed parsing (likely did not have a valid dateTime)
-                continue
-            }
-
-            // Update name if track uses a different name
-            if trackPilotName != pilotName {
-                trackPilotName = "\(trackPilotName) (\(pilotName))"
-            }
-                
-            // Format data for track point
-            let dateTime = formatter.date(from: dateTimeString) ?? Date()
-            let speedString = extractValue(from: placemarkString, using: "<Data name=\"Velocity\">", endTag: "</Data>") ?? ""
-            let speed = extractNumber(from: speedString) ?? 0.0
-            let speedMph = convertKMToMiles(speed).rounded()
-            let altitudeString = extractValue(from: placemarkString, using: "<Data name=\"Elevation\">", endTag: "</Data>") ?? ""
-            let altitude = extractNumber(from: altitudeString) ?? 0.0
-            let altitudeFeet = Double(convertMetersToFeet(altitude))
-            let latitude = Double(latitudeString) ?? 0.0
-            let longitude = Double(longitudeString) ?? 0.0
-            let courseString = extractValue(from: placemarkString, using: "<Data name=\"Course\">", endTag: "</Data>") ?? ""
-            let course = extractNumber(from: courseString) ?? 0.0
-            let inEmergencyString = extractValue(from: placemarkString, using: "<Data name=\"In Emergency\">", endTag: "</Data>")?.lowercased()
-            let inEmergency = Bool(inEmergencyString ?? "false") ?? false
-            let message = extractValue(from: placemarkString, using: "<Data name=\"Text\">", endTag: "</Data>") ?? ""
-
-            let trackPoint = PilotTracks(
-                pilotName: trackPilotName,
-                dateTime: dateTime,
-                coordinates: (latitude, longitude),
-                speed: speedMph,
-                altitude: altitudeFeet,
-                heading: course,
-                inEmergency: inEmergency,
-                message: message
-            )
-            pilotTracks.append(trackPoint)
-        }
-        return pilotTracks
-    }
-    
-    private func extractAllValues(from text: String, using startTag: String, endTag: String) -> [String] {
-        var values: [String] = []
-        var searchRange: Range<String.Index>?
-        while let startRange = text.range(of: startTag, options: [], range: searchRange),
-              let endRange = text.range(of: endTag, options: [], range: startRange.upperBound..<text.endIndex) {
-            let value = String(text[startRange.upperBound..<endRange.lowerBound])
-            values.append(value)
-            searchRange = endRange.upperBound..<text.endIndex
-        }
-        return values
-    }
-    
-    private func extractValue(from text: String, using startTag: String, endTag: String) -> String? {
-        
-        // Get string within tag
-        guard let startRange = text.range(of: startTag),
-              let endRange = text.range(of: endTag, options: [], range: startRange.upperBound..<text.endIndex) else {
-            //print("range lookup failed for startTag: \(startTag), endTag: \(endTag)")
-            return nil
-        }
-        let tagString = String(text[startRange.upperBound..<endRange.lowerBound])
-
-        // The string is in the format <value>xxx</value>
-        // Only return the section between the value tags
-        guard let startRange = tagString.range(of: "<value>"),
-              let endRange = tagString.range(of: "</value>", options: [], range: startRange.upperBound..<tagString.endIndex) else {
-            //print("value range lookup failed for startTag: \(startTag), endTag: \(endTag)")
-            return nil
-        }
-        let valueString = String(tagString[startRange.upperBound..<endRange.lowerBound])
-        
-        return valueString
-    }
-}
-

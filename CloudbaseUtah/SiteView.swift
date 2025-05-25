@@ -5,6 +5,7 @@ struct StationLatestReadings: Identifiable {
     let id = UUID()
     let stationID: String
     let stationName: String
+    let readingsSource: String
     let stationElevation: String
     let stationLatitude: String
     let stationLongitude: String
@@ -65,6 +66,13 @@ struct MesonetLatestObservationsValues: Codable {
         case value
         case dateTime = "date_time"
     }
+}
+
+struct CUASAStationData: Codable {
+    var id: Int
+    var name: String
+    var lat: Double
+    var lon: Double
 }
 
 struct CUASAReadingsData: Codable {
@@ -129,6 +137,7 @@ class StationLatestReadingsViewModel: ObservableObject {
                         return StationLatestReadings(
                             stationID: station.stationID,
                             stationName: station.stationName,
+                            readingsSource: "Mesonet",
                             stationElevation: station.elevation,
                             stationLatitude: station.latitude,
                             stationLongitude: station.longitude,
@@ -152,62 +161,99 @@ class StationLatestReadingsViewModel: ObservableObject {
         }.resume()
     }
 
-    func getLatestCUASAReadings(completion: @escaping () -> Void) {
-        let CUASAStations = sitesViewModel.sites
-            .filter { $0.readingsSource == "CUASA" }
-            .map { $0.readingsStation }
-            .unique()
-        guard !CUASAStations.isEmpty else { return }
-        
-        let readingInterval: Double = 5 * 60 // 5 minutes in seconds
-        let readingEnd = Date().timeIntervalSince1970 // current timestamp in seconds
-        let readingStart = readingEnd - readingInterval // to ensure at least one reading is returned
-        
-        for station in CUASAStations {
-            let urlString = "https://sierragliding.us/api/station/" + station + "/data?start=" + String(readingStart) + "&end=" + String(readingEnd) + "&sample=" + String(readingInterval)
-            guard let url = URL(string: urlString) else { continue }
+        func getLatestCUASAReadings(completion: @escaping () -> Void) {
+            // Get unique list of CUASA stations
+            let CUASAStations = Array(
+                Dictionary(grouping: sitesViewModel.sites.filter { $0.readingsSource == "CUASA" }, by: { $0.readingsStation })
+                    .compactMap { $0.value.first }
+            )
+            guard !CUASAStations.isEmpty else {
+                print("CUASA stations are empty")
+                completion() // Call completion if nothing to do
+                return
+            }
             
-            URLSession.shared.dataTask(with: url) { data, response, error in
-                DispatchQueue.main.async {
+            let readingInterval: Double = 5 * 60 // 5 minutes in seconds
+            let readingEnd = Date().timeIntervalSince1970 // current timestamp in seconds
+            let readingStart = readingEnd - readingInterval // to ensure at least one reading is returned
+            
+            let group = DispatchGroup()
+            
+            for station in CUASAStations {
+                group.enter()
+                
+                // Get station info (lat, lon)
+                let stationURLString = "https://sierragliding.us/api/station/" + station.readingsStation
+                guard let stationInfoURL = URL(string: stationURLString) else {
+                    print("Could not build station data URL for station: \(station.readingsStation)")
+                    group.leave()
+                    continue
+                }
+                
+                URLSession.shared.dataTask(with: stationInfoURL) { data, response, error in
                     guard let data = data, error == nil else {
-                        print("Error fetching data: \(String(describing: error))")
+                        print("Error fetching CUASA station data: \(String(describing: error))")
+                        DispatchQueue.main.async { group.leave() }
                         return
                     }
-                    
                     do {
-                        let readingsDataArray = try JSONDecoder().decode([CUASAReadingsData].self, from: data)
-                        if let latestData = readingsDataArray.max(by: { $0.timestamp < $1.timestamp }) {
-                            
-                            let date = Date(timeIntervalSince1970: latestData.timestamp)
-                            let formatter = DateFormatter()
-                            formatter.dateFormat = "h:mm"
-                            let formattedTime = formatter.string(from: date)
-                            let newReading = StationLatestReadings(
-                                stationID: latestData.ID,
-                                stationName: latestData.ID,
-                                stationElevation: "0",                  // Not yet implementated for CUASA stations
-                                stationLatitude: "0",
-                                stationLongitude: "0",
-                                windSpeed: convertKMToMiles(latestData.windspeed_avg).rounded(),
-                                windDirection: latestData.wind_direction_avg,
-                                windGust: convertKMToMiles(latestData.windspeed_max).rounded(),
-                                windTime: formattedTime
-                            )
+                        let decoder = JSONDecoder()
+                        let CUASAStationInfo = try decoder.decode(CUASAStationData.self, from: data)
+                        
+                        // Get readings for station
+                        let urlString = "https://sierragliding.us/api/station/" + station.readingsStation + "/data?start=" + String(readingStart) + "&end=" + String(readingEnd) + "&sample=" + String(readingInterval)
+                        guard let readingsURL = URL(string: urlString) else {
+                            print("Could not build readings URL for station: \(station.readingsStation)")
+                            DispatchQueue.main.async { group.leave() }
+                            return
+                        }
+                        
+                        URLSession.shared.dataTask(with: readingsURL) { data, response, error in
                             DispatchQueue.main.async {
-                                self.latestReadings.append(newReading)
-                                completion()
+                                defer { group.leave() }
+                                guard let data = data, error == nil else {
+                                    print("Error fetching data: \(String(describing: error))")
+                                    return
+                                }
+                                
+                                do {
+                                    let readingsDataArray = try JSONDecoder().decode([CUASAReadingsData].self, from: data)
+                                    if let latestData = readingsDataArray.max(by: { $0.timestamp < $1.timestamp }) {
+                                        let date = Date(timeIntervalSince1970: latestData.timestamp)
+                                        let formatter = DateFormatter()
+                                        formatter.dateFormat = "h:mm"
+                                        let formattedTime = formatter.string(from: date)
+                                        let newReading = StationLatestReadings(
+                                            stationID: latestData.ID,
+                                            stationName: CUASAStationInfo.name,
+                                            readingsSource: "CUASA",
+                                            stationElevation: station.readingsAlt,
+                                            stationLatitude: String(CUASAStationInfo.lat),
+                                            stationLongitude: String(CUASAStationInfo.lon),
+                                            windSpeed: convertKMToMiles(latestData.windspeed_avg).rounded(),
+                                            windDirection: latestData.wind_direction_avg,
+                                            windGust: convertKMToMiles(latestData.windspeed_max).rounded(),
+                                            windTime: formattedTime
+                                        )
+                                        self.latestReadings.append(newReading)
+                                    }
+                                } catch {
+                                    print("Error decoding JSON: \(error)")
+                                }
                             }
-                        }
+                        }.resume()
                     } catch {
-                        print("Error decoding JSON: \(error)")
-                        DispatchQueue.main.async {
-                            completion()
-                        }
+                        print("CUASA station info decoding error: \(error)")
+                        DispatchQueue.main.async { group.leave() }
                     }
-                }
-            }.resume()
+                }.resume()
+            }
+            
+            group.notify(queue: .main) {
+                completion() // Called once, after all requests finish
+            }
         }
-    }
+
 }
 
 struct SiteView: View {

@@ -253,7 +253,7 @@ class SunriseSunsetViewModel: ObservableObject {
 }
 
 // Get sites metadata
-struct Sites: Codable, Identifiable, Equatable {
+struct Sites: Codable, Identifiable, Equatable, Hashable {
     var id = UUID()
     var area: String
     var siteName: String

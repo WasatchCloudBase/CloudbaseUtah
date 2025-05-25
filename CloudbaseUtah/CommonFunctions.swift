@@ -365,3 +365,13 @@ extension UIImage {
         return scaledImage
     }
 }
+
+// Set color for UI Images
+func tintedImage(_ image: UIImage, color: UIColor) -> UIImage {
+    UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+    color.set()
+    image.draw(in: CGRect(origin: .zero, size: image.size))
+    let tinted = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return tinted ?? image
+}

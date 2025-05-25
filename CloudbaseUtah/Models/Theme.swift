@@ -61,8 +61,11 @@ let cameraAnnotationTextColor: Color = cameraAnnotationColor
 let siteAnnotationTextColor: UIColor = UIColor(.white)
 let stationAnnotationColor: Color = .gunmetal
 let stationAnnotationTextColor: UIColor = UIColor(.gunmetal)
-let pilotNodeAnnotationColor: Color = .white
-let pilotAnnotationTextColor: UIColor = .white
+let pilotNodeAnnotationColor: UIColor = UIColor(.white)
+let pilotLabelBackgroundColor: UIColor = UIColor.black.withAlphaComponent(0.2)
+let pilotLabelNameTextColor: UIColor = UIColor(.white)
+let pilotLabelDateTextColor: UIColor = UIColor(.titanium)
+let pilotLabelAltTextColor: UIColor = UIColor(.sky)
 let pilotEmergencyAnnotationTextColor: UIColor = UIColor(.poppy)
 let pilotTrackColor: UIColor = UIColor(.white)
 let pilotTrackWidth: CGFloat = 1
@@ -85,8 +88,10 @@ let siteAnnotationUIImage: UIImage = UIImage(named: "roundPGicon")?.scaled(toWid
         ?? defaultAnnotationUIImage
 let pilotLaunchAnnotationUIImage: UIImage = UIImage(systemName: "arrow.up.right.circle.fill")?.scaled(toWidth: pilotLaunchAnnotationImageWidth)
         ?? defaultAnnotationUIImage
-let pilotNodeAnnotationUIImage: UIImage = UIImage(systemName: "circle.fill")?.scaled(toWidth: pilotNodeAnnotationImageWidth)
-        ?? defaultAnnotationUIImage
+let pilotNodeAnnotationUIImage: UIImage = {
+    if let image = UIImage(systemName: "inset.filled.circle")?.withRenderingMode(.alwaysOriginal).scaled(toWidth: pilotNodeAnnotationImageWidth) {
+        return tintedImage(image, color: UIColor(.white))
+    } else { return defaultAnnotationUIImage } } ()
 let pilotLatestAnnotationUIImage: UIImage = UIImage(named: "PGIconNoBorder")?.scaled(toWidth: pilotLatestAnnotationImageWidth)
         ?? defaultAnnotationUIImage
 let pilotMessageAnnotationUIImage: UIImage = UIImage(systemName: "bubble.fill")?.scaled(toWidth: defaultAnnotationImageWidth)
