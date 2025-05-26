@@ -1,4 +1,4 @@
-/* Data flow for map annotations:
+/* Overview of mapView components:
  
  App on appear:  List of sites and pilots loaded
  
@@ -17,23 +17,61 @@
         Appends mapAnnotations for active layers
 
  MKMapViewWrapper manages the map and annotation display and events:
-    func makeUIView
-    func updateUIView
-    func makeCoordinator
-    class Coordinator
-        @objc func labelTapped
+ 
+    func makeUIView:
+        Configures map settings including map type
+        Registers custom annotations
+        Identifies coordinator
+ 
+    func updateUIView:
+        Removes annotations when map layers are not active
+        Removes annotations when the pilot track days is reduced
+        Displays annotations that are within the visible screen area
+        Ignores duplicate annotations within a small geographical tolerance
+        Sets cluster identifier for station annotations
+        Calls updatePolylines to create lines between pilot track nodes
+ 
+    func makeCoordinator:
+        Defines Coordinator class as the event coordinator
+ 
+    class Coordinator:
+ 
+        @objc func labelTapped:
+            When pilot track annotation label is tapped, treat as if the annotation marker was tapped
+ 
         struct StationAnnotationMarker: View
+            Defines the layout for station annotations (e.g., wind direction and speed)
+ 
         class StationAnnotationView: MKAnnotationView
-            private func setupHostingController()
-        func updatePolylines
-        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay)
-        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation)
-        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool)
-        func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation)
  
+            private func setupHostingController:
+                Defines anchor size and parameters for station annotation clustering
  
- *** Implement throttle functionality on async functions that are called when use pan/zooms map
- *** Determine when to use main or background async threads for various asynch processes
+            override func prepareForReuse:
+                Overrides standard prepareForReuse to make sure station annotation hosting controller is removed
+ 
+        func updatePolylines:
+            Removes all previous map lines
+            Creates groups of pilot tracks by pilot name and date
+            Creates lines between each track node within a pilot track group
+ 
+        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay):
+            Defines poly line renderer
+            Defines poly line color and width
+ 
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation):
+            Defines cluster annotation parameters
+            Assigns station annotations to cluster
+            Defines annotation markers and labels for each annotation type
+            Enables user interaction and tapping of labels
+ 
+        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool):
+            Defines map scale threshold for clustering
+            Updates station clustering based on map zoom
+            Define a delay to batch map navigation changes within a time interval
+ 
+        func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation):
+            When an annotation is tapped, update selected station, site, or pilot track to trigger event processing
  
 */
 
@@ -144,9 +182,9 @@ struct MKMapViewWrapper: UIViewRepresentable {
         } else {
             // Remove annotations that are older than days specified in pilotTrackDays
             let targetDate = getDateForDays(days: mapSettingsViewModel.pilotTrackDays)
-            let pilotsToRemove = uiView.annotations.compactMap { $0 as? CustomMKPointAnnotation }
+            let pilotTracksToRemove = uiView.annotations.compactMap { $0 as? CustomMKPointAnnotation }
                 .filter { $0.trackDateTime ?? Date() < targetDate }
-            uiView.removeAnnotations(pilotsToRemove)
+            uiView.removeAnnotations(pilotTracksToRemove)
         }
 
         
@@ -161,8 +199,8 @@ struct MKMapViewWrapper: UIViewRepresentable {
             let alreadyExists = uiView.annotations.compactMap({ $0 as? CustomMKPointAnnotation }).contains {
                 $0.title == ann.annotationID &&
                 $0.annotationType == ann.annotationType &&
-                abs($0.coordinate.latitude - ann.coordinates.latitude) < 0.00005 &&
-                abs($0.coordinate.longitude - ann.coordinates.longitude) < 0.00005
+                abs($0.coordinate.latitude - ann.coordinates.latitude) < 0.0001 &&
+                abs($0.coordinate.longitude - ann.coordinates.longitude) < 0.0001
             }
             if alreadyExists { return nil }
             
@@ -485,7 +523,7 @@ struct MKMapViewWrapper: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             // Compute the zoom scale based on the width of the visible map rect
             let zoomScale = mapView.visibleMapRect.size.width / mapView.frame.size.width
-            let threshold: Double = 1200 // This threshold is adjustable
+            let threshold: Double = 1200
             
             // Loop through station annotations to adjust clustering dynamically
             for annotation in mapView.annotations.compactMap({ $0 as? CustomMKPointAnnotation }) {

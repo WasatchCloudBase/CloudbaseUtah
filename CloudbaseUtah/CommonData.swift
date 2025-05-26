@@ -102,12 +102,13 @@ struct LiftParameters: Codable {
 class LiftParametersViewModel: ObservableObject {
     @Published var liftParameters: LiftParameters?
     
-    func getLiftParameters() {
+    func getLiftParameters(completion: @escaping () -> Void) {
         var liftParameters: LiftParameters = .init(thermalLapseRate: 0, thermalVelocityConstant: 0, initialTriggerTempDiff: 0, ongoingTriggerTempDiff: 0, thermalRampDistance: 0, thermalRampStartPct: 0, cloudbaseLapseRatesDiff: 0, thermalGliderSinkRate: 0)
         let rangeName = "LiftParameters"
         let liftParameterURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
         guard let liftParameterURL = URL(string: liftParameterURLString) else {
             print("invalid URL for thermal lift parameters")
+            completion() // Call completion even on error
             return
         }
         URLSession.shared.dataTask(with: liftParameterURL) { data, response, error in
@@ -143,8 +144,14 @@ class LiftParametersViewModel: ObservableObject {
                             }
                         }
                         self.liftParameters = liftParameters
+                        completion() // Call completion after updating
                     }
+                    return
                 }
+            }
+            // If decoding fails or data is nil, still call completion
+            DispatchQueue.main.async {
+                completion()
             }
         }.resume()
     }
@@ -163,10 +170,12 @@ class WeatherCodesViewModel: ObservableObject {
     @Published var weatherCodes: [WeatherCodes] = []
     private var cancellables = Set<AnyCancellable>()
     let sheetName = "WeatherCodes"
-    func getWeatherCodes() {
+    
+    func getWeatherCodes(completion: @escaping () -> Void) {
         let weatherCodesURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(sheetName)?alt=json&key=\(googleApiKey)"
         guard let url = URL(string: weatherCodesURLString) else {
             print("Invalid URL for weather codes")
+            DispatchQueue.main.async { completion() }
             return
         }
         URLSession.shared.dataTaskPublisher(for: url)
@@ -177,9 +186,15 @@ class WeatherCodesViewModel: ObservableObject {
             }
             .replaceError(with: [])
             .receive(on: DispatchQueue.main)
-            .assign(to: \.weatherCodes, on: self)
+            .handleEvents(receiveOutput: { [weak self] codes in
+                self?.weatherCodes = codes
+            }, receiveCompletion: { _ in
+                completion()
+            })
+            .sink { _ in }
             .store(in: &cancellables)
     }
+    
     func weatherCodeImage(weatherCode: Int, cloudcover: Double, precipProbability: Double, tempF: Double) -> String? {
         var weatherCodeImage: String = weatherCodes.first { $0.weatherCode == weatherCode }?.imageName ?? ""
         // Adjust sun/cloud/rain weather code image based on high % precip
@@ -224,20 +239,23 @@ class SunriseSunsetViewModel: ObservableObject {
     @Published var sunriseSunset: SunriseSunset?
     
     // Get sunrise / sunset for SLC airport
-    func getSunriseSunset() {
+    func getSunriseSunset(completion: @escaping () -> Void) {
         var sunriseSunset: SunriseSunset = .init(sunrise: "", sunset: "")
         let urlString = "https://api.sunrise-sunset.org/json?lat=\(sunriseLatitude)&lng=\(sunriseLongitude)&formatted=0"
         guard let url = URL(string: urlString) else {
             print("Invalid URL for sunrise and sunset times")
+            DispatchQueue.main.async { completion() }
             return
         }
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
                 print("Error for sunrise and sunset times: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion() }
                 return
             }
             guard let data = data else {
                 print("No data received for sunrise and sunset times")
+                DispatchQueue.main.async { completion() }
                 return
             }
             let decoder = JSONDecoder()
@@ -246,7 +264,10 @@ class SunriseSunsetViewModel: ObservableObject {
                     sunriseSunset.sunrise = convertISODateToLocalTime(isoDateString: decodedResponse.results.sunrise)
                     sunriseSunset.sunset = convertISODateToLocalTime(isoDateString: decodedResponse.results.sunset)
                     self.sunriseSunset = sunriseSunset
+                    completion()
                 }
+            } else {
+                DispatchQueue.main.async { completion() }
             }
         }.resume()
     }
@@ -277,11 +298,12 @@ class SitesViewModel: ObservableObject {
     @Published var sites: [Sites] = []
     private var cancellables = Set<AnyCancellable>()
     
-    func getSites() {
+    func getSites(completion: @escaping () -> Void) {
         let rangeName = "Sites"
         let sitesURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
         guard let url = URL(string: sitesURLString) else {
             print("Invalid URL")
+            DispatchQueue.main.async { completion() }
             return
         }
         
@@ -314,7 +336,12 @@ class SitesViewModel: ObservableObject {
             }
             .replaceError(with: [])
             .receive(on: DispatchQueue.main)
-            .assign(to: \.sites, on: self)
+            .handleEvents(receiveOutput: { [weak self] sites in
+                self?.sites = sites
+            }, receiveCompletion: { _ in
+                completion()
+            })
+            .sink { _ in }
             .store(in: &cancellables)
     }
 }
@@ -335,11 +362,12 @@ class PilotsViewModel: ObservableObject {
     @Published var pilots: [Pilots] = []
     private var cancellables = Set<AnyCancellable>()
     
-    func getPilots() {
+    func getPilots(completion: @escaping () -> Void) {
         let rangeName = "Pilots"
         let sitesURLString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
         guard let url = URL(string: sitesURLString) else {
             print("Invalid URL")
+            DispatchQueue.main.async { completion() }
             return
         }
         
@@ -367,7 +395,12 @@ class PilotsViewModel: ObservableObject {
             }
             .replaceError(with: [])
             .receive(on: DispatchQueue.main)
-            .assign(to: \.pilots, on: self)
+            .handleEvents(receiveOutput: { [weak self] pilots in
+                self?.pilots = pilots
+            }, receiveCompletion: { _ in
+                completion()
+            })
+            .sink { _ in }
             .store(in: &cancellables)
     }
     

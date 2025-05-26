@@ -16,55 +16,137 @@ struct CloudbaseUtahApp: App {
             span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
         ),
         activeLayers: [.pilots],
-//        activeLayers: [.stations, .sites],
         selectedMapType: .standard,
         pilotTrackDays: defaultPilotTrackDays
     )
-    
+
     var body: some Scene {
         WindowGroup {
-            
-            // Call app base view and track flag for requests to refresh metadata
             BaseAppView(refreshMetadata: $refreshMetadata)
+                .environmentObject(liftParametersViewModel)
+                .environmentObject(weatherCodesViewModel)
+                .environmentObject(sunriseSunsetViewModel)
+                .environmentObject(sitesViewModel)
+                .environmentObject(pilotsViewModel)
+                .environmentObject(mapSettingsViewModel)
+                .environment(\.colorScheme, .dark)
+                .onAppear {
+                    loadInitialMetadata()
+                }
+                .onChange(of: refreshMetadata) { _, newValue in
+                    if newValue {
+                        loadInitialMetadata()
+                        refreshMetadata = false
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                    refreshMetadata = true
+                }
+        }
+    }
 
-            // Establish metadata and map setting view models
-            .environmentObject(liftParametersViewModel)
-            .environmentObject(weatherCodesViewModel)
-            .environmentObject(sunriseSunsetViewModel)
-            .environmentObject(sitesViewModel)
-            .environmentObject(pilotsViewModel)
-            .environmentObject(mapSettingsViewModel)
-            
-            // Force dark mode and black background
-            .environment(\.colorScheme, .dark)
-        
-            // Initial load of metadata
-            .onAppear {
-                liftParametersViewModel.getLiftParameters()
-                weatherCodesViewModel.getWeatherCodes()
-                sunriseSunsetViewModel.getSunriseSunset()
-                sitesViewModel.getSites()
-                pilotsViewModel.getPilots()
-                initializeLoggingFile()
-            }
+    private func loadInitialMetadata() {
+        liftParametersViewModel.getLiftParameters() {}
+        weatherCodesViewModel.getWeatherCodes() {}
+        sunriseSunsetViewModel.getSunriseSunset() {}
+        sitesViewModel.getSites() {}
+        pilotsViewModel.getPilots() {}
+        initializeLoggingFile()
+    }
+}
 
-            // Reload metadata when refresh requested
-            .onChange(of: refreshMetadata) { _, newValue in
-                if newValue {
-                    liftParametersViewModel.getLiftParameters()
-                    weatherCodesViewModel.getWeatherCodes()
-                    sunriseSunsetViewModel.getSunriseSunset()
-                    sitesViewModel.getSites()
-                    pilotsViewModel.getPilots()
-                    refreshMetadata = false
+
+struct BaseAppView: View {
+    @Binding var refreshMetadata: Bool
+    @State private var isActive = false
+    @State private var metadataLoaded = false
+    @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
+    @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
+    @EnvironmentObject var pilotsViewModel: PilotsViewModel
+    @EnvironmentObject var sitesViewModel: SitesViewModel
+
+    var body: some View {
+        ZStack {
+            backgroundColor.edgesIgnoringSafeArea(.all)
+            VStack {
+                if isActive && metadataLoaded {
+                    MainView(refreshMetadata: $refreshMetadata)
+                        .preferredColorScheme(.dark)
+                } else {
+                    SplashScreenView()
+                        .preferredColorScheme(.dark)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                checkIfReadyToTransition()
+                            }
+                        }
                 }
             }
-        
-            // Check for date changes to force base view to reapper (reloading matadata)
-            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
-                refreshMetadata = true
+        }
+        .onAppear {
+            loadInitialMetadata()
+        }
+        .onChange(of: refreshMetadata) { oldValue, newValue in
+            if newValue {
+                isActive = false
+                metadataLoaded = false
+                loadInitialMetadata()
             }
-        
+        }
+    }
+
+    private func loadInitialMetadata() {
+        let group = DispatchGroup()
+        group.enter()
+        liftParametersViewModel.getLiftParameters {
+            group.leave()
+        }
+        group.enter()
+        weatherCodesViewModel.getWeatherCodes {
+            group.leave()
+        }
+        group.enter()
+        sunriseSunsetViewModel.getSunriseSunset {
+            group.leave()
+        }
+        group.enter()
+        sitesViewModel.getSites {
+            group.leave()
+        }
+        group.enter()
+        pilotsViewModel.getPilots {
+            group.leave()
+        }
+        initializeLoggingFile()
+        group.notify(queue: .main) {
+            metadataLoaded = true
+            checkIfReadyToTransition()
+        }
+    }
+
+    private func checkIfReadyToTransition() {
+        if metadataLoaded {
+            withAnimation {
+                isActive = true
+            }
+        }
+    }
+}
+
+struct SplashScreenView: View {
+    var body: some View {
+        ZStack {
+            backgroundColor.edgesIgnoringSafeArea(.all)
+            VStack {
+                Image("UtahPGicon")
+                    .resizable()
+                    .scaledToFit()
+                Text("Cloudbase Utah")
+                    .bold()
+                    .foregroundColor(titleFontColor)
+                    .padding(.top, 2)
+            }
         }
     }
 }
