@@ -54,7 +54,7 @@ class CamerasViewModel: ObservableObject {
             return
         }
 
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let data = data, error == nil else {
                 print("Error fetching data: \(error?.localizedDescription ?? "Unknown error")")
                 return
@@ -63,8 +63,8 @@ class CamerasViewModel: ObservableObject {
             do {
                 let decodedData = try JSONDecoder().decode([CameraData].self, from: data)
                 DispatchQueue.main.async {
-                    self.cameras = decodedData
-                    self.updateClusters(regionSpan: MKCoordinateSpan(latitudeDelta: 4.0, longitudeDelta: 6.0)) // Initial clustering
+                    self?.cameras = decodedData
+                    self?.updateClusters(regionSpan: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan))
                 }
             } catch {
                 print("Error decoding JSON: \(error)")
@@ -73,7 +73,7 @@ class CamerasViewModel: ObservableObject {
     }
 
     func updateClusters(regionSpan: MKCoordinateSpan) {
-        let thresholdDistance = max(regionSpan.latitudeDelta, regionSpan.longitudeDelta) * 0.1
+        let thresholdDistance = max(regionSpan.latitudeDelta, regionSpan.longitudeDelta) * mapClusterThresholdFactor
         clusteredCameras = []
 
         for camera in cameras {
@@ -90,7 +90,7 @@ class CamerasViewModel: ObservableObject {
 struct UDOTCameraListView: View {
     @StateObject private var viewModel = CamerasViewModel()
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: mapInitLongitude, longitude: mapInitLatitude),
+        center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
         span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
     )
     @State private var selectedCamera: CameraData?
@@ -98,8 +98,14 @@ struct UDOTCameraListView: View {
 
     var body: some View {
         NavigationView {
-/* Need to rebuild based on current map and annotation structures */
-/*            Map(coordinateRegion: $region, annotationItems: viewModel.clusteredCameras) { camera in
+            
+            // Validate camera coordinates
+            let _ = viewModel.clusteredCameras.forEach { camera in
+                assert(camera.latitude >= -90 && camera.latitude <= 90, "Invalid latitude: \(camera.latitude)")
+                assert(camera.longitude >= -180 && camera.longitude <= 180, "Invalid longitude: \(camera.longitude)")
+            }
+            
+            Map(coordinateRegion: $region, annotationItems: viewModel.clusteredCameras) { camera in
                 MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: camera.latitude, longitude: camera.longitude)) {
                     Button {
                         selectedCamera = camera
@@ -125,12 +131,11 @@ struct UDOTCameraListView: View {
             .sheet(item: $selectedCamera) { camera in
                 CameraDetailView(camera: camera)
             }
- */
         }
     }
 
     private func startMonitoringRegion() {
-        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
+        Timer.scheduledTimer(withTimeInterval: mapBatchProcessingInterval, repeats: true) { _ in
             let currentSpan = region.span
             if hasRegionSpanChanged(from: lastRegionSpan, to: currentSpan) {
                 lastRegionSpan = currentSpan
@@ -140,9 +145,8 @@ struct UDOTCameraListView: View {
     }
 
     private func hasRegionSpanChanged(from oldSpan: MKCoordinateSpan, to newSpan: MKCoordinateSpan) -> Bool {
-        let tolerance: Double = 0.01
-        return abs(oldSpan.latitudeDelta - newSpan.latitudeDelta) > tolerance ||
-            abs(oldSpan.longitudeDelta - newSpan.longitudeDelta) > tolerance
+        return abs(oldSpan.latitudeDelta - newSpan.latitudeDelta) > mapScaleChangeTolerance ||
+            abs(oldSpan.longitudeDelta - newSpan.longitudeDelta) > mapScaleChangeTolerance
     }
 }
 

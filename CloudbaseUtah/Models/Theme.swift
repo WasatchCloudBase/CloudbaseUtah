@@ -55,7 +55,7 @@ let repeatDateTimeColor: Color = .titanium
 let layersIconColor: Color = toolbarImageColor
 let layersFontColor: Color = toolbarFontColor
 let layersIconBackgroundColor: Color = .black
-let cameraAnnotationColor: Color = .sky
+let cameraAnnotationColor: Color = .white
 let cameraAnnotationTextColor: Color = cameraAnnotationColor
 //  siteAnnotationColor not defined here; it is established by the image
 let siteAnnotationTextColor: UIColor = UIColor(.white)
@@ -69,7 +69,6 @@ let pilotLabelAltTextColor: UIColor = UIColor(.sky)
 let pilotEmergencyAnnotationTextColor: UIColor = UIColor(.poppy)
 let pilotTrackColor: UIColor = UIColor(.white)
 let pilotTrackWidth: CGFloat = 1
-let clusterAnnotationColor: UIColor = UIColor(stationAnnotationColor)
 let defaultAnnotationColor: UIColor = UIColor(.black)
 let defaultAnnotationTextColor: UIColor = UIColor(.white)
 

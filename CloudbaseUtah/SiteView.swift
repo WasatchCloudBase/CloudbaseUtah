@@ -124,9 +124,9 @@ class StationLatestReadingsViewModel: ObservableObject {
     func getLatestMesonetReadings(stationParameters: String, completion: @escaping () -> Void) {
         let urlString = latestReadingsAPIHeader + stationParameters + latestReadingsAPITrailer + mesowestAPIToken
         guard let url = URL(string: urlString) else { return }
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            stationReadingsQueue.async {
-                guard let data = data, error == nil else { return }
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            DispatchQueue.main.async {
+                guard let self = self, let data = data, error == nil else { return }
                 do {
                     let decodedResponse = try JSONDecoder().decode(MesonetLatestResponse.self, from: data)
                     let latestReadings: [StationLatestReadings] = decodedResponse.station.compactMap { station in
@@ -190,8 +190,8 @@ class StationLatestReadingsViewModel: ObservableObject {
                     continue
                 }
                 
-                URLSession.shared.dataTask(with: stationInfoURL) { data, response, error in
-                    guard let data = data, error == nil else {
+                URLSession.shared.dataTask(with: stationInfoURL) { [weak self] data, response, error in
+                    guard let self = self, let data = data, error == nil else {
                         print("Error fetching CUASA station data: \(String(describing: error))")
                         DispatchQueue.main.async { group.leave() }
                         return

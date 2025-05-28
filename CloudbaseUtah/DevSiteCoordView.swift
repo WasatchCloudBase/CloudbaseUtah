@@ -26,6 +26,8 @@ struct DevSiteCoordView: View {
                     )
                 }) {
                     Text(site.siteName)
+                        .font(.subheadline)
+                        .foregroundColor(sectionHeaderColor)
                 }
             }
             .onChange(of: selectedSite) {
@@ -154,8 +156,8 @@ struct SiteMapView: View {
                         Text("Lat: \(String(format: "%.5f", markerCoordinate.latitude))")
                     }
                     .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
+                    .background(buttonBackgroundColor)
+                    .foregroundColor(buttonTextColor)
                     .cornerRadius(8)
                     
                     Button(action: {
@@ -164,8 +166,8 @@ struct SiteMapView: View {
                         Text("Lon: \(String(format: "%.5f", markerCoordinate.longitude))")
                     }
                     .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
+                    .background(buttonBackgroundColor)
+                    .foregroundColor(buttonTextColor)
                     .cornerRadius(8)
                 }
                 .padding()

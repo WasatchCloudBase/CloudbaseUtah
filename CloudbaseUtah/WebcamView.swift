@@ -22,8 +22,8 @@ class WeatherCamsViewModel: ObservableObject {
         let urlString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
         guard let url = URL(string: urlString) else { return }
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            guard let data = data, error == nil else {
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self, let data = data, error == nil else {
                 print("Failed to fetch data")
                 return
             }

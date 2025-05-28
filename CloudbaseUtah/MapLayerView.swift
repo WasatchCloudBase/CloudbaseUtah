@@ -153,23 +153,23 @@ struct LayerSelectionView: View {
                                         .foregroundColor(.gray)
                                 }
                             }
-                        }
-                    }
-                }
+                            if tempActiveLayers.contains(.pilots) && layer == .pilots {
+                                VStack(alignment: .trailing) {
+                                    Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
+                                    HStack {
+                                        Text("Today")
+                                            .font(.subheadline)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        Text("+ Yesterday")
+                                            .font(.subheadline)
+                                            .frame(maxWidth: .infinity, alignment: .center)
+                                        Text("+ Prior Day")
+                                            .font(.subheadline)
+                                            .frame(maxWidth: .infinity, alignment: .trailing)
+                                    }
+                                }
+                            }
 
-                if tempActiveLayers.contains(.pilots) {
-                    VStack(alignment: .trailing) {
-                        Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
-                        HStack {
-                            Text("Today")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Text("+ Yesterday")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                            Text("+ Prior Day")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
                         }
                     }
                 }

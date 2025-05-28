@@ -22,6 +22,7 @@ func tempColor(_ tempF: Int) -> Color {
         return .clear
     }
 }
+
 func cloudCoverColor(_ cloudCoverPct: Int) -> Color {
     switch cloudCoverPct {
     case ...39:
@@ -36,6 +37,7 @@ func cloudCoverColor(_ cloudCoverPct: Int) -> Color {
         return .clear
     }
 }
+
 func precipColor(_ precipPct: Int) -> Color {
     switch precipPct {
     case ...19:
@@ -50,6 +52,7 @@ func precipColor(_ precipPct: Int) -> Color {
         return .clear
     }
 }
+
 func CAPEColor(_ CAPEvalue: Int) -> Color {
     switch CAPEvalue {
     case 0...299:
@@ -64,6 +67,7 @@ func CAPEColor(_ CAPEvalue: Int) -> Color {
         return .clear
     }
 }
+
 func windSpeedColor(windSpeed: Int, siteType: String) -> Color {
     switch siteType {
     case "Aloft", "Mountain":
@@ -107,6 +111,7 @@ func windSpeedColor(windSpeed: Int, siteType: String) -> Color {
         }
     }
 }
+
 func thermalColor(_ thermalVelocity: Double) -> Color {
     // Assumes thermalVelocity already rounded to nearest tenth
     switch thermalVelocity {
@@ -124,35 +129,46 @@ func thermalColor(_ thermalVelocity: Double) -> Color {
         return .clear
     }
 }
+
 func roundToOneDecimal(_ value: Double) -> Double {
     return (value * 10).rounded() / 10
 }
+
 func convertKnotsToMPH(_ knots: Int) -> Int {
     let mph = Int((Double(knots) * 1.15078).rounded())
     return mph
 }
+
 func convertCelsiusToFahrenheit(_ celsius: Int) -> Int {
     return Int(((Double(celsius) * 9/5) + 32).rounded())
 }
+
 func convertMetersToFeet(_ meters: Double) -> Int {
     return Int((meters * 3.28084).rounded())
 }
+
 func convertFeetToMeters(_ feet: Double) -> Double {
     return (feet / 3.28084).rounded()
 }
+
 func convertKMToMiles(_ km: Double) -> Double {
     return (km * 0.621371).rounded()
 }
+
 func formatAltitude(_ altitudeData: String) -> String {
     let numberFormatter = NumberFormatter()
-     numberFormatter.numberStyle = .decimal
-    if let altitudeData = Int(altitudeData.replacingOccurrences(of: ",", with: "")) {
-        let formattedAltitude = numberFormatter.string(from: NSNumber(value: altitudeData))
-        return "\(formattedAltitude ?? "0") ft"
-     } else {
+    numberFormatter.numberStyle = .decimal
+    numberFormatter.maximumFractionDigits = 0
+    numberFormatter.minimumFractionDigits = 0
+    let altitude = altitudeData.replacingOccurrences(of: ",", with: "")
+    let altitudeInt = Int(Double(altitude) ?? 0.0)
+    if let formattedAltitude = numberFormatter.string(from: NSNumber(value: altitudeInt)) {
+        return "\(formattedAltitude) ft"
+    } else {
          return altitudeData
-     }
+    }
 }
+
 func buildReferenceNote(Alt: String, Note: String) -> String {
     var NoteString: String = ""
     if Alt != "" {
@@ -164,11 +180,13 @@ func buildReferenceNote(Alt: String, Note: String) -> String {
     }
     return NoteString
 }
+
 func extractSection(from data: Substring, start: String, end: String) -> String? {
     guard let startRange = data.range(of: start)?.upperBound,
           let endRange = data.range(of: end, range: startRange..<data.endIndex)?.lowerBound else { return nil }
     return String(data[startRange..<endRange])
 }
+
 func collapseTextLines(_ text: String?) -> String {
     // Set default if input is nil
     let nonOptionalText = text ?? ""
@@ -177,6 +195,7 @@ func collapseTextLines(_ text: String?) -> String {
     cleanedText = cleanedText.replacingOccurrences(of: "(?<!\n)\n(?!\n)", with: " ", options: .regularExpression)
     return cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
 }
+
 func removeExtraBlankLines(_ text: String?) -> String {
     // Set default if input is nil
     let nonOptionalText = text ?? ""

@@ -85,13 +85,9 @@ class SkewTChartManager: ObservableObject {
     
     // Read user input and updates chart parameters
     func d3Update(userTemp: Double) {
-print("1")
         DispatchQueue.main.async {
-print("2")
             if self.skewTSoundingData.count > 1 {
                 let threshold = (self.skewTSoundingData[1].Temp_c * 9 / 5) + 32 + 5.4
-print("threshold: \(threshold)")
-print("userTemp: \(userTemp)")
                 if userTemp > threshold && userTemp < 120 {
                     let userSkewTLiftParameters = self.getSkewTLiftParameters(temp: userTemp, data: self.skewTSoundingData)
                     self.dalrFlag = 1
@@ -166,7 +162,6 @@ print("userTemp: \(userTemp)")
         return skewTLiftParameters
     }
     
-    // populateSoaringForecast() async function equivalent using URLSession
     func populateSoaringForecast() {
         
         // Use soaringForecastViewModel to get forecast max temp
@@ -178,8 +173,8 @@ print("userTemp: \(userTemp)")
 
         // Get sounding data
         let soundingURL = URL(string: "https://storage.googleapis.com/wasatch-wind-static/raob.json")!
-        URLSession.shared.dataTask(with: soundingURL) { data2, response2, error2 in
-            if let data2 = data2 {
+        URLSession.shared.dataTask(with: soundingURL) { [weak self] data2, response2, error2 in
+            if let self = self, let data2 = data2 {
                 if let jsonData = try? JSONSerialization.jsonObject(with: data2) as? [[String: Any]] {
                     let decodedData = jsonData.compactMap { dict -> SkewTDataPoint? in
                         if let Temp_c = dict["Temp_c"] as? Double,

@@ -23,8 +23,8 @@ class TFRViewModel: ObservableObject {
         
         isLoading = true
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let data = data {
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            if let self = self, let data = data {
                 do {
                     let tfrList = try JSONDecoder().decode([TFR].self, from: data)
                     DispatchQueue.main.async {
@@ -39,7 +39,7 @@ class TFRViewModel: ObservableObject {
                 }
             } else {
                 DispatchQueue.main.async {
-                    self.isLoading = false
+                    self?.isLoading = false
                 }
             }
         }.resume()
@@ -155,8 +155,8 @@ class SoaringForecastViewModel: ObservableObject {
     }
     func fetchSoaringForecast() {
         guard let url = URL(string: soaringForecastLink) else { return }
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            guard let data = data, error == nil else { return }
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self, let data = data, error == nil else { return }
             if let content = String(data: data, encoding: .utf8) {
                 // Check if the output is formatted using the summer (rich) forecast
                 if content.contains("Soaring Forecast") {

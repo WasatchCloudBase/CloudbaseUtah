@@ -18,13 +18,21 @@ enum NavBarSelectedView:Int {
 }
 let googleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
 let googleApiKey = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
+
 let sunriseLatitude: Double = 40.7862                   // SLC airport coordinates
 let sunriseLongitude: Double = -111.9801
-let mapInitLatitude: Double = 40.53                     // Center point for map on initial opening
-let mapInitLongitude: Double = -111.87
-let mapInitLatitudeSpan: Double = 0.60                  // Size of map on initial opening
-let mapInitLongitudeSpan: Double = mapInitLatitudeSpan * 1.5
+let mapInitLatitude: Double = 39.72                     // Center point for map on initial opening
+let mapInitLongitude: Double = -111.45
+let mapInitLatitudeSpan: Double = 7.2                   // Size of map on initial opening
+let mapInitLongitudeSpan: Double = 5.2                  //mapInitLatitudeSpan * 1.5
+let stationSpacingBaseThreshold: Double = 0.01          // Larger number will reduce the number of stations displayed
+let stationSpacingZoomFactor: Double = 700              // Larger number will reduce number of stations displayed
+let mapBatchProcessingInterval: Double = 0.2
+let mapScaleChangeTolerance: Double = 0.01              // Don't refresh annotation filtering for minor scale changes
+let annotationDuplicateTolerance = 0.0001
+let mapClusterThresholdFactor = 0.1                     // Initial value was 0.1
 let mapEnableRotation: Bool = false
+
 let defaultTopOfLiftAltitude = 18000.0                  // Use in lift area graph when top of lift isn't reached in calculations
 let pageRefreshInterval: TimeInterval = 150             // Time in seconds to refresh wind readings (300 for 5 min)
 let defaultPilotTrackDays: Double = 1.0                 // Default days of live tracking to display
@@ -73,11 +81,6 @@ let annotationTextHeight: CGFloat = 14
 let stationAnnotationWidth: CGFloat = 40
 let stationAnnotationHeight: CGFloat = 22
 
-// Background processing custom queues
-let backgroundQueue = DispatchQueue(label: "backgroundQueue", qos: .background)
-let stationReadingsQueue = DispatchQueue(label: "stationReadingsQueue", qos: .background)
-let pilotTracksQueue = DispatchQueue(label: "pilotTracksQueue", qos: .background)
-
 // Get lift parameters for common use
 struct LiftParameterSource: Codable, Identifiable {
     var id = UUID()
@@ -111,7 +114,7 @@ class LiftParametersViewModel: ObservableObject {
             completion() // Call completion even on error
             return
         }
-        URLSession.shared.dataTask(with: liftParameterURL) { data, response, error in
+        URLSession.shared.dataTask(with: liftParameterURL) { [weak self] data, response, error in
             if let data = data {
                 let decoder = JSONDecoder()
                 if let decodedResponse = try? decoder.decode(LiftParametersResponse.self, from: data) {
@@ -143,7 +146,7 @@ class LiftParametersViewModel: ObservableObject {
                                 }
                             }
                         }
-                        self.liftParameters = liftParameters
+                        self?.liftParameters = liftParameters
                         completion() // Call completion after updating
                     }
                     return
@@ -247,7 +250,7 @@ class SunriseSunsetViewModel: ObservableObject {
             DispatchQueue.main.async { completion() }
             return
         }
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
             if let error = error {
                 print("Error for sunrise and sunset times: \(error.localizedDescription)")
                 DispatchQueue.main.async { completion() }
@@ -263,7 +266,7 @@ class SunriseSunsetViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     sunriseSunset.sunrise = convertISODateToLocalTime(isoDateString: decodedResponse.results.sunrise)
                     sunriseSunset.sunset = convertISODateToLocalTime(isoDateString: decodedResponse.results.sunset)
-                    self.sunriseSunset = sunriseSunset
+                    self?.sunriseSunset = sunriseSunset
                     completion()
                 }
             } else {

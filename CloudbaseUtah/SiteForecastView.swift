@@ -47,8 +47,7 @@ struct SiteForecastView: View {
                 VStack(alignment: .leading) {
                     let topOfChartAltitude = 18000.0
                     let surfaceAltitude = convertMetersToFeet(forecastData.elevation)
-                    let Alt = formatAltitude(String(surfaceAltitude))
-                    Text(buildReferenceNote(Alt: "\(Alt)", Note: forecastNote))
+                    Text(buildReferenceNote(Alt: String(surfaceAltitude), Note: forecastNote))
                         .font(.footnote)
                         .foregroundColor(infoFontColor)
                         .padding(.bottom, 5)

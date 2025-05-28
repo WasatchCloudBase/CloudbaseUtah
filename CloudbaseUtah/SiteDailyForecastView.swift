@@ -40,7 +40,7 @@ class DailyForecastViewModel: ObservableObject {
         if printForecastURL { print(dailyForecastURLString) }
 
         guard let dailyForecastURL = URL(string: dailyForecastURLString) else { return }
-        URLSession.shared.dataTask(with: dailyForecastURL) { data, response, error in
+        URLSession.shared.dataTask(with: dailyForecastURL) { [weak self] data, response, error in
             if let data = data {
                 let decoder = JSONDecoder()
                 // Remove occasional value of null in the results
@@ -72,7 +72,7 @@ class DailyForecastViewModel: ObservableObject {
                             
                             // Set weather code image
                             // Set weather code image
-                            weatherCodeImage[index] = self.weatherCodesViewModel.weatherCodeImage (
+                            weatherCodeImage[index] = self?.weatherCodesViewModel.weatherCodeImage (
                                 weatherCode: Int(dailyForecastData.daily.weather_code[index]),
                                 cloudcover: Double(dailyForecastData.daily.cloud_cover_mean[index]),
                                 precipProbability: Double(dailyForecastData.daily.precipitation_probability_max[index]),
@@ -94,7 +94,7 @@ class DailyForecastViewModel: ObservableObject {
                         updatedDaily.formattedMaxTemp = formattedMaxTemp
                         updatedDaily.formattedMinTemp = formattedMinTemp
                         updatedDaily.precipImage = precipImage
-                        self.dailyForecastData = DailyForecastData(elevation: dailyForecastData.elevation, daily: updatedDaily)
+                        self?.dailyForecastData = DailyForecastData(elevation: dailyForecastData.elevation, daily: updatedDaily)
                     }
                 } else {
                     print("JSON decode failed for forecast")
@@ -131,9 +131,8 @@ struct SiteDailyForecastView: View {
             if let daily = viewModel.dailyForecastData?.daily {
 
                 let surfaceAltitude = convertMetersToFeet(viewModel.dailyForecastData?.elevation ?? 0.0)
-                let Alt = formatAltitude(String(surfaceAltitude))
                 HStack {
-                    Text(buildReferenceNote(Alt: "\(Alt)", Note: forecastNote))
+                    Text(buildReferenceNote(Alt: String(surfaceAltitude), Note: forecastNote))
                         .font(.footnote)
                         .foregroundColor(infoFontColor)
                         .padding(.bottom, 5)
