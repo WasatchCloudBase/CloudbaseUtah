@@ -3,7 +3,7 @@
  
     func makeUIView:
         Configures map settings including map type
-        Registers custom annotations
+        Registers custom MKAnnotations are used
         Identifies coordinator
  
     func updateUIView:
@@ -85,13 +85,14 @@ class CustomMKPointAnnotation: MKPointAnnotation {
 
 // Map wrapper to improve performance through lazy loading
 struct MKMapViewWrapper: UIViewRepresentable {
-    @Binding var region: MKCoordinateRegion
-    @Binding var annotations: [CustomMapAnnotation]
+    @Binding var region: MKCoordinateRegion  // coordinates and span
+    @Binding var annotationSourceItems: [AnnotationSourceItem]
     var mapType: MKMapType
     @Binding var selectedSite: Sites?
     @Binding var selectedPilotTrack: PilotTracks?
     @ObservedObject var mapSettingsViewModel: MapSettingsViewModel
 
+    // makeUIView called when view is created
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView(frame: .zero)
         // Configure the map view as needed, for example:
@@ -104,17 +105,15 @@ struct MKMapViewWrapper: UIViewRepresentable {
         return mapView
     }
     
+    // updateUIView is called:
+    //   - after makeUIView is completed (initial call)
+    //   - when the UI state changes
+    //   - wrapper properties, bindings, or observed items change (e.g., region, annotationSourceItems, etc.)
     func updateUIView(_ uiView: MKMapView, context: Context) {
         uiView.mapType = mapType
 
-        if uiView.region.center.latitude != region.center.latitude ||
-           uiView.region.center.longitude != region.center.longitude {
-            uiView.setRegion(region, animated: false)
-        }
-        
         // If annotations are cleared, remove all markers
-        if annotations.isEmpty {
-print("annotations are empty so removing all markers")
+        if annotationSourceItems.isEmpty {
             uiView.removeAnnotations(uiView.annotations)
         }
         
@@ -128,7 +127,6 @@ print("annotations are empty so removing all markers")
         if !mapSettingsViewModel.activeLayers.contains(.stations) {
             let stationsToRemove = uiView.annotations.compactMap { $0 as? CustomMKPointAnnotation }
                 .filter { $0.annotationType == "station" }
-print("stations layer not active so removing all stations")
             uiView.removeAnnotations(stationsToRemove)
         }
         
@@ -150,44 +148,56 @@ print("stations layer not active so removing all stations")
 //        uiView.removeAnnotations(stationsToRemove)
 //print("Removed all stations in updateUIView..expect to rebuild")
 
-        let visibleMapRect = uiView.visibleMapRect
-
-print("Loading annotations from CustomMKPointAnnotations")
+// Is this necessary?  It doesn't seem necessary....
+/*        // Get visible map area based on changes
+        if uiView.region.center.latitude != region.center.latitude ||
+           uiView.region.center.longitude != region.center.longitude {
+            uiView.setRegion(region, animated: false)
+        }
+ */
         
         // Build new annotations only for those within visible map rect.
-        let newAnnotations = annotations.compactMap { ann -> CustomMKPointAnnotation? in
-            let point = MKMapPoint(ann.coordinates)
-            guard visibleMapRect.contains(point) else { return nil }
+        let visibleMapRect = uiView.visibleMapRect
+print("Building annotations visible in map rectangle")
+        
+        let newAnnotations = annotationSourceItems.compactMap { annotationSourceItem -> CustomMKPointAnnotation? in
+            let point = MKMapPoint(annotationSourceItem.coordinates)
+ //           guard visibleMapRect.contains(point) else { return nil }
             
-            // Check for duplicates and only display once
+            // Don't display duplicate annotations
             let alreadyExists = uiView.annotations.compactMap({ $0 as? CustomMKPointAnnotation }).contains {
-                $0.title == ann.annotationID &&
-                $0.annotationType == ann.annotationType &&
-                abs($0.coordinate.latitude - ann.coordinates.latitude) < annotationDuplicateTolerance &&
-                abs($0.coordinate.longitude - ann.coordinates.longitude) < annotationDuplicateTolerance
+                $0.title == annotationSourceItem.annotationID &&
+                $0.annotationType == annotationSourceItem.annotationType &&
+                abs($0.coordinate.latitude - annotationSourceItem.coordinates.latitude) < annotationDuplicateTolerance &&
+                abs($0.coordinate.longitude - annotationSourceItem.coordinates.longitude) < annotationDuplicateTolerance
             }
             if alreadyExists { return nil }
 
-            let customAnnotation = CustomMKPointAnnotation(__coordinate: ann.coordinates)
-            customAnnotation.title = ann.annotationID
-            customAnnotation.subtitle = ann.annotationType
-            customAnnotation.annotationType = ann.annotationType
-            customAnnotation.windSpeed = ann.windSpeed
-            customAnnotation.windDirection = ann.windDirection
-            customAnnotation.windGust = ann.windGust
-            customAnnotation.trackDateTime = ann.trackDateTime
-            customAnnotation.altitude = ann.altitude
-            customAnnotation.message = ann.message
-            customAnnotation.inEmergency = ann.inEmergency
+            // Create array element in CustomMKPointAnnotation
+            let customAnnotation = CustomMKPointAnnotation(__coordinate: annotationSourceItem.coordinates)
+            customAnnotation.title = annotationSourceItem.annotationID
+            customAnnotation.subtitle = annotationSourceItem.annotationType
+            customAnnotation.annotationType = annotationSourceItem.annotationType
+            customAnnotation.windSpeed = annotationSourceItem.windSpeed
+            customAnnotation.windDirection = annotationSourceItem.windDirection
+            customAnnotation.windGust = annotationSourceItem.windGust
+            customAnnotation.trackDateTime = annotationSourceItem.trackDateTime
+            customAnnotation.altitude = annotationSourceItem.altitude
+            customAnnotation.message = annotationSourceItem.message
+            customAnnotation.inEmergency = annotationSourceItem.inEmergency
             return customAnnotation
         }
+        
+        // Add array of CustomMKPointAnnotation elements to map
         uiView.addAnnotations(newAnnotations)
+print("Added customMKPointAnnotations: \(newAnnotations.count)")
 
-        // Ensure filtering occurs on first map draw
+//print("Skipping filtering")
+/*        // Ensure filtering occurs on first map draw
         DispatchQueue.main.asyncAfter(deadline: .now() + mapBatchProcessingInterval) {
-print("Calling filterStationAnnotations for first draw")
             context.coordinator.filterStationAnnotations(on: uiView)
         }
+ */
 
         //Create lines between pilot track nodes
         // with a delay to ensure annotations have been added
@@ -202,12 +212,22 @@ print("Calling filterStationAnnotations for first draw")
     class Coordinator: NSObject, MKMapViewDelegate {
         weak var mapView: MKMapView?
         var parent: MKMapViewWrapper
+        var debounceTimer: Timer?
         private var previousSpan: MKCoordinateSpan?
 
         init(_ parent: MKMapViewWrapper) {
             self.parent = parent
         }
 
+        // Check if user gestures made a meaningful change to map zoom/pan
+        func regionsAreEqual(_ lhs: MKCoordinateRegion, _ rhs: MKCoordinateRegion) -> Bool {
+            let epsilon = 0.00001
+            return abs(lhs.center.latitude - rhs.center.latitude) < epsilon &&
+                   abs(lhs.center.longitude - rhs.center.longitude) < epsilon &&
+                   abs(lhs.span.latitudeDelta - rhs.span.latitudeDelta) < epsilon &&
+                   abs(lhs.span.longitudeDelta - rhs.span.longitudeDelta) < epsilon
+        }
+        
         private func annotationsAreTooClose(_ a: CustomMKPointAnnotation, _ b: CustomMKPointAnnotation, threshold: Double) -> Bool {
             return abs(a.coordinate.latitude - b.coordinate.latitude) < threshold &&
                    abs(a.coordinate.longitude - b.coordinate.longitude) < threshold
@@ -217,7 +237,7 @@ print("Calling filterStationAnnotations for first draw")
             let zoomScale = mapView.visibleMapRect.size.width / mapView.frame.size.width
             let stationSpacingDynamicThreshold = stationSpacingBaseThreshold * (zoomScale / stationSpacingZoomFactor)
 
-            let fullStationAnnotations = parent.annotations.filter { $0.annotationType == "station" }
+            let fullStationAnnotations = parent.annotationSourceItems.filter { $0.annotationType == "station" }
             var filteredAnnotations = [CustomMKPointAnnotation]()
 
             for ann in fullStationAnnotations {
@@ -233,46 +253,48 @@ print("Calling filterStationAnnotations for first draw")
                 customAnnotation.message = ann.message
                 customAnnotation.inEmergency = ann.inEmergency
 
-                let collision = filteredAnnotations.contains { existing in
-                    annotationsAreTooClose(existing, customAnnotation, threshold: stationSpacingDynamicThreshold)
-                }
-                if !collision {
+//print("Skipping collision checks for filtering")
+//                let collision = filteredAnnotations.contains { existing in
+//                    annotationsAreTooClose(existing, customAnnotation, threshold: stationSpacingDynamicThreshold)
+//                }
+//                if !collision {
                     filteredAnnotations.append(customAnnotation)
-                }
+//                }
             }
 
-            print("** Filtering stations based on zoom level changes")
-
+//print("Skipping remove of station annotations (when zoom level changes?)")
             // Remove previous annotations only when zoom level changes
-            mapView.removeAnnotations(mapView.annotations.compactMap { $0 as? CustomMKPointAnnotation }
+/*            mapView.removeAnnotations(mapView.annotations.compactMap { $0 as? CustomMKPointAnnotation }
                 .filter { $0.annotationType == "station" } )
-
+*/
             mapView.addAnnotations(filteredAnnotations)
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-            let currentSpan = mapView.region.span
+            
+//print("Skipping filtering of station annotations on region changes")
+//            filterStationAnnotations(on: mapView)
+            
+// should not need to do this...loaded initially, on state change, active phase change, and time out
+            // Load stations based on new map region
+//            fetchStationAnnotations(for: mapView)
 
-            if let previous = previousSpan,
-               abs(currentSpan.latitudeDelta - previous.latitudeDelta) < 0.001 &&
-               abs(currentSpan.longitudeDelta - previous.longitudeDelta) < 0.001 {
-                print("Zoom level did not change significantly, skipping station filtering")
-                return
-            }
-
-            previousSpan = currentSpan
-            print("Zoom level changed, updating station filtering")
-            filterStationAnnotations(on: mapView)
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + mapBatchProcessingInterval) {
-                self.parent.region = mapView.region
+            // Invalidate any existing timer
+            debounceTimer?.invalidate()
+            // Start a new timer
+            debounceTimer = Timer.scheduledTimer(withTimeInterval: mapBatchProcessingInterval, repeats: false) { [weak self] _ in
+                guard let self = self else { return }
+                // Only update if region has actually changed
+                if !regionsAreEqual(self.parent.region, mapView.region) {
+                    self.parent.region = mapView.region
+                }
             }
         }
 
         private func fetchStationAnnotations(for mapView: MKMapView) {
             let visibleRect = mapView.visibleMapRect
 
-            let newStations = parent.annotations.filter { $0.annotationType == "station" }.compactMap { ann -> CustomMKPointAnnotation? in
+            let newStations = parent.annotationSourceItems.filter { $0.annotationType == "station" }.compactMap { ann -> CustomMKPointAnnotation? in
                 let point = MKMapPoint(ann.coordinates)
                 guard visibleRect.contains(point) else { return nil }
 
@@ -378,10 +400,10 @@ print("Calling filterStationAnnotations for first draw")
             mapView.overlays.forEach { mapView.removeOverlay($0) }
             
             // Group pilot annotations by pilot name and the start of day of their timestamp
-            var groupedAnnotations = [PilotTrackKey: [(index: Int, annotation: CustomMapAnnotation)]]()
+            var groupedAnnotations = [PilotTrackKey: [(index: Int, annotation: AnnotationSourceItem)]]()
             
             // Loop through the parent's annotations with indices
-            for (index, ann) in parent.annotations.enumerated() {
+            for (index, ann) in parent.annotationSourceItems.enumerated() {
                 if ann.annotationType == "pilot" {
                     let key = PilotTrackKey(
                         pilotName: ann.annotationName,
@@ -445,7 +467,8 @@ print("Calling filterStationAnnotations for first draw")
                     let stationView = mapView.dequeueReusableAnnotationView(withIdentifier: "StationAnnotationView") as? StationAnnotationView
                         ?? StationAnnotationView(annotation: annotation, reuseIdentifier: "StationAnnotationView")
                     stationView.annotation = annotation
-                    stationView.displayPriority = .defaultLow
+                    stationView.collisionMode = .none
+ //                   stationView.displayPriority = .defaultHigh
                     return stationView
                 }
 
@@ -567,7 +590,7 @@ print("Calling filterStationAnnotations for first draw")
             switch customAnnotation.annotationType {
                 
             case "site":
-                guard let selectedSite = parent.annotations.first(where: { $0.annotationID == customAnnotation.title }) else {
+                guard let selectedSite = parent.annotationSourceItems.first(where: { $0.annotationID == customAnnotation.title }) else {
                     print("Could not find site/station annotation for: \(String(describing: customAnnotation.title))")
                     return
                 }
@@ -591,7 +614,7 @@ print("Calling filterStationAnnotations for first draw")
                 
             case "station":
                 // Return selectedSite for stations as well as sites to pass to siteDetail view for readings and forecast
-                guard let selectedSite = parent.annotations.first(where: { $0.annotationID == customAnnotation.title }) else {
+                guard let selectedSite = parent.annotationSourceItems.first(where: { $0.annotationID == customAnnotation.title }) else {
                     print("Could not find station annotation")
                     return
                 }
@@ -614,7 +637,7 @@ print("Calling filterStationAnnotations for first draw")
                 }
 
             case "pilot":
-                guard let selectedPilotTrack = parent.annotations.first(where: { $0.annotationID == customAnnotation.title &&
+                guard let selectedPilotTrack = parent.annotationSourceItems.first(where: { $0.annotationID == customAnnotation.title &&
                         $0.trackDateTime == customAnnotation.trackDateTime}) else {
                     print("Could not find pilot annotation for: \(String(describing: customAnnotation.title)) and \(String(describing: customAnnotation.trackDateTime))")
                     return
@@ -644,8 +667,9 @@ print("Calling filterStationAnnotations for first draw")
 // ----------
 
 
-// List of items used as the source for creating map annotations
-struct CustomMapAnnotation: Identifiable {
+// Full listing of items used as the source for creating map annotations
+// Created based on active layers and refreshed on app navigation or elapsed time
+struct AnnotationSourceItem: Identifiable {
     let id = UUID()
     let annotationType: String              // e.g., "site" or "station"
     let annotationID: String                // an identifier based on the type
@@ -697,7 +721,7 @@ struct MapView: View {
     @State private var isPlaying = false
     @State private var animationProgress: Double = 0.0
     @State private var currentTime: String = "00:00"
-    @State private var customMapAnnotations: [CustomMapAnnotation] = []
+    @State private var annotationSourceItems: [AnnotationSourceItem] = []
     @State private var isActive = false                         // Whether view is active for time refreshes
     @State private var refreshWorkItem: DispatchWorkItem?       // Used to cancel and restart timer when another event occurs
     private var cancellables = Set<AnyCancellable>()
@@ -711,7 +735,7 @@ struct MapView: View {
         ZStack {
             MKMapViewWrapper(
                 region: $mapSettingsViewModel.region,
-                annotations: $customMapAnnotations,
+                annotationSourceItems: $annotationSourceItems,
                 mapType: mapSettingsViewModel.selectedMapType.toMapKitType(),
                 selectedSite: $selectedSite,
                 selectedPilotTrack: $selectedPilotTrack,
@@ -736,7 +760,7 @@ struct MapView: View {
                             }
                         }
                         .sheet(isPresented: $isLayerSheetPresented) {
-                            LayerSelectionView(
+                            MapSettingsView(
                                 activeLayers: $mapSettingsViewModel.activeLayers,
                                 selectedMapType: $mapSettingsViewModel.selectedMapType,
                                 pilotTrackDays: $mapSettingsViewModel.pilotTrackDays
@@ -783,7 +807,7 @@ struct MapView: View {
                                        scenePhase: scenePhase)) {
             // Check all changes together to only execute updateMapAnnotations once
             if scenePhase == .active {
-                updateCustomMapAnnotations()
+                updateAnnotationSourceItems()
                 startTimer() // Cancels existing timer and restarts
                 isActive = true
             } else {
@@ -791,7 +815,7 @@ struct MapView: View {
             }
         }
         .onAppear {
-            updateCustomMapAnnotations()
+            updateAnnotationSourceItems()
             isActive = true
             startTimer()
         }
@@ -817,7 +841,7 @@ struct MapView: View {
         // Create a new work item
         let workItem = DispatchWorkItem {
             if isActive {
-                updateCustomMapAnnotations()
+                updateAnnotationSourceItems()
             }
         }
         refreshWorkItem = workItem
@@ -826,16 +850,16 @@ struct MapView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval, execute: workItem)
     }
 
-    // Update the annotations based on the active layers.
-    private func updateCustomMapAnnotations() {
+    // Update the annotation source item list based on the active layers.
+    private func updateAnnotationSourceItems() {
         
-        customMapAnnotations.removeAll()
+        annotationSourceItems.removeAll()
 
         if mapSettingsViewModel.activeLayers.contains(.sites) {
                 let filteredSites = sitesViewModel.sites.filter { $0.siteType == "Mountain" || $0.siteType == "Soaring" }
             for site in filteredSites {
                 if let lat = Double(site.siteLat), let lon = Double(site.siteLon) {
-                let annotation = CustomMapAnnotation(
+                let annotationSourceItem = AnnotationSourceItem(
                         annotationType: "site",
                         annotationID: site.siteName,
                         annotationName: site.siteName,
@@ -853,7 +877,7 @@ struct MapView: View {
                         message: "",
                         trackDateTime: nil
                     )
-                    customMapAnnotations.append(annotation)
+                    annotationSourceItems.append(annotationSourceItem)
                 }
             }
         }
@@ -875,7 +899,7 @@ struct MapView: View {
                 // Create annotations for each latest reading
                 for reading in stationLatestReadingsViewModel.latestReadings {
                     if let lat = Double(reading.stationLatitude), let lon = Double(reading.stationLongitude) {
-                        let annotation = CustomMapAnnotation(
+                        let annotationSourceItem = AnnotationSourceItem(
                             annotationType: "station",
                             annotationID: reading.stationID,
                             annotationName: reading.stationName,
@@ -893,7 +917,7 @@ struct MapView: View {
                             message: "",
                             trackDateTime: nil
                         )
-                        customMapAnnotations.append(annotation)
+                        annotationSourceItems.append(annotationSourceItem)
                     }
                 }
             }
@@ -910,7 +934,7 @@ struct MapView: View {
             }
             pilotGroup.notify(queue: .main) {
                 for trackNode in pilotTracksViewModel.pilotTracks {
-                    let annotation = CustomMapAnnotation(
+                    let annotationSourceItem = AnnotationSourceItem(
                         annotationType: "pilot",
                         annotationID: trackNode.pilotName,
                         annotationName: trackNode.pilotName,
@@ -928,7 +952,7 @@ struct MapView: View {
                         message: trackNode.message,
                         trackDateTime: trackNode.dateTime
                     )
-                    customMapAnnotations.append(annotation)
+                    annotationSourceItems.append(annotationSourceItem)
                 }
             }
         }

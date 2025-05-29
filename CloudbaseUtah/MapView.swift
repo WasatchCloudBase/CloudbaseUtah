@@ -5,17 +5,16 @@
  MapView:
     Site list and pilot list passed in as environment object
     Map built using MKMapViewWrapper
-    On appear, timer is started to periodically update annotations
-    updateMapAnnotations is called on appear, change of scene, or change of map parameters to manage CustomMapAnnotation structure
+    On appear, timer is started to periodically update annotationSourceItems (e.g. get new station readings, pilot track nodes, etc.)
+    updateAnnotationSourceItems is called on appear, change of scene, or change of map parameters to manage CustomMapAnnotation structure
     Publish any changes to pilotTracksViewModel
  
- updateMapAnnotations manages the CustomMapAnnotation [CustomMapAnnotation] structure:
-    Removes all existing CustomMapAnnotations
+ updateAnnotationSourceItems manages the annotationSourceItems [AnnotationSourceItem] structure:
+    Removes all existing annotationSourceItems
     Based on which map layers are active:
         Fetches source data (calls fetchTrackingData for pilot tracks, latest readings for station readings, etc.)
             Update pilot tracks to pilotTracksViewModel
-        Appends CustomMapAnnotations for active layers
-
+        Appends annotationSourceItems for active layers
 */
 
 import SwiftUI

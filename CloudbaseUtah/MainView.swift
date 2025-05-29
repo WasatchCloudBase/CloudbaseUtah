@@ -32,7 +32,7 @@ struct MainView: View {
                         .environmentObject(sitesViewModel)
                 }
                 if selectedView == .webcam {
-                    WebcamView()
+                    WeatherCamView()
                 }
                 if selectedView == .link {
                     LinkView()
