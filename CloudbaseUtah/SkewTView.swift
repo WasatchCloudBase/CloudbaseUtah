@@ -367,7 +367,7 @@ struct SkewTChartView: View {
                 TextField("Temp", text: $userTemp)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .cornerRadius(8)
-                    .frame(width: buttonWidth * 0.7)
+                    .frame(width: skewTButtonWidth * 0.7)
                     .keyboardType(.decimalPad)
                     .padding(.trailing, 0)
                     .onSubmit {
@@ -381,11 +381,11 @@ struct SkewTChartView: View {
                     manager.d3Update(userTemp: Double(userTemp) ?? manager.maxTempF)
                 }) {
                     Text("Submit")
-                        .foregroundColor(buttonTextColor)
+                        .foregroundColor(skewTButtonTextColor)
                         .padding(8)
                 }
-                .frame(width: buttonWidth)
-                .background(buttonBackgroundColor)
+                .frame(width: skewTButtonWidth)
+                .background(skewTButtonBackgroundColor)
                 .cornerRadius(8)
                 Button(action: {
                     userTemp = ""
@@ -393,11 +393,11 @@ struct SkewTChartView: View {
                     manager.d3Update(userTemp: manager.maxTempF)
                 }) {
                     Text("Clear")
-                        .foregroundColor(buttonTextColor)
+                        .foregroundColor(skewTButtonTextColor)
                         .padding(8)
                 }
-                .frame(width: buttonWidth)
-                .background(buttonBackgroundColor)
+                .frame(width: skewTButtonWidth)
+                .background(skewTButtonBackgroundColor)
                 .cornerRadius(8)
             }
             // Setting buttonStyle to work around a SwiftUI bug where both buttons are actioned when either is pressed

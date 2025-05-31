@@ -114,7 +114,7 @@ struct PilotTrackNodeView: View {
                                 .padding(.trailing, 2)
                                 .foregroundColor(infoFontColor)
                                 .frame(width: colWidth, alignment: .trailing)
-                            Text("\(pilotTrack.coordinates.latitude), \(pilotTrack.coordinates.longitude)")
+                            Text("\(pilotTrack.latitude), \(pilotTrack.longitude)")
                                 .font(.subheadline)
                                 .padding(.leading, 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -308,7 +308,7 @@ struct PilotTrackNodeView: View {
                             .foregroundColor(rowHeaderColor)
                     }
                     Button(action: {
-                        UIPasteboard.general.string = "\(pilotTrack.coordinates.latitude),\(pilotTrack.coordinates.longitude)"
+                        UIPasteboard.general.string = "\(pilotTrack.latitude),\(pilotTrack.longitude)"
                     }) {
                         Text("Copy coordinates to clipboard")
                             .multilineTextAlignment(.trailing)
@@ -331,7 +331,7 @@ struct PilotTrackNodeView: View {
             }
             .padding(0)
             .onAppear {
-                fetchGroundElevation(latitude: pilotTrack.coordinates.latitude, longitude: pilotTrack.coordinates.longitude)
+                fetchGroundElevation(latitude: pilotTrack.latitude, longitude: pilotTrack.longitude)
             }
         }
         Spacer()
@@ -375,8 +375,8 @@ struct PilotTrackNodeView: View {
         let formattedFlightDuration = String(format: "%d:%02d", flightHours, flightMinutes)
         
         // Calculate start to end distance
-        let startCoordinates = CLLocation(latitude: oldestTrack.coordinates.latitude, longitude: oldestTrack.coordinates.longitude)
-        let latestCoordinates = CLLocation(latitude: latestTrack.coordinates.latitude, longitude: latestTrack.coordinates.longitude)
+        let startCoordinates = CLLocation(latitude: oldestTrack.latitude, longitude: oldestTrack.longitude)
+        let latestCoordinates = CLLocation(latitude: latestTrack.latitude, longitude: latestTrack.longitude)
         let startToEndDistance = startCoordinates.distance(from: latestCoordinates) / 1000  // convert m to km
 
         // Calculate maximum altitude
@@ -387,8 +387,8 @@ struct PilotTrackNodeView: View {
         for (index, track) in sameDayTracks.enumerated() {
             if index > 0 {
                 let previousTrack = sameDayTracks[index - 1]
-                let previousCoordinates = CLLocation(latitude: previousTrack.coordinates.latitude, longitude: previousTrack.coordinates.longitude)
-                let currentCoordinates = CLLocation(latitude: track.coordinates.latitude, longitude: track.coordinates.longitude)
+                let previousCoordinates = CLLocation(latitude: previousTrack.latitude, longitude: previousTrack.longitude)
+                let currentCoordinates = CLLocation(latitude: track.latitude, longitude: track.longitude)
                 totalDistance += previousCoordinates.distance(from: currentCoordinates)
             }
         }
@@ -398,16 +398,16 @@ struct PilotTrackNodeView: View {
     }
     
     private func openGoogleMaps() {
-        let latitude = pilotTrack.coordinates.latitude
-        let longitude = pilotTrack.coordinates.longitude
+        let latitude = pilotTrack.latitude
+        let longitude = pilotTrack.longitude
         if let url = URL(string: "https://www.google.com/maps/search/?api=1&query=\(latitude),\(longitude)") {
             UIApplication.shared.open(url)
         }
     }
     
     private func openAppleMaps() {
-        let latitude = pilotTrack.coordinates.latitude
-        let longitude = pilotTrack.coordinates.longitude
+        let latitude = pilotTrack.latitude
+        let longitude = pilotTrack.longitude
         if let url = URL(string: "https://maps.apple.com/?q=Track&ll=\(latitude),\(longitude)") {
             UIApplication.shared.open(url)
         }

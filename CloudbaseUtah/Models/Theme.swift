@@ -27,9 +27,8 @@ let skewTTempColor: Color = .displayValueRed
 let skewTGridBorderColor: Color = .grayslime
 let skewTGridLineColor: Color = .grayslime
 let skewTAxisLabelColor: Color = .titanium
-let buttonBackgroundColor: Color = .darksky2
-let buttonTextColor: Color = .white
-let buttonWidth: CGFloat = 100
+let skewTButtonBackgroundColor: Color = .darksky2
+let skewTButtonTextColor: Color = .white
 
 // Table and chart colors
 let tableBackgroundColor: Color = .gunmetal
@@ -58,41 +57,31 @@ let layersIconBackgroundColor: Color = .black
 let cameraAnnotationColor: Color = .white
 let cameraAnnotationTextColor: Color = cameraAnnotationColor
 //  siteAnnotationColor not defined here; it is established by the image
-let siteAnnotationTextColor: UIColor = UIColor(.white)
+let siteAnnotationTextColor: Color = .white
 let stationAnnotationColor: Color = .gunmetal
-let stationAnnotationTextColor: UIColor = UIColor(.gunmetal)
-let pilotNodeAnnotationColor: UIColor = UIColor(.white)
-let pilotLabelBackgroundColor: UIColor = UIColor.black.withAlphaComponent(0.2)
-let pilotLabelNameTextColor: UIColor = UIColor(.white)
-let pilotLabelDateTextColor: UIColor = UIColor(.titanium)
-let pilotLabelAltTextColor: UIColor = UIColor(.sky)
-let pilotEmergencyAnnotationTextColor: UIColor = UIColor(.poppy)
-let pilotTrackColor: UIColor = UIColor(.white)
+let stationAnnotationTextColor: Color = .gunmetal
+let pilotNodeAnnotationColor: Color = .white
+let pilotLabelBackgroundColor: Color = .black //.withAlphaComponent(0.2)
+let pilotLabelNameTextColor: Color = .white
+let pilotLabelDateTextColor: Color = .titanium
+let pilotLabelAltTextColor: Color = .sky
+let pilotEmergencyAnnotationTextColor: Color = .poppy
+let pilotTrackColor: Color = .white
 let pilotTrackWidth: CGFloat = 1
-let defaultAnnotationColor: UIColor = UIColor(.black)
-let defaultAnnotationTextColor: UIColor = UIColor(.white)
+let defaultAnnotationColor: Color = .black
+let defaultAnnotationTextColor: Color = .white
 
 // Images
-let defaultAnnotationImageWidth: CGFloat = 50
-let pilotNodeAnnotationImageWidth: CGFloat = 20
-let pilotLaunchAnnotationImageWidth: CGFloat = 40
-let pilotLatestAnnotationImageWidth: CGFloat = 40
 let windArrow: String = "arrow.up"
 let layersImage: String = "square.3.layers.3d"
 let playImage: String = "play.fill"
 let pauseImage: String = "pause.fill"
 let cameraAnnotationImage: String = "camera.circle"
-let defaultAnnotationUIImage:  UIImage = UIImage(systemName: "questionmark")!
-let siteAnnotationUIImage: UIImage = UIImage(named: "roundPGicon")?.scaled(toWidth: defaultAnnotationImageWidth)
-        ?? defaultAnnotationUIImage
-let pilotLaunchAnnotationUIImage: UIImage = UIImage(systemName: "arrow.up.right.circle.fill")?.scaled(toWidth: pilotLaunchAnnotationImageWidth)
-        ?? defaultAnnotationUIImage
-let pilotNodeAnnotationUIImage: UIImage = {
-    if let image = UIImage(systemName: "inset.filled.circle")?.withRenderingMode(.alwaysOriginal).scaled(toWidth: pilotNodeAnnotationImageWidth) {
-        return tintedImage(image, color: UIColor(.white))
-    } else { return defaultAnnotationUIImage } } ()
-let pilotLatestAnnotationUIImage: UIImage = UIImage(named: "PGIconNoBorder")?.scaled(toWidth: pilotLatestAnnotationImageWidth)
-        ?? defaultAnnotationUIImage
-let pilotMessageAnnotationUIImage: UIImage = UIImage(systemName: "bubble.fill")?.scaled(toWidth: defaultAnnotationImageWidth)
-        ?? defaultAnnotationUIImage
+let defaultAnnotationImage:  String = "questionmark"
+let siteAnnotationImage: String = "roundPGicon"
+let pilotLaunchAnnotationImage: String = "arrow.up.right.circle.fill"
+let pilotNodeAnnotationImage: String = "inset.filled.circle"
+let pilotLatestAnnotationImage: String = "PGIconNoBorder"
+let pilotMessageAnnotationImage: String = "bubble.fill"
+let pilotInEmergencyAnnotationImage: String = "exclamationmark.triangle.fill"
 

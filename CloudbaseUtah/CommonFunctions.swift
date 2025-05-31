@@ -245,7 +245,7 @@ func removeTextFromOpenToClose(_ data: String, open: String, close: String) -> S
     return updatedData
 }
 
-// Convert numbers followed by MDT to MST to time format
+// Convert numbers followed by MDT or MST to time format
 func formatTimeinString(from string: String) -> String {
     let pattern = "\\b(\\d+) ?(MDT|MST)\\b"
     let regex = try! NSRegularExpression(pattern: pattern, options: [])
@@ -348,6 +348,11 @@ func convertISODateToLocalTime(isoDateString: String) -> String {
     return localTimeString
 }
 
+func getFormattedTimefromDate(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "h:mm"
+    return formatter.string(from: date)
+}
 func getDateForDays(days: Double) -> Date {
     // Get date string based on "days" value:
     // Days = 1, today

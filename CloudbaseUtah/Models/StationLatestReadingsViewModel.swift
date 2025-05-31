@@ -133,7 +133,6 @@ class StationLatestReadingsViewModel: ObservableObject {
                         guard let _ = station.observations.windSpeed?.value,
                               let _ = station.observations.windSpeed?.dateTime
                         else { return nil }
-                        
                         return StationLatestReadings(
                             stationID: station.stationID,
                             stationName: station.stationName,

@@ -5,7 +5,7 @@ import MapKit
 // Custom Map Style Enum
 enum CustomMapStyle: String, CaseIterable {
     case standard, hybrid
-    func toMapKitType() -> MKMapType {
+    func toMapStyle() -> MapStyle {
         switch self {
         case .standard:
             return .standard

@@ -23,7 +23,7 @@ struct PilotTracksView: View {
                             .bold()
                         Text("Time: \(track.dateTime.formatted())")
                             .font(.caption)
-                        Text("Coordinates: \(track.coordinates.latitude), \(track.coordinates.longitude)")
+                        Text("Coordinates: \(track.latitude), \(track.longitude)")
                             .font(.caption)
                         Text("Speed: \(track.speed)")
                             .font(.caption)

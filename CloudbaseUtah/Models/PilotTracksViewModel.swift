@@ -1,12 +1,14 @@
 import SwiftUI
 import Combine
+import MapKit
 
 // Pilot live tracking structure
-struct PilotTracks: Identifiable {
+struct PilotTracks: Identifiable, Equatable {
     let id: UUID = UUID()
     let pilotName: String
     let dateTime: Date
-    let coordinates: (latitude: Double, longitude: Double)
+    let latitude: Double
+    let longitude: Double
     let speed: Double
     let altitude: Double
     let heading: Double
@@ -115,7 +117,8 @@ class PilotTracksViewModel: ObservableObject {
             let trackPoint = PilotTracks(
                 pilotName: trackPilotName,
                 dateTime: dateTime,
-                coordinates: (latitude, longitude),
+                latitude: latitude,
+                longitude: longitude,
                 speed: speedMph,
                 altitude: altitudeFeet,
                 heading: course,
@@ -159,6 +162,17 @@ class PilotTracksViewModel: ObservableObject {
         let valueString = String(tagString[startRange.upperBound..<endRange.lowerBound])
         
         return valueString
+    }
+    
+    func getTrackLines() -> [PilotTrackKey: [CLLocationCoordinate2D]] {
+        var trackLines: [PilotTrackKey: [CLLocationCoordinate2D]] = [:]
+
+        for track in pilotTracks.sorted(by: { $0.dateTime < $1.dateTime }) {
+            let key = PilotTrackKey(pilotName: track.pilotName, date: track.dateTime)
+            trackLines[key, default: []].append(CLLocationCoordinate2D(latitude: track.latitude, longitude: track.longitude))
+        }
+
+        return trackLines
     }
 }
 

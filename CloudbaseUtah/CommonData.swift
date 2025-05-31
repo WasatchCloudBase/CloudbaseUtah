@@ -32,10 +32,12 @@ let mapScaleChangeTolerance: Double = 0.01              // Don't refresh annotat
 let annotationDuplicateTolerance = 0.0001
 let mapClusterThresholdFactor = 0.1                     // Initial value was 0.1
 let mapEnableRotation: Bool = false
+let skewTButtonWidth: CGFloat = 100
 
 let defaultTopOfLiftAltitude = 18000.0                  // Use in lift area graph when top of lift isn't reached in calculations
 let pageRefreshInterval: TimeInterval = 150             // Time in seconds to refresh wind readings (300 for 5 min)
 let defaultPilotTrackDays: Double = 1.0                 // Default days of live tracking to display
+let defaultActiveLayers: Set<MapLayer> = [.pilots]
 
 // HTTP links and APIs
 let forecastUSMapLink: String = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
@@ -77,6 +79,14 @@ let areaChartOpacity: CGFloat = 0.5
 
 // Map parameters
 let annotationTextWidth: CGFloat = 60
-let annotationTextHeight: CGFloat = 14
+let annotationTextHeight: CGFloat = 4
 let stationAnnotationWidth: CGFloat = 40
 let stationAnnotationHeight: CGFloat = 22
+let defaultAnnotationImageWidth: CGFloat = 50
+let pilotNodeAnnotationImageWidth: CGFloat = 20
+let pilotLaunchAnnotationImageWidth: CGFloat = 40
+let pilotLatestAnnotationImageWidth: CGFloat = 40
+let pilotNodeAnnotationTextWidth: CGFloat = 56
+let pilotNodeAnnotationTextOneRowHeight: CGFloat = 16
+let pilotNodeAnnotationTextThreeRowHeight: CGFloat = pilotNodeAnnotationTextOneRowHeight * 3
+let pilotNodeLabelThreeRowSpan: CGFloat = 0.08                   // Map scale that determines when to display time/altitude for each node

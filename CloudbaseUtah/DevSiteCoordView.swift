@@ -49,7 +49,7 @@ struct IdentifiableCoordinate: Identifiable {
     let coordinate: CLLocationCoordinate2D
 }
 
-struct MapViewRepresentable: UIViewRepresentable {
+struct SiteCoordMapViewRepresentable: UIViewRepresentable {
     @Binding var coordinateRegion: MKCoordinateRegion
     @Binding var markerCoordinate: CLLocationCoordinate2D?
 
@@ -82,9 +82,9 @@ struct MapViewRepresentable: UIViewRepresentable {
     }
 
     class Coordinator: NSObject, MKMapViewDelegate {
-        var parent: MapViewRepresentable
+        var parent: SiteCoordMapViewRepresentable
 
-        init(parent: MapViewRepresentable) {
+        init(parent: SiteCoordMapViewRepresentable) {
             self.parent = parent
         }
 
@@ -135,7 +135,7 @@ struct SiteMapView: View {
                 Spacer()
             }
             .background(toolbarBackgroundColor)
-            MapViewRepresentable(coordinateRegion: $coordinateRegion, markerCoordinate: $markerCoordinate)
+            SiteCoordMapViewRepresentable(coordinateRegion: $coordinateRegion, markerCoordinate: $markerCoordinate)
             
             // Commented out...need to implement Google client app authorization to call update APIs
             /*            Button("Update Coordinates") {
@@ -156,8 +156,8 @@ struct SiteMapView: View {
                         Text("Lat: \(String(format: "%.5f", markerCoordinate.latitude))")
                     }
                     .padding()
-                    .background(buttonBackgroundColor)
-                    .foregroundColor(buttonTextColor)
+                    .background(skewTButtonBackgroundColor)
+                    .foregroundColor(skewTButtonTextColor)
                     .cornerRadius(8)
                     
                     Button(action: {
@@ -166,8 +166,8 @@ struct SiteMapView: View {
                         Text("Lon: \(String(format: "%.5f", markerCoordinate.longitude))")
                     }
                     .padding()
-                    .background(buttonBackgroundColor)
-                    .foregroundColor(buttonTextColor)
+                    .background(skewTButtonBackgroundColor)
+                    .foregroundColor(skewTButtonTextColor)
                     .cornerRadius(8)
                 }
                 .padding()

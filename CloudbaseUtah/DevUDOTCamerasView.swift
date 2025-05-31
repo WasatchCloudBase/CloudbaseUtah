@@ -10,8 +10,8 @@ struct UDOTCameraListView: View {
         center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
         span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
     )
-    @State private var selectedCamera: UDOTCameraData?
     @State private var lastRegionSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0)
+    @State private var selectedCamera: UDOTCameraData?
 
     var body: some View {
         NavigationView {
