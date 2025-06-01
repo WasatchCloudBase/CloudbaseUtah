@@ -132,9 +132,7 @@ class AnnotationSourceItemsViewModel: ObservableObject {
         }
         
         if mapSettingsViewModel.activeLayers.contains(.pilots){
-            
             annotationSourceItemGroup.enter()
-            
             // Set pilot dispatch group to determine when all pilot track calls are completed before updating annotations
             let pilotGroup = DispatchGroup()
             for pilot in pilotsViewModel.pilots {

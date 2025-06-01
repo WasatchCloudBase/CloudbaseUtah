@@ -6,7 +6,169 @@ import CoreGraphics
 import CoreLocation
 import Foundation
 
-struct OldMapView: View {
+struct pilotMapView: UIViewRepresentable {
+    @Binding var region: MKCoordinateRegion
+    @Binding var zoomLevel: Double
+    let pilotTracks: [PilotTracks]
+    let onPilotSelected: (PilotTracks) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self, onPilotSelected: onPilotSelected)
+    }
+
+    func makeUIView(context: Context) -> MKMapView {
+        let mapView = MKMapView()
+        mapView.delegate = context.coordinator
+        mapView.setRegion(region, animated: false)
+        mapView.showsUserLocation = true
+        mapView.isZoomEnabled = true
+        mapView.isScrollEnabled = true
+        return mapView
+    }
+
+    func updateUIView(_ mapView: MKMapView, context: Context) {
+        mapView.removeAnnotations(mapView.annotations)
+        mapView.removeOverlays(mapView.overlays)
+        
+        let calendar = Calendar.current
+        let groupedTracks = Dictionary(grouping: pilotTracks) { track in
+            PilotTrackKey(pilotName: track.pilotName, date: calendar.startOfDay(for: track.dateTime))
+        }
+
+        let showAllMarkers = zoomLevel > mapShowAllMarkersZoomLevel
+        var addedTrackIDs = Set<UUID>() // Make sure PilotTracks has a UUID or unique identifier
+
+        for (_, tracks) in groupedTracks {
+            let sorted = tracks.sorted { $0.dateTime < $1.dateTime }
+            let coords = sorted.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+
+            // Draw polyline if multiple coordinates
+            if coords.count > 1 {
+                let polyline = MKPolyline(coordinates: coords, count: coords.count)
+                mapView.addOverlay(polyline)
+            }
+
+            for (index, track) in sorted.enumerated() {
+                // Skip already-processed tracks
+                guard addedTrackIDs.insert(track.id).inserted else { continue }
+
+                let isFirst = index == 0
+                let isLast = index == sorted.count - 1
+                let isEmergency = track.inEmergency == true
+                let hasMessage = !(track.message?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+
+                let isNormalNode = !isFirst && !isLast && !isEmergency && !hasMessage
+                if !showAllMarkers && isNormalNode {
+                    continue
+                }
+
+                let annotation = PilotTrackAnnotation(
+                    coordinate: CLLocationCoordinate2D(latitude: track.latitude, longitude: track.longitude),
+                    title: track.pilotName,
+                    subtitle: DateFormatter.localizedString(from: track.dateTime, dateStyle: .none, timeStyle: .short),
+                    annotationType: "pilot",
+                    pilotTrack: track,
+                    pilotName: track.pilotName,
+                    isFirst: isFirst,
+                    isLast: isLast,
+                    isEmergency: isEmergency,
+                    hasMessage: hasMessage
+                )
+
+                mapView.addAnnotation(annotation)
+            }
+        }
+    }
+
+    class Coordinator: NSObject, MKMapViewDelegate {
+        var parent: pilotMapView
+        let onPilotSelected: (PilotTracks) -> Void
+
+        init(parent: pilotMapView, onPilotSelected: @escaping (PilotTracks) -> Void) {
+            self.parent = parent
+            self.onPilotSelected = onPilotSelected
+        }
+
+        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            let newZoom = log2(360 * (Double(mapView.frame.size.width) / 256) / mapView.region.span.longitudeDelta)
+            DispatchQueue.main.async {
+                self.parent.zoomLevel = newZoom
+            }
+        }
+
+        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            if let polyline = overlay as? MKPolyline {
+                let renderer = MKPolylineRenderer(polyline: polyline)
+                renderer.strokeColor = .systemBlue.withAlphaComponent(0.7)
+                renderer.lineWidth = 3
+                return renderer
+            }
+            return MKOverlayRenderer()
+        }
+
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            guard let pilotAnnotation = annotation as? PilotTrackAnnotation else { return nil }
+
+            if pilotAnnotation.isFirst || pilotAnnotation.isLast || pilotAnnotation.isEmergency || pilotAnnotation.hasMessage {
+                let identifier = "PilotMarkerAnnotation"
+                
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
+                    ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+
+                view.annotation = nil  // Ensure no stale annotation
+                view.annotation = annotation
+                view.canShowCallout = false
+                view.clusteringIdentifier = nil  // <--- this disables clustering
+
+                // Style
+                if pilotAnnotation.isEmergency {
+                    view.markerTintColor = .systemRed
+                    view.glyphImage = UIImage(systemName: "exclamationmark.triangle.fill")
+                } else if pilotAnnotation.hasMessage {
+                    view.markerTintColor = .systemOrange
+                    view.glyphImage = UIImage(systemName: "envelope.fill")
+                } else if pilotAnnotation.isFirst {
+                    view.markerTintColor = .systemGreen
+                    view.glyphImage = UIImage(systemName: "arrow.up.circle.fill")
+                } else if pilotAnnotation.isLast {
+                    view.markerTintColor = .systemBlue
+                    view.glyphImage = UIImage(systemName: "flag.checkered")
+                }
+
+                return view
+            } else {
+                // Regular node — use small dot view
+                let identifier = "DotAnnotation"
+                
+
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+                    ?? MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+
+                view.annotation = annotation
+                view.canShowCallout = false
+                view.clusteringIdentifier = nil
+                view.frame = CGRect(x: 0, y: 0, width: 6, height: 6)
+                view.layer.cornerRadius = 3
+                view.backgroundColor = .gray
+                return view
+            }
+        }
+        
+        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            guard
+                let annotation = view.annotation as? PilotTrackAnnotation,
+                let track = annotation.pilotTrack
+            else { return }
+
+            // Defer the state update to avoid conflict with MKMapView animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.onPilotSelected(track)
+            }
+        }
+    }
+}
+
+struct PilotMapContainerView: View {
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
@@ -33,6 +195,7 @@ struct OldMapView: View {
         center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
         span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)))
     @State private var lastRegionSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0)
+    @State private var currentZoomLevel: Double = defaultMapZoomLevel
     private var cancellables = Set<AnyCancellable>()
     
     init(sitesViewModel: SitesViewModel) {
@@ -61,142 +224,22 @@ struct OldMapView: View {
                 assert(annotation.coordinates.longitude >= -180 && annotation.coordinates.longitude <= 180, "Invalid longitude: \(annotation.coordinates.longitude)")
             }
             
-            Map(coordinateRegion: $region,
-                interactionModes: .all,
-                showsUserLocation: true,
-                annotationItems: annotationSourceItemsViewModel.clusteredAnnotationSourceItems)
-            { annotation in
-                MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: annotation.coordinates.latitude, longitude: annotation.coordinates.longitude)) {
-                    
-                    Button(action: {
-                        switch annotation.annotationType {
-                            
-                        case "site":
-                            DispatchQueue.main.async {
-                                selectedSite = sitesViewModel.sites.first(where: { $0.siteName == annotation.annotationID })
-                                return
-                            }
-                        case "station":
-                            DispatchQueue.main.async {
-                                selectedSite = Sites(
-                                    id: UUID(),
-                                    area: "",
-                                    siteName: annotation.annotationName,
-                                    readingsNote: "",
-                                    forecastNote: "",
-                                    siteType: "",
-                                    readingsAlt: String(annotation.altitude),
-                                    readingsSource: annotation.readingsSource,
-                                    readingsStation: annotation.annotationID,
-                                    pressureZoneReadingTime: "",
-                                    siteLat: "\(annotation.coordinates.latitude)",
-                                    siteLon: "\(annotation.coordinates.longitude)",
-                                    sheetRow: 0
-                                )
-                                return
-                            }
-                        case "pilot":
-                            DispatchQueue.main.async {
-                                selectedPilotTrack = pilotTracksViewModel.pilotTracks.first(where: { $0.pilotName == annotation.annotationID && $0.dateTime == annotation.trackDateTime})
-                                return
-                            }
-                        default:
-                            return
-                        }
-                    }) {
-                        switch annotation.annotationType {
-                            
-                        case "site" :
-                            VStack (spacing: 0) {
-                                Image(siteAnnotationImage)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: defaultAnnotationImageWidth)
-                                Text(annotation.annotationName)
-                                    .font(.footnote)
-                                    .foregroundColor(siteAnnotationTextColor)
-                                    .frame(width: annotationTextWidth, height: annotationTextHeight)
-                            }
-                            
-                        case "station" :
-                            HStack (spacing: 1) {
-                                Text(String(Int(annotation.windSpeed?.rounded() ?? 0)))
-                                    .font(.caption)
-                                    .foregroundStyle(windSpeedColor(windSpeed: Int(annotation.windSpeed?.rounded() ?? 0), siteType: ""))
-                                    .bold()
-                                /* Not displaying gusts
-                                 Text("g")
-                                 .font(.caption2)
-                                 Text(String(Int(customAnnotation.windGust?.rounded() ?? 0)))
-                                 .font(.caption)
-                                 .foregroundStyle(windSpeedColor(windSpeed: Int(customAnnotation.windGust?.rounded() ?? 0), siteType: ""))
-                                 .bold()
-                                 */
-                                Image(systemName: windArrow)
-                                    .rotationEffect(.degrees((Double(annotation.windDirection ?? 180)) - 180))
-                                    .font(.footnote)
-                            }
-                            .padding (4)
-                            .frame(width: stationAnnotationWidth, height: stationAnnotationHeight)
-                            .background(stationAnnotationColor)
-                            .cornerRadius(5)
-                            
-                        case "pilot" :
-                            
-                            /*
-                             // Determine image based on position
-                             switch customAnnotation.nodePosition {
-                             case "first":
-                             annotationImage = pilotLaunchAnnotationUIImage
-                             case "last":
-                             annotationImage = pilotLatestAnnotationUIImage
-                             default:
-                             */
-                            let pilotName = annotation.annotationName.components(separatedBy: " ").first ?? annotation.annotationName
-                            let pilotTrackNodeDateTime = getFormattedTimefromDate(annotation.trackDateTime ?? Date())
-                            let pilotTrackNodeAltitude = formatAltitude(String(annotation.altitude))
-                            let pilotLabelHeight: CGFloat = getPilotLabelHeightFromMapSpan(span: region.span)
-                            let pilotAnnotationImage: String = getPilotAnnotationImage(inEmergency: annotation.inEmergency ?? false, message: annotation.message ?? "")
-                            
-                            VStack (spacing: 0) {
-                                Image(systemName: pilotNodeAnnotationImage)
-                                    .foregroundColor(pilotNodeAnnotationColor)
-                                VStack (spacing: 0) {
-                                    Text(pilotName)
-                                        .font(.footnote)
-                                        .foregroundColor(pilotLabelNameTextColor)
-                                    if region.span.latitudeDelta < pilotNodeLabelThreeRowSpan {
-                                        Text(pilotTrackNodeDateTime)
-                                            .font(.caption)
-                                            .foregroundColor(pilotLabelDateTextColor)
-                                        Text(pilotTrackNodeAltitude)
-                                            .font(.caption)
-                                            .foregroundColor(pilotLabelAltTextColor)
-                                    }
-                                }
-                                .padding (4)
-                                .frame(width: pilotNodeAnnotationTextWidth, height: 60) //pilotLabelHeight)
-                                .background(pilotLabelBackgroundColor)
-                                .cornerRadius(5)
-                            }
-                            
-                        default:
-                            VStack (spacing: 0) {
-                                Image(systemName: defaultAnnotationImage)
-                                    .foregroundColor(defaultAnnotationColor)
-                                Text(annotation.annotationName)
-                                    .font(.footnote)
-                                    .foregroundColor(defaultAnnotationTextColor)
-                                    .frame(width: annotationTextWidth, height: annotationTextHeight)
-                            }
-                        }
-                    }
+            pilotMapView(
+                region: $region,
+                zoomLevel: $currentZoomLevel,
+                pilotTracks: pilotTracksViewModel.pilotTracks,
+                onPilotSelected: { track in
+                    selectedPilotTrack = track
                 }
-            }
+            )
             .mapStyle(mapSettingsViewModel.selectedMapType.toMapStyle())
             .cornerRadius(10)
             .padding(.vertical, 8)
-            
+
+            if let track = selectedPilotTrack {
+                PilotTrackNodeView(pilotTrack: track)
+            }
+
             // Floating Item Bar
             VStack {
                 Spacer()
@@ -207,7 +250,7 @@ struct OldMapView: View {
                                 Image(systemName: layersImage)
                                     .imageScale(.large)
                                     .foregroundStyle(layersIconColor)
-                                Text("Layers")
+                                Text("Settings")
                                     .font(.caption)
                                     .foregroundColor(layersFontColor)
                             }
@@ -274,9 +317,6 @@ struct OldMapView: View {
                 isActive = false
             }
         }
-//       .onChange(of: pilotTracksViewModel.pilotTracks) {
-//           annotationSourceItemsViewModel.updateAnnotationSourceItems {}
-//       }
        .onAppear {
            annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
            annotationSourceItemsViewModel.sitesViewModel = sitesViewModel

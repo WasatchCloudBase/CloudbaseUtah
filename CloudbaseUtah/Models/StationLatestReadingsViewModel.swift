@@ -100,10 +100,10 @@ class StationLatestReadingsViewModel: ObservableObject {
     init(viewModel: SitesViewModel) {
         self.sitesViewModel = viewModel
         
-        // Build list of Mesoewst stations for latest readings API call
+        // Build list of Mesowest stations for latest readings API call
         let mesonetStations = sitesViewModel.sites.filter { $0.readingsSource == "Mesonet" && !$0.readingsStation.isEmpty }
         guard !mesonetStations.isEmpty else {
-            print ("filtered sites are empty:  none matched 'Mesonet' and had a readingsStation ")
+            //print ("filtered sites are empty:  none matched 'Mesonet' and had a readingsStation ")
             return
         }
         let stationParameters = mesonetStations.map { "&stid=\($0.readingsStation)" }.joined()

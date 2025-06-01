@@ -77,3 +77,11 @@ enum MapLayer: String, Equatable, CaseIterable {
         }
     }
 }
+
+// Composite structure to check for all map settings and view changes together
+// and only rebuild annotations once if there are multiple changes
+struct MapSettingsState: Equatable {
+    let activeLayers: Set<MapLayer>
+    let pilotTrackDays: Double
+    let scenePhase: ScenePhase
+}

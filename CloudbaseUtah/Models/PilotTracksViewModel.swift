@@ -16,6 +16,51 @@ struct PilotTracks: Identifiable, Equatable {
     let message: String?
 }
 
+// Listing of pilot live tracks by pilot name and date
+// used to determine track groupings for line rendering on track
+struct PilotTrackKey: Hashable {
+    let pilotName: String
+    let date: Date
+}
+
+// Separate annotation for pilot tracks to allow polylines as an overlay on map
+class PilotTrackAnnotation: NSObject, MKAnnotation {
+    let coordinate: CLLocationCoordinate2D
+    let title: String?
+    let subtitle: String?
+    let annotationType: String
+    let pilotTrack: PilotTracks?
+
+    let pilotName: String
+    let isFirst: Bool
+    let isLast: Bool
+    let isEmergency: Bool
+    let hasMessage: Bool
+
+    init(coordinate: CLLocationCoordinate2D,
+         title: String?,
+         subtitle: String?,
+         annotationType: String,
+         pilotTrack: PilotTracks?,
+         pilotName: String,
+         isFirst: Bool,
+         isLast: Bool,
+         isEmergency: Bool,
+         hasMessage: Bool
+    ) {
+        self.coordinate = coordinate
+        self.title = title
+        self.subtitle = subtitle
+        self.annotationType = annotationType
+        self.pilotTrack = pilotTrack
+        self.pilotName = pilotName
+        self.isFirst = isFirst
+        self.isLast = isLast
+        self.isEmergency = isEmergency
+        self.hasMessage = hasMessage
+    }
+}
+
 class PilotTracksViewModel: ObservableObject {
     @Published var pilotTracks: [PilotTracks] = []
     
@@ -163,16 +208,6 @@ class PilotTracksViewModel: ObservableObject {
         
         return valueString
     }
-    
-    func getTrackLines() -> [PilotTrackKey: [CLLocationCoordinate2D]] {
-        var trackLines: [PilotTrackKey: [CLLocationCoordinate2D]] = [:]
 
-        for track in pilotTracks.sorted(by: { $0.dateTime < $1.dateTime }) {
-            let key = PilotTrackKey(pilotName: track.pilotName, date: track.dateTime)
-            trackLines[key, default: []].append(CLLocationCoordinate2D(latitude: track.latitude, longitude: track.longitude))
-        }
-
-        return trackLines
-    }
 }
 

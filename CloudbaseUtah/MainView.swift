@@ -7,6 +7,7 @@ struct MainView: View {
     @State var siteViewActive = true
     @State var weatherViewActive = false
     @State var mapViewActive = false
+    @State var pilotMapViewActive = false
     @State var webcamViewActive = false
     @State var linkViewActive = false
     @State var devViewActive = false
@@ -28,7 +29,11 @@ struct MainView: View {
                     WeatherView()
                 }
                 if selectedView == .map {
-                    MapView(sitesViewModel: sitesViewModel)
+                    OldMapView(sitesViewModel: sitesViewModel)
+                        .environmentObject(sitesViewModel)
+                }
+                if selectedView == .pilotmap {
+                    PilotMapContainerView(sitesViewModel: sitesViewModel)
                         .environmentObject(sitesViewModel)
                 }
                 if selectedView == .webcam {
@@ -62,6 +67,7 @@ struct MainView: View {
                             siteViewActive = false
                             weatherViewActive = false
                             mapViewActive = false
+                            pilotMapViewActive = false
                             webcamViewActive = false
                             linkViewActive = false
                             devViewActive = true
@@ -90,6 +96,7 @@ struct MainView: View {
                                 siteViewActive = true
                                 weatherViewActive = false
                                 mapViewActive = false
+                                pilotMapViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = false
                                 devViewActive = false
@@ -110,6 +117,7 @@ struct MainView: View {
                                 siteViewActive = false
                                 weatherViewActive = true
                                 mapViewActive = false
+                                pilotMapViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = false
                                 devViewActive = false
@@ -118,7 +126,7 @@ struct MainView: View {
                                     Image(systemName: "cloud.sun")
                                         .foregroundColor(weatherViewActive ? toolbarActiveImageColor : toolbarImageColor)
                                         .imageScale(.medium)
-                                    Text("Region")
+                                    Text("Weather")
                                         .foregroundColor(weatherViewActive ? toolbarActiveFontColor : toolbarFontColor)
                                         .font(.caption)
                                         .padding(.top, 4)
@@ -130,6 +138,7 @@ struct MainView: View {
                                 siteViewActive = false
                                 weatherViewActive = false
                                 mapViewActive = true
+                                pilotMapViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = false
                                 devViewActive = false
@@ -146,10 +155,32 @@ struct MainView: View {
                             }
                             Spacer()
                             Button {
+                                selectedView = .pilotmap
+                                siteViewActive = false
+                                weatherViewActive = false
+                                mapViewActive = false
+                                pilotMapViewActive = true
+                                webcamViewActive = false
+                                linkViewActive = false
+                                devViewActive = false
+                            } label: {
+                                VStack {
+                                    Image(systemName: "point.bottomleft.forward.to.arrow.triangle.scurvepath")
+                                        .foregroundColor(webcamViewActive ? toolbarActiveImageColor : toolbarImageColor)
+                                        .imageScale(.medium)
+                                    Text("Tracks")
+                                        .foregroundColor(webcamViewActive ? toolbarActiveFontColor : toolbarFontColor)
+                                        .font(.caption)
+                                        .padding(.top, 4)
+                                }
+                            }
+                            Spacer()
+                            Button {
                                 selectedView = .webcam
                                 siteViewActive = false
                                 weatherViewActive = false
                                 mapViewActive = false
+                                pilotMapViewActive = false
                                 webcamViewActive = true
                                 linkViewActive = false
                                 devViewActive = false
@@ -164,12 +195,14 @@ struct MainView: View {
                                         .padding(.top, 4)
                                 }
                             }
+
                             Spacer()
                             Button {
                                 selectedView = .link
                                 siteViewActive = false
                                 weatherViewActive = false
                                 mapViewActive = false
+                                pilotMapViewActive = false
                                 webcamViewActive = false
                                 linkViewActive = true
                                 devViewActive = false
