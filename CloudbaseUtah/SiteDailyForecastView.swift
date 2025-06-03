@@ -70,12 +70,12 @@ struct SiteDailyForecastView: View {
                                         .font(.caption)
                                 }
                                 .frame(height: dataHeight)
-                                let windColor = windSpeedColor(windSpeed: Int(daily.wind_speed_10m_max[index].rounded()), siteType: siteType)
+                                let windColor = windSpeedColor(windSpeed: Int(daily.wind_speed_10m_mean[index].rounded()), siteType: siteType)
                                 // let gustColor = windSpeedColor(windSpeed: Int(daily.wind_gusts_10m_max[index].rounded()), siteType: siteType)
                                 Group {
                                     HStack(spacing: windArrowSpacing) {
                                         VStack(alignment: .trailing, spacing: 1) {
-                                            Text("\(Int(daily.wind_speed_10m_max[index].rounded()))")
+                                            Text("\(Int(daily.wind_speed_10m_mean[index].rounded()))")
                                                 .font(.caption)
                                                 .foregroundStyle(windColor)
                                             /*  Removing gust from display

@@ -12,9 +12,8 @@ enum NavBarSelectedView:Int {
     case site = 0
     case weather = 1
     case map = 2
-    case pilotmap = 3
-    case webcam = 4
-    case link = 5
+    case webcam = 3
+    case link = 4
     case dev = 9
 }
 let googleSpreadsheetID = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
@@ -27,7 +26,10 @@ let mapInitLongitude: Double = -111.45
 let mapInitLatitudeSpan: Double = 7.2                   // Size of map on initial opening
 let mapInitLongitudeSpan: Double = 5.2                  //mapInitLatitudeSpan * 1.5
 let defaultMapZoomLevel: Double = 6.7
-let mapShowAllMarkersZoomLevel: Double = 10
+let mapShowAllMarkersZoomLevel: Double = 10.0
+let mapPilotArrowDefaultSize: Double = 15
+let mapPilotAnnotationZoomScaleFactor: Double = 0.9     // Drives sizing of pilot node annotation based on zoom level
+let mapPilotTrackWidth: CGFloat = 2
 let stationSpacingBaseThreshold: Double = 0.01          // Larger number will reduce the number of stations displayed
 let stationSpacingZoomFactor: Double = 700              // Larger number will reduce number of stations displayed
 let mapBatchProcessingInterval: Double = 0.2

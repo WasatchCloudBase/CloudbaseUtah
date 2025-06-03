@@ -89,17 +89,6 @@ struct AboutView: View {
                             .foregroundColor(rowHeaderColor)
                     }
                     
-                    // Test for map changes track listing
-                    NavigationLink(destination:
-                                   PilotMapContainerView(
-                                       sitesViewModel: sitesViewModel
-                                   )
-                        .environmentObject(pilotsViewModel)) {
-                        Text("Map test view")
-                            .font(.subheadline)
-                            .foregroundColor(rowHeaderColor)
-                    }
-
                 }
             }
         }

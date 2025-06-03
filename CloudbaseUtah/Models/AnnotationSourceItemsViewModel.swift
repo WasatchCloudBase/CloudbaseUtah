@@ -8,21 +8,17 @@ struct AnnotationSourceItem: Identifiable {
     let id = UUID()
     let annotationType: String              // e.g., "site" or "station"
     let annotationID: String                // an identifier based on the type
-    var nodePosition: String? = nil         // Identifies first and last nodes in a track
-    let annotationName: String              // Pilot name for pilot track annotations
+    let annotationName: String
     let coordinates: CLLocationCoordinate2D
     let altitude: Double
-    let readingsNote: String                // For site annotations; track message for pilot track annotations
+    let readingsNote: String                // For site annotations
     let forecastNote: String
     let siteType: String                    // For site annotations
     let readingsStation: String             // For site annotations
     let readingsSource: String
-    let windSpeed: Double?                  // For station annotations; track speed for pilot track annotations
-    let windDirection: Double?              // Heading for pilot track annotations
+    let windSpeed: Double?                  // For station annotations
+    let windDirection: Double?
     let windGust: Double?
-    let inEmergency: Bool?                  // For pilot track annotations
-    let message: String?
-    let trackDateTime: Date?
 }
 
 class AnnotationSourceItemsViewModel: ObservableObject {
@@ -33,21 +29,15 @@ class AnnotationSourceItemsViewModel: ObservableObject {
     var mapSettingsViewModel: MapSettingsViewModel
     var sitesViewModel: SitesViewModel
     var stationLatestReadingsViewModel: StationLatestReadingsViewModel
-    var pilotsViewModel: PilotsViewModel
-    var pilotTracksViewModel: PilotTracksViewModel
 
     init(
         mapSettingsViewModel: MapSettingsViewModel,
         sitesViewModel: SitesViewModel,
-        stationLatestReadingsViewModel: StationLatestReadingsViewModel,
-        pilotsViewModel: PilotsViewModel,
-        pilotTracksViewModel: PilotTracksViewModel
+        stationLatestReadingsViewModel: StationLatestReadingsViewModel
     ) {
         self.mapSettingsViewModel = mapSettingsViewModel
         self.sitesViewModel = sitesViewModel
         self.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-        self.pilotsViewModel = pilotsViewModel
-        self.pilotTracksViewModel = pilotTracksViewModel
     }
 
     
@@ -78,10 +68,7 @@ class AnnotationSourceItemsViewModel: ObservableObject {
                         readingsSource: site.readingsSource,
                         windSpeed: 0.0,
                         windDirection: 0.0,
-                        windGust: 0.0,
-                        inEmergency: false,
-                        message: "",
-                        trackDateTime: nil
+                        windGust: 0.0
                     )
                     annotationSourceItems.append(annotationSourceItem)
                 }
@@ -119,10 +106,7 @@ class AnnotationSourceItemsViewModel: ObservableObject {
                             readingsSource: reading.readingsSource,
                             windSpeed: reading.windSpeed,
                             windDirection: reading.windDirection,
-                            windGust: reading.windGust,
-                            inEmergency: false,
-                            message: "",
-                            trackDateTime: nil
+                            windGust: reading.windGust
                         )
                         annotationSourceItems.append(annotationSourceItem)
                     }
@@ -132,39 +116,7 @@ class AnnotationSourceItemsViewModel: ObservableObject {
         }
         
         if mapSettingsViewModel.activeLayers.contains(.pilots){
-            annotationSourceItemGroup.enter()
-            // Set pilot dispatch group to determine when all pilot track calls are completed before updating annotations
-            let pilotGroup = DispatchGroup()
-            for pilot in pilotsViewModel.pilots {
-                pilotGroup.enter()
-                self.pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {
-                    pilotGroup.leave()
-                }
-            }
-            pilotGroup.notify(queue: .main) {
-                for trackNode in self.pilotTracksViewModel.pilotTracks {
-                    let annotationSourceItem = AnnotationSourceItem(
-                        annotationType: "pilot",
-                        annotationID: trackNode.pilotName,
-                        annotationName: trackNode.pilotName,
-                        coordinates: CLLocationCoordinate2D(latitude: trackNode.latitude, longitude: trackNode.longitude),
-                        altitude: trackNode.altitude,
-                        readingsNote: trackNode.message ?? "",
-                        forecastNote: "",
-                        siteType: "",
-                        readingsStation: "",
-                        readingsSource: "",
-                        windSpeed: trackNode.speed,
-                        windDirection: trackNode.heading,
-                        windGust: 0.0,
-                        inEmergency: trackNode.inEmergency,
-                        message: trackNode.message,
-                        trackDateTime: trackNode.dateTime
-                    )
-                    self.annotationSourceItems.append(annotationSourceItem)
-                }
-                annotationSourceItemGroup.leave()
-            }
+            // Do nothing; pilot tracks handled separately
         }
         
         annotationSourceItemGroup.notify(queue: .main) {

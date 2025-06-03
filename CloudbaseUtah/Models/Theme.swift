@@ -50,7 +50,7 @@ let displayValueOrange: Color = .displayValueOrange
 let displayValueRed: Color = .displayValueRed
 let repeatDateTimeColor: Color = .titanium
 
-// Map page colors and format
+// Map page colors
 let layersIconColor: Color = toolbarImageColor
 let layersFontColor: Color = toolbarFontColor
 let layersIconBackgroundColor: Color = .black
@@ -65,9 +65,9 @@ let pilotLabelBackgroundColor: Color = .black //.withAlphaComponent(0.2)
 let pilotLabelNameTextColor: Color = .white
 let pilotLabelDateTextColor: Color = .titanium
 let pilotLabelAltTextColor: Color = .sky
+let pilotEmergencyAnnotationColor: Color = .red
 let pilotEmergencyAnnotationTextColor: Color = .poppy
 let pilotTrackColor: Color = .white
-let pilotTrackWidth: CGFloat = 1
 let defaultAnnotationColor: Color = .black
 let defaultAnnotationTextColor: Color = .white
 
@@ -80,8 +80,19 @@ let cameraAnnotationImage: String = "camera.circle"
 let defaultAnnotationImage:  String = "questionmark"
 let siteAnnotationImage: String = "roundPGicon"
 let pilotLaunchAnnotationImage: String = "arrow.up.right.circle.fill"
-let pilotNodeAnnotationImage: String = "inset.filled.circle"
-let pilotLatestAnnotationImage: String = "PGIconNoBorder"
-let pilotMessageAnnotationImage: String = "bubble.fill"
+let pilotLatestAnnotationImage: String = "flag.checkered"  // Needs to be system image based on current code.  "PGIconNoBorder"
+let pilotMessageAnnotationImage: String = "envelope.fill" // Could used "bubble.fill"
 let pilotInEmergencyAnnotationImage: String = "exclamationmark.triangle.fill"
 
+// Pilot track log colors
+// (assigned dynamically to differentiate pilot tracks on map)
+let pilotColorPalette: [UIColor] = [
+    UIColor(ciColor: .cyan),
+    UIColor(ciColor: .yellow),
+    UIColor(ciColor: .green),
+    UIColor(ciColor: .red),
+    UIColor(ciColor: .blue),
+    UIColor(.orangetheme),
+    UIColor(ciColor: .magenta),
+    UIColor(ciColor: .white)
+]

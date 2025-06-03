@@ -2,6 +2,7 @@ import SwiftUI
 import Foundation
 import SafariServices
 import UIKit
+import MapKit
 
 // Common utility functions
 func tempColor(_ tempF: Int) -> Color {
@@ -398,4 +399,13 @@ func tintedImage(_ image: UIImage, color: UIColor) -> UIImage {
     let tinted = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
     return tinted ?? image
+}
+
+// Calculate bearing based on two points (used for pilot tracks)
+func bearing(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> CLLocationDirection {
+    let deltaLon = to.longitude - from.longitude
+    let y = sin(deltaLon * .pi/180) * cos(to.latitude * .pi/180)
+    let x = cos(from.latitude * .pi/180) * sin(to.latitude * .pi/180) -
+            sin(from.latitude * .pi/180) * cos(to.latitude * .pi/180) * cos(deltaLon * .pi/180)
+    return atan2(y, x) * 180 / .pi
 }
