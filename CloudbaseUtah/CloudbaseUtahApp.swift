@@ -15,9 +15,11 @@ struct CloudbaseUtahApp: App {
             center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
             span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
         ),
-        activeLayers: defaultActiveLayers,
-        selectedMapType: .standard,
-        pilotTrackDays: defaultPilotTrackDays
+        selectedMapType: defaultmapType,
+        pilotTrackDays: defaultPilotTrackDays,
+        mapDisplayMode: defaultmapDisplayMode,
+        showSites: true,
+        showStations: true
     )
 
     var body: some Scene {

@@ -94,7 +94,7 @@ struct CUASAReadingsData: Codable {
 class StationLatestReadingsViewModel: ObservableObject {
     @Published var latestReadings: [StationLatestReadings] = []
     @Published var stationParameters: String = ""
-    var sitesViewModel: SitesViewModel
+    let sitesViewModel: SitesViewModel
     
     // sites available in this view model
     init(viewModel: SitesViewModel) {
@@ -115,12 +115,21 @@ class StationLatestReadingsViewModel: ObservableObject {
         }
     }
 
-    func reloadLatestReadingsData() {
-            self.getLatestMesonetReadings (stationParameters: self.stationParameters) {
-                self.getLatestCUASAReadings() {}
-            }
+    func reloadLatestReadingsData(completion: @escaping () -> Void) {
+        let group = DispatchGroup()
+        group.enter()
+        self.getLatestMesonetReadings(stationParameters: self.stationParameters) {
+            group.leave()
+        }
+        group.enter()
+        self.getLatestCUASAReadings() {
+            group.leave()
+        }
+        group.notify(queue: .main) {
+            completion()
+        }
     }
-
+    
     func getLatestMesonetReadings(stationParameters: String, completion: @escaping () -> Void) {
         let urlString = latestReadingsAPIHeader + stationParameters + latestReadingsAPITrailer + mesowestAPIToken
         guard let url = URL(string: urlString) else { return }

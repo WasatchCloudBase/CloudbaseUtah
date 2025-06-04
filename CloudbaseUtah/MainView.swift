@@ -14,6 +14,8 @@ struct MainView: View {
     @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @EnvironmentObject var sitesViewModel: SitesViewModel
+    @EnvironmentObject var pilotsViewModel: PilotsViewModel
+    @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
 
     var body: some View {
         NavigationView {
@@ -28,8 +30,13 @@ struct MainView: View {
                     WeatherView()
                 }
                 if selectedView == .map {
-                    MapContainerView(sitesViewModel: sitesViewModel)
-                        .environmentObject(sitesViewModel)
+                    MapContainerView(
+                        sitesViewModel: sitesViewModel,
+                        mapSettingsViewModel: mapSettingsViewModel
+                    )
+                    .environmentObject(sitesViewModel)
+                    .environmentObject(mapSettingsViewModel)
+                    .environmentObject(pilotsViewModel)
                 }
                 if selectedView == .webcam {
                     WeatherCamView()

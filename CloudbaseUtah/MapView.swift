@@ -41,7 +41,6 @@ class ArrowOverlayRenderer: MKOverlayRenderer {
     override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
         let center = point(for: MKMapPoint(arrow.coordinate))
         let size = CGFloat(arrow.size) * zoomScale * 300 * mapPilotAnnotationZoomScaleFactor
-        print("arrow size: \(size), zoomscale: \(zoomScale)")
 
         let path = CGMutablePath()
         path.move(to: CGPoint(x: center.x, y: center.y - size / 2))
@@ -61,7 +60,7 @@ class ArrowOverlayRenderer: MKOverlayRenderer {
         context.restoreGState()
     }
 }
-// MARK: - Main Map View
+
 struct MapView: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
     @Binding var zoomLevel: Double
@@ -170,6 +169,9 @@ struct MapView: UIViewRepresentable {
             let newZoom = log2(360 * (Double(mapView.frame.size.width) / 256) / mapView.region.span.longitudeDelta)
             DispatchQueue.main.async {
                 self.parent.zoomLevel = newZoom
+                
+                // Set region to retain region when user switches map modes
+                self.parent.region = mapView.region
             }
         }
 
@@ -251,9 +253,11 @@ struct MapContainerView: View {
     @EnvironmentObject var pilotsViewModel: PilotsViewModel
     @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
     @Environment(\.scenePhase) private var scenePhase
+
     @StateObject private var stationLatestReadingsViewModel: StationLatestReadingsViewModel
-    @StateObject private var pilotTracksViewModel: PilotTracksViewModel
+    @StateObject private var pilotTracksViewModel = PilotTracksViewModel()
     @StateObject private var annotationSourceItemsViewModel: AnnotationSourceItemsViewModel
+
     @State private var selectedSite: Sites?
     @State private var selectedPilotTrack: PilotTracks?
     @State private var isLayerSheetPresented = false
@@ -261,32 +265,32 @@ struct MapContainerView: View {
     @State private var animationProgress: Double = 0.0
     @State private var currentTime: String = "00:00"
     @State private var annotationSourceItems: [AnnotationSourceItem] = []
-    @State private var isActive = false                         // Whether view is active for time refreshes
-    @State private var refreshWorkItem: DispatchWorkItem?       // Used to cancel and restart timer when another event occurs
+    @State private var isActive = false
+    @State private var refreshWorkItem: DispatchWorkItem?
+
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
         span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan))
+
     @State private var position = MapCameraPosition.region(MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
         span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)))
+
     @State private var lastRegionSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0)
     @State private var currentZoomLevel: Double = defaultMapZoomLevel
+
     private var cancellables = Set<AnyCancellable>()
-    
-    init(sitesViewModel: SitesViewModel) {
-        _stationLatestReadingsViewModel = StateObject(wrappedValue: StationLatestReadingsViewModel(viewModel: sitesViewModel));
-        _pilotTracksViewModel = StateObject(wrappedValue: PilotTracksViewModel())
-        _annotationSourceItemsViewModel = StateObject(wrappedValue: AnnotationSourceItemsViewModel(
-            mapSettingsViewModel: MapSettingsViewModel(
-                region: MKCoordinateRegion(
-                    center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
-                    span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
-                ),
-                activeLayers: defaultActiveLayers,
-                selectedMapType: .standard,
-                pilotTrackDays: defaultPilotTrackDays),
-            sitesViewModel: SitesViewModel(),
-            stationLatestReadingsViewModel: StationLatestReadingsViewModel(viewModel: SitesViewModel())))
+
+    init(sitesViewModel: SitesViewModel, mapSettingsViewModel: MapSettingsViewModel) {
+        let stationVM = StationLatestReadingsViewModel(viewModel: sitesViewModel)
+        _stationLatestReadingsViewModel = StateObject(wrappedValue: stationVM)
+        _annotationSourceItemsViewModel = StateObject(wrappedValue:
+            AnnotationSourceItemsViewModel(
+                mapSettingsViewModel: mapSettingsViewModel,
+                sitesViewModel: sitesViewModel,
+                stationLatestReadingsViewModel: stationVM
+            )
+        )
     }
     
     var body: some View {
@@ -299,7 +303,7 @@ struct MapContainerView: View {
             }
             
             // Create map for pilot tracks
-            if mapSettingsViewModel.activeLayers.contains(.pilots) {
+            if mapSettingsViewModel.isMapTrackingMode {
                 MapView(
                     region: $region,
                     zoomLevel: $currentZoomLevel,
@@ -313,7 +317,7 @@ struct MapContainerView: View {
                 .padding(.vertical, 8)
                 
             // Create map for weather
-            } else {
+            } else if mapSettingsViewModel.isMapWeatherMode {
                 Map(coordinateRegion: $region,
                     interactionModes: .all,
                     showsUserLocation: true,
@@ -406,6 +410,8 @@ struct MapContainerView: View {
                 .cornerRadius(10)
                 .padding(.vertical, 8)
 
+            } else {
+                Text("Map not in a valid mode (weather, tracking")
             }
 
             // Floating Item Bar
@@ -425,9 +431,11 @@ struct MapContainerView: View {
                         }
                         .sheet(isPresented: $isLayerSheetPresented) {
                             MapSettingsView(
-                                activeLayers: $mapSettingsViewModel.activeLayers,
                                 selectedMapType: $mapSettingsViewModel.selectedMapType,
-                                pilotTrackDays: $mapSettingsViewModel.pilotTrackDays
+                                pilotTrackDays: $mapSettingsViewModel.pilotTrackDays,
+                                mapDisplayMode: $mapSettingsViewModel.mapDisplayMode,
+                                showSites: $mapSettingsViewModel.showSites,
+                                showStations: $mapSettingsViewModel.showStations
                             )
                         }
                     }
@@ -466,46 +474,58 @@ struct MapContainerView: View {
                 .padding(.bottom, 24)
             }
         }
-        .onChange(of: MapSettingsState(activeLayers: mapSettingsViewModel.activeLayers,
-                                       pilotTrackDays: mapSettingsViewModel.pilotTrackDays,
-                                       scenePhase: scenePhase)) {
+        .onChange(of: MapSettingsState(pilotTrackDays: mapSettingsViewModel.pilotTrackDays,
+                                       mapDisplayMode: mapSettingsViewModel.mapDisplayMode,
+                                       showSites: mapSettingsViewModel.showSites,
+                                       showStations: mapSettingsViewModel.showStations,
+                                       scenePhase: scenePhase
+                                      )) {
             // Check all changes together to only execute updateMapAnnotations once
             if scenePhase == .active {
                 // Reload latest pilot tracks
-                if mapSettingsViewModel.activeLayers.contains(.pilots) {
+                if mapSettingsViewModel.isMapTrackingMode {
                     for pilot in pilotsViewModel.pilots {
                         pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {}
                     }
                 }
+                
                 // Reload weather readings
                 else {
                     annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
                     annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
-                    annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-                    annotationSourceItemsViewModel.updateAnnotationSourceItems {
-                        annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                    stationLatestReadingsViewModel.reloadLatestReadingsData {
+                        annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
+                        annotationSourceItemsViewModel.updateAnnotationSourceItems {
+                            annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                        }
                     }
                 }
                 startTimer() // Cancels existing timer and restarts
                 isActive = true
+                startMonitoringRegion()
             } else {
                 isActive = false
             }
         }
        .onAppear {
            // Reload latest pilot tracks
-           if mapSettingsViewModel.activeLayers.contains(.pilots) {
-               for pilot in pilotsViewModel.pilots {
-                   pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {}
+           if mapSettingsViewModel.isMapTrackingMode {
+               DispatchQueue.main.async {
+                   for pilot in pilotsViewModel.pilots {
+                       pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {}
+                   }
                }
            }
            // Reload weather readings
            else {
+               
                annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
                annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
-               annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-               annotationSourceItemsViewModel.updateAnnotationSourceItems {
-                   annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+               stationLatestReadingsViewModel.reloadLatestReadingsData {
+                   annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
+                   annotationSourceItemsViewModel.updateAnnotationSourceItems {
+                       annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                   }
                }
            }
            startTimer() // Cancels existing timer and restarts
@@ -545,18 +565,24 @@ struct MapContainerView: View {
         let workItem = DispatchWorkItem {
             if isActive {
                 // Reload latest pilot tracks
-                if mapSettingsViewModel.activeLayers.contains(.pilots) {
+                if mapSettingsViewModel.isMapTrackingMode {
                     for pilot in pilotsViewModel.pilots {
                         pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {}
                     }
                 }
                 // Reload weather readings
                 else {
-                    annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
-                    annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
-                    annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-                    annotationSourceItemsViewModel.updateAnnotationSourceItems {
-                        annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                    DispatchQueue.main.async {
+                        annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
+                        annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
+                    }
+                    DispatchQueue.main.async {
+                        annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
+                    }
+                    DispatchQueue.main.async {
+                        annotationSourceItemsViewModel.updateAnnotationSourceItems {
+                            annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                        }
                     }
                 }
             }
@@ -568,7 +594,7 @@ struct MapContainerView: View {
     }
     
     private func startMonitoringRegion() {
-        if mapSettingsViewModel.activeLayers.contains(.pilots) {
+        if mapSettingsViewModel.isMapTrackingMode {
             // Do nothing; pilot map changes handled elsewhere
         } else {
             Timer.scheduledTimer(withTimeInterval: mapBatchProcessingInterval, repeats: true) { _ in

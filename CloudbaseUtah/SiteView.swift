@@ -136,13 +136,13 @@ struct SiteView: View {
             isActive = false
         }
         .sheet(item: $selectedSite, onDismiss: {
-            stationLatestReadingsViewModel.reloadLatestReadingsData()
+            stationLatestReadingsViewModel.reloadLatestReadingsData() {}
         }) { site in
             SiteDetailView(site: site)
         }
         .onChange(of: scenePhase) {
             if scenePhase == .active {
-                stationLatestReadingsViewModel.reloadLatestReadingsData()
+                stationLatestReadingsViewModel.reloadLatestReadingsData() {}
             } else {
                 isActive = false
             }
@@ -154,7 +154,7 @@ struct SiteView: View {
     private func startTimer() {
         DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval) {
             if isActive {
-                stationLatestReadingsViewModel.reloadLatestReadingsData()
+                stationLatestReadingsViewModel.reloadLatestReadingsData() {}
             }
         }
     }

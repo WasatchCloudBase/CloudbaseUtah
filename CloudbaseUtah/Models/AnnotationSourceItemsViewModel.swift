@@ -51,7 +51,8 @@ class AnnotationSourceItemsViewModel: ObservableObject {
         let annotationSourceItemGroup = DispatchGroup()
         
         // Process sites (synchronous)
-        if mapSettingsViewModel.activeLayers.contains(.sites) {
+        if mapSettingsViewModel.isMapDisplayingSites {
+            
             let filteredSites = sitesViewModel.sites.filter { $0.siteType == "Mountain" || $0.siteType == "Soaring" }
             for site in filteredSites {
                 if let lat = Double(site.siteLat), let lon = Double(site.siteLon) {
@@ -75,7 +76,7 @@ class AnnotationSourceItemsViewModel: ObservableObject {
             }
         }
         
-        if mapSettingsViewModel.activeLayers.contains(.stations) {
+        if mapSettingsViewModel.isMapDisplayingStations {
             
             annotationSourceItemGroup.enter()
             
@@ -115,7 +116,7 @@ class AnnotationSourceItemsViewModel: ObservableObject {
             }
         }
         
-        if mapSettingsViewModel.activeLayers.contains(.pilots){
+        if mapSettingsViewModel.isMapTrackingMode {
             // Do nothing; pilot tracks handled separately
         }
         

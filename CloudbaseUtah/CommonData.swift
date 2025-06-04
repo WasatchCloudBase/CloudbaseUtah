@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import Foundation
+import MapKit
 
 // Set development build flags
 let devMenuAvailable: Bool = true
@@ -42,7 +43,8 @@ let skewTButtonWidth: CGFloat = 100
 let defaultTopOfLiftAltitude = 18000.0                  // Use in lift area graph when top of lift isn't reached in calculations
 let pageRefreshInterval: TimeInterval = 150             // Time in seconds to refresh wind readings (300 for 5 min)
 let defaultPilotTrackDays: Double = 1.0                 // Default days of live tracking to display
-let defaultActiveLayers: Set<MapLayer> = [.pilots]
+let defaultmapDisplayMode: MapDisplayMode = .tracking
+let defaultmapType: CustomMapStyle = .standard
 
 // HTTP links and APIs
 let forecastUSMapLink: String = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"

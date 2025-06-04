@@ -2,6 +2,11 @@ import SwiftUI
 import Combine
 import MapKit
 
+enum MapDisplayMode {
+    case weather
+    case tracking
+}
+
 // Custom Map Style Enum
 enum CustomMapStyle: String, CaseIterable {
     case standard, hybrid
@@ -15,73 +20,41 @@ enum CustomMapStyle: String, CaseIterable {
     }
 }
 
-// Model to retain map settings (center, zoom, layers) when navigating between views
 class MapSettingsViewModel: ObservableObject {
     @Published var region: MKCoordinateRegion
-    @Published var activeLayers: Set<MapLayer>
     @Published var selectedMapType: CustomMapStyle
     @Published var pilotTrackDays: Double
+    @Published var mapDisplayMode: MapDisplayMode
+    @Published var showSites: Bool
+    @Published var showStations: Bool
 
     init(region: MKCoordinateRegion,
-         activeLayers: Set<MapLayer>,
-         selectedMapType: CustomMapStyle = .standard,
-         pilotTrackDays: Double = defaultPilotTrackDays)
-    {
+         selectedMapType: CustomMapStyle = defaultmapType,
+         pilotTrackDays: Double = defaultPilotTrackDays,
+         mapDisplayMode: MapDisplayMode = defaultmapDisplayMode,
+         showSites: Bool = true,
+         showStations: Bool = true
+    ) {
         self.region = region
-        self.activeLayers = activeLayers
         self.selectedMapType = selectedMapType
         self.pilotTrackDays = pilotTrackDays
-    }
-}
-
-// Define map layers
-enum MapLayer: String, Equatable, CaseIterable {
-    case sites,
-         stations,
-         pilots
-    /*,
-         precipitation,
-         cloudCover,
-         tracks,
-         thermalHeatMap,
-         flySkyHyAirspace
-     */
-
-    var name: String {
-        switch self {
-        case .sites: return "Paragliding sites"
-        case .stations: return "Wind stations"
-        case .pilots: return "Live tracking"
-    /*
-        case .precipitation: return "Precipitation"
-        case .cloudCover: return "Cloud cover"
-        case .tracks: return "Skyways"
-        case .thermalHeatMap: return "Thermals"
-        case .flySkyHyAirspace: return "FlySkyHy LZs and thermal hotspots"
-     */
-        }
+        self.mapDisplayMode = mapDisplayMode
+        self.showSites = showSites
+        self.showStations = showStations
     }
     
-    var description: String {
-        switch self {
-        case .sites: return "Select site for readings and forecast"
-        case .stations: return "Select station for readings and forecast"
-        case .pilots: return "inReach GPS live tracking"
-    /*
-        case .precipitation: return "Past and forecasted precipitation \n(provided by www.rainviewer.com)"
-        case .cloudCover: return "Past and forecasted cloud coverage \n(provided by www.rainviewer.com)"
-        case .tracks: return "Tracks from thermal.kk7"
-        case .thermalHeatMap: return "Heat map from thermal.kk7"
-        case .flySkyHyAirspace: return "Preview of custom airspace \n(use Links tab to load into FlySkyHy)"
-     */
-        }
-    }
+    var isMapWeatherMode: Bool { mapDisplayMode == .weather }
+    var isMapTrackingMode: Bool { mapDisplayMode == .tracking }
+    var isMapDisplayingSites: Bool { mapDisplayMode == .weather && showSites }
+    var isMapDisplayingStations: Bool { mapDisplayMode == .weather && showStations }
 }
 
 // Composite structure to check for all map settings and view changes together
 // and only rebuild annotations once if there are multiple changes
 struct MapSettingsState: Equatable {
-    let activeLayers: Set<MapLayer>
     let pilotTrackDays: Double
+    let mapDisplayMode: MapDisplayMode
+    let showSites: Bool
+    let showStations: Bool
     let scenePhase: ScenePhase
 }
