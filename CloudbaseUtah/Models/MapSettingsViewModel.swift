@@ -7,10 +7,22 @@ enum MapDisplayMode {
     case tracking
 }
 
-// Custom Map Style Enum
+// Custom Map Style
 enum CustomMapStyle: String, CaseIterable {
     case standard, hybrid
+    
+    // Conversion to MapStyle (for Map)
     func toMapStyle() -> MapStyle {
+        switch self {
+        case .standard:
+            return .standard
+        case .hybrid:
+            return .hybrid
+        }
+    }
+
+    // Conversion to Maptype (for MKMapView)
+    func toMapType() -> MKMapType {
         switch self {
         case .standard:
             return .standard
@@ -32,7 +44,7 @@ class MapSettingsViewModel: ObservableObject {
          selectedMapType: CustomMapStyle = defaultmapType,
          pilotTrackDays: Double = defaultPilotTrackDays,
          mapDisplayMode: MapDisplayMode = defaultmapDisplayMode,
-         showSites: Bool = true,
+         showSites: Bool = false,
          showStations: Bool = true
     ) {
         self.region = region

@@ -79,9 +79,9 @@ let pauseImage: String = "pause.fill"
 let cameraAnnotationImage: String = "camera.circle"
 let defaultAnnotationImage:  String = "questionmark"
 let siteAnnotationImage: String = "roundPGicon"
-let pilotLaunchAnnotationImage: String = "arrow.up.right.circle.fill"
+let pilotLaunchAnnotationImage: String = "paperplane.fill" // Could use arrow.up.right.circle.fill"
 let pilotLatestAnnotationImage: String = "flag.checkered"  // Needs to be system image based on current code.  "PGIconNoBorder"
-let pilotMessageAnnotationImage: String = "envelope.fill" // Could used "bubble.fill"
+let pilotMessageAnnotationImage: String = "envelope.fill"  // Could use "bubble.fill"
 let pilotInEmergencyAnnotationImage: String = "exclamationmark.triangle.fill"
 
 // Pilot track log colors

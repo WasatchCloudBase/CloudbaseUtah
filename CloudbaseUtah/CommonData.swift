@@ -96,4 +96,4 @@ let pilotLatestAnnotationImageWidth: CGFloat = 40
 let pilotNodeAnnotationTextWidth: CGFloat = 56
 let pilotNodeAnnotationTextOneRowHeight: CGFloat = 16
 let pilotNodeAnnotationTextThreeRowHeight: CGFloat = pilotNodeAnnotationTextOneRowHeight * 3
-let pilotNodeLabelThreeRowSpan: CGFloat = 0.08                   // Map scale that determines when to display time/altitude for each node
+let pilotNodeLabelThreeRowSpan: CGFloat = 0.2                   // Map scale that determines when to display time/altitude for each node

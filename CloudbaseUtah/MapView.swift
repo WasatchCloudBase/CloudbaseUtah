@@ -40,7 +40,7 @@ class ArrowOverlayRenderer: MKOverlayRenderer {
 
     override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
         let center = point(for: MKMapPoint(arrow.coordinate))
-        let size = CGFloat(arrow.size) * zoomScale * 300 * mapPilotAnnotationZoomScaleFactor
+        let size = CGFloat(arrow.size) * zoomScale * mapPilotAnnotationZoomScaleFactor
 
         let path = CGMutablePath()
         path.move(to: CGPoint(x: center.x, y: center.y - size / 2))
@@ -64,6 +64,7 @@ class ArrowOverlayRenderer: MKOverlayRenderer {
 struct MapView: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
     @Binding var zoomLevel: Double
+    @Binding var mapStyle: CustomMapStyle
     let pilotTracks: [PilotTracks]
     let onPilotSelected: (PilotTracks) -> Void
 
@@ -78,10 +79,16 @@ struct MapView: UIViewRepresentable {
         mapView.showsUserLocation = true
         mapView.isZoomEnabled = true
         mapView.isScrollEnabled = true
+        mapView.mapType = mapStyle.toMapType()
         return mapView
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
+        
+        // Update map type in case it was changed
+        mapView.mapType = mapStyle.toMapType()
+        
+        // Clear all prior pilot track node annotations and line overlays
         mapView.removeAnnotations(mapView.annotations)
         mapView.removeOverlays(mapView.overlays)
 
@@ -179,7 +186,7 @@ struct MapView: UIViewRepresentable {
             if let polyline = overlay as? MKPolyline,
                let pilotName = polyline.title {
                 let renderer = MKPolylineRenderer(polyline: polyline)
-                renderer.strokeColor = pilotColorMap[pilotName ?? ""] ?? .gray
+                renderer.strokeColor = pilotColorMap[pilotName] ?? .gray
                 renderer.lineWidth = mapPilotTrackWidth
                 return renderer
             } else if let arrow = overlay as? ArrowOverlay {
@@ -216,18 +223,130 @@ struct MapView: UIViewRepresentable {
                 view.displayPriority = .required
                 return view
             } else {
+                
                 let identifier = "DotAnnotation"
                 let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
                     ?? MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
 
-                let dotDiameter: CGFloat = parent.zoomLevel * mapPilotAnnotationZoomScaleFactor
                 view.annotation = annotation
+                view.canShowCallout = false
+                view.clusteringIdentifier = nil
+
+                // Remove any prior dot and label views that were displayed
+                view.subviews.forEach { $0.removeFromSuperview() }
+                
+                // Create container view
+                let dotDiameter: CGFloat = parent.zoomLevel * mapPilotAnnotationZoomScaleFactor
+                let container = UIView()
+                container.backgroundColor = .clear
+
+                // Get different color for each pilot track
+                let pilotTrackColor = pilotColorMap[pilotAnnotation.pilotName] ?? .gray
+                // Dot
+                let dot = UIView(frame: CGRect(x: 0, y: 0, width: dotDiameter, height: dotDiameter))
+                dot.layer.cornerRadius = dotDiameter / 2
+                dot.backgroundColor = pilotTrackColor
+                dot.center = CGPoint(x: dotDiameter / 2, y: dotDiameter / 2)
+
+                // Label
+                let label = UILabel()
+                label.numberOfLines = 0
+                label.textAlignment = .center
+                let attributedText = NSMutableAttributedString()
+                let span = mapView.region.span
+                
+                // Pilot label row 1
+                if let name = pilotAnnotation.title {
+                    let nameAttr = NSAttributedString(
+                        string: name + "\n",
+                        attributes: [
+                            .foregroundColor: UIColor(pilotLabelNameTextColor),
+                            .font: UIFont.systemFont(ofSize: 10, weight: .semibold)
+                        ])
+                    attributedText.append(nameAttr)
+                }
+
+                if span.latitudeDelta < pilotNodeLabelThreeRowSpan {
+                    // Pilot label row 2
+                    let pilotTrackNodeDateTime = getFormattedTimefromDate(pilotAnnotation.pilotTrack?.dateTime ?? Date())
+                    let timeAttr = NSAttributedString(
+                        string: pilotTrackNodeDateTime + "\n",
+                        attributes: [
+                            .foregroundColor: UIColor(pilotLabelDateTextColor),
+                            .font: UIFont.systemFont(ofSize: 9)
+                        ])
+                    attributedText.append(timeAttr)
+                    
+                    // Pilot label row 3
+                    let pilotTrackNodeAltitude = pilotAnnotation.pilotTrack?.altitude ?? 0
+                    let formattedAltitude = formatAltitude(String(pilotTrackNodeAltitude))
+                    let altAttr = NSAttributedString(
+                        string: formattedAltitude,
+                        attributes: [
+                            .foregroundColor: UIColor(pilotLabelAltTextColor),
+                            .font: UIFont.systemFont(ofSize: 9)
+                        ])
+                    attributedText.append(altAttr)
+                }
+                
+                // Finalize label setup
+                label.attributedText = attributedText
+                label.sizeToFit()
+
+                // Label background container
+                let labelContainer = UIView()
+                
+                // Create background if zoomed in
+                if span.latitudeDelta < pilotNodeLabelThreeRowSpan {
+                    labelContainer.backgroundColor = UIColor(pilotLabelBackgroundColor).withAlphaComponent(0.7)
+                    labelContainer.layer.borderColor = pilotTrackColor.cgColor
+                    labelContainer.layer.borderWidth = 0.5
+                    labelContainer.layer.cornerRadius = 5
+                    labelContainer.layer.masksToBounds = true
+                }
+
+                // Padding (optional, using insets manually)
+                let padding: CGFloat = 4
+                label.frame = CGRect(
+                    x: padding,
+                    y: padding,
+                    width: label.frame.width,
+                    height: label.frame.height
+                )
+                labelContainer.addSubview(label)
+
+                // Resize label container based on label + padding
+                labelContainer.frame = CGRect(
+                    x: 0,
+                    y: dotDiameter + 2,
+                    width: label.frame.width + 2 * padding,
+                    height: label.frame.height + 2 * padding
+                )
+
+                // Center the label container horizontally
+                labelContainer.center.x = dotDiameter / 2
+
+                // Add dot and labelContainer to container
+                container.addSubview(dot)
+                container.addSubview(labelContainer)
+                container.frame = CGRect(
+                    x: 0,
+                    y: 0,
+                    width: max(dotDiameter, labelContainer.frame.width),
+                    height: dotDiameter + labelContainer.frame.height + 2
+                )
+
+                // Format and display dot and label view
+                view.addSubview(container)
+                view.frame = container.frame
+                view.displayPriority = .defaultLow
                 view.canShowCallout = false
                 view.clusteringIdentifier = nil
                 view.frame = CGRect(x: 0, y: 0, width: dotDiameter, height: dotDiameter)
                 view.layer.cornerRadius = dotDiameter / 2.0
-                view.backgroundColor = pilotColorMap[pilotAnnotation.pilotName] ?? .gray
                 view.displayPriority = .defaultLow
+
+
                 return view
             }
         }
@@ -242,6 +361,15 @@ struct MapView: UIViewRepresentable {
                 self.onPilotSelected(track)
             }
         }
+    }
+}
+
+func getPilotLabelHeightFromMapSpan(span: MKCoordinateSpan) -> CGFloat {
+    if span.latitudeDelta < pilotNodeLabelThreeRowSpan {
+        return pilotNodeAnnotationTextThreeRowHeight
+    }
+    else {
+        return pilotNodeAnnotationTextOneRowHeight
     }
 }
 
@@ -307,13 +435,12 @@ struct MapContainerView: View {
                 MapView(
                     region: $region,
                     zoomLevel: $currentZoomLevel,
+                    mapStyle: $mapSettingsViewModel.selectedMapType,
                     pilotTracks: pilotTracksViewModel.pilotTracks,
                     onPilotSelected: { track in
                         selectedPilotTrack = track
                     }
-                )
-                .mapStyle(mapSettingsViewModel.selectedMapType.toMapStyle())
-                .cornerRadius(10)
+                )                .cornerRadius(10)
                 .padding(.vertical, 8)
                 
             // Create map for weather
@@ -545,15 +672,6 @@ struct MapContainerView: View {
         
         // Make sure pilot live track view model is published
        .environmentObject(pilotTracksViewModel)
-    }
-    
-    private func getPilotLabelHeightFromMapSpan(span: MKCoordinateSpan) -> CGFloat {
-        if span.latitudeDelta < pilotNodeLabelThreeRowSpan {
-            return pilotNodeAnnotationTextThreeRowHeight
-        }
-        else {
-            return pilotNodeAnnotationTextOneRowHeight
-        }
     }
     
     // Timer to reload annotations if page stays active
