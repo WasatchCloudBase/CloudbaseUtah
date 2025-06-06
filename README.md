@@ -27,15 +27,16 @@ This app provides a quick look at all of this for each site.  XCSkies is still r
       - Site recent readings history
       - Link to site 2-day history (for Mesowest stations)
       - Link to live readings and history graphs (for CUASA stations)
+    - Daily forecast for next 7 days (HRRR model for next 48 hours; GFS for longer term forecast)
     - Hourly forecast for next 7 days (HRRR model for next 48 hours; GFS for longer term forecast)
       - Weather (skies, top of lift temp, surface temp, cloud cover, precip, CAPE)
       - Wind speed and direction (surface and each 2k feet up to 18k)
       - Lift strength (each 2k feet up to 18k)
       - Top of lift
 - Interactive map with layers for:
-      - Paragliding sites
-      - Weather stations
-      - Others TBD
+    - Paragliding sites
+    - Weather stations
+    - Pilot live tracks
 - Live web cams for real-time skies
 - Links to additional resources
   - Custom airspace file for FlySKyHy that contains LZs, thermal hot spots, Do Not Land areas, and raptor closures across Utah and various other paragliding sites
