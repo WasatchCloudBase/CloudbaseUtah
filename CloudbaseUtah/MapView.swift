@@ -345,8 +345,6 @@ struct MapView: UIViewRepresentable {
                 view.frame = CGRect(x: 0, y: 0, width: dotDiameter, height: dotDiameter)
                 view.layer.cornerRadius = dotDiameter / 2.0
                 view.displayPriority = .defaultLow
-
-
                 return view
             }
         }
@@ -551,6 +549,7 @@ struct MapContainerView: View {
                                 Image(systemName: layersImage)
                                     .imageScale(.large)
                                     .foregroundStyle(layersIconColor)
+                                    .padding(.bottom, 6)
                                 Text("Settings")
                                     .font(.caption)
                                     .foregroundColor(layersFontColor)
@@ -572,7 +571,27 @@ struct MapContainerView: View {
                     
                     Spacer()
                     
+                    VStack (alignment: .center) {
+                        Picker("Display", selection: $mapSettingsViewModel.mapDisplayMode) {
+                            Text("Weather").tag(MapDisplayMode.weather)
+                            Text("Tracking").tag(MapDisplayMode.tracking)
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding(.bottom, 6)
+                        Text ("Map Type")
+                            .font(.caption)
+                            .foregroundColor(layersFontColor)
+                    }
+                    .padding(.top, 15)
+                    .padding(.trailing, 16)
+                    .padding(.leading, 16)
+                    .padding(.bottom, 12)
+                    .background(layersIconBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    
                     VStack(alignment: .trailing) {
+                        
+                        
                         /*
                          if mapSettingsViewModel.activeLayers.contains(.precipitation) ||
                          mapSettingsViewModel.activeLayers.contains(.cloudCover) {

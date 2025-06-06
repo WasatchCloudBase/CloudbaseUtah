@@ -65,7 +65,8 @@ struct MapSettingsView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                 }
-
+                
+                /* Map mode on main map screen, so not duplicating here
                 Section(header: Text("Map mode")) {
                     Picker("Display", selection: $tempMapDisplayMode) {
                         Text("Weather").tag(MapDisplayMode.weather)
@@ -73,29 +74,26 @@ struct MapSettingsView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                 }
+                */
 
-                if tempMapDisplayMode == .weather {
-                    Section(header: Text("Weather layers")) {
-                        Toggle("Show Sites", isOn: $tempShowSites)
-                        Toggle("Show Stations", isOn: $tempShowStations)
-                    }
+                Section(header: Text("Weather layers")) {
+                    Toggle("Show Sites", isOn: $tempShowSites)
+                    Toggle("Show Stations", isOn: $tempShowStations)
                 }
 
-                if tempMapDisplayMode == .tracking {
-                    Section(header: Text("Pilot track days")) {
-                        VStack(alignment: .trailing) {
-                            Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
-                            HStack {
-                                Text("Today")
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                Text("+ Yesterday")
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                Text("+ Prior Day")
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
-                            }
+                Section(header: Text("Pilot track days")) {
+                    VStack(alignment: .trailing) {
+                        Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
+                        HStack {
+                            Text("Today")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text("+ Yesterday")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                            Text("+ Prior Day")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
                         }
                     }
                 }
