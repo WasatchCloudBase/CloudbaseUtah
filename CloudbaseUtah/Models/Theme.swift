@@ -87,12 +87,13 @@ let pilotInEmergencyAnnotationImage: String = "exclamationmark.triangle.fill"
 // Pilot track log colors
 // (assigned dynamically to differentiate pilot tracks on map)
 let pilotColorPalette: [UIColor] = [
-    UIColor(ciColor: .cyan),
-    UIColor(ciColor: .yellow),
-    UIColor(ciColor: .green),
-    UIColor(ciColor: .red),
-    UIColor(ciColor: .blue),
+    UIColor(.electric),
+    UIColor(.champion),
+    UIColor(.bubblegum),
+    UIColor(.poppy),
+    UIColor(.periwinkle),
     UIColor(.orangetheme),
-    UIColor(ciColor: .magenta),
-    UIColor(ciColor: .white)
+    UIColor(.magentatheme),
+    UIColor(.slime),
+    UIColor(.darkgray)
 ]

@@ -198,6 +198,166 @@ struct MapView: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             guard let pilotAnnotation = annotation as? PilotTrackAnnotation else { return nil }
 
+            let identifier = "PilotAnnotation"
+            let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+                ?? MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+
+            view.annotation = annotation
+            view.canShowCallout = false
+            view.clusteringIdentifier = nil
+            view.collisionMode = .circle
+
+            // Remove prior views
+            view.subviews.forEach { $0.removeFromSuperview() }
+            
+            // Determing track node annotation type
+            var trackNodeType = "normal"
+            if pilotAnnotation.isEmergency || pilotAnnotation.hasMessage || pilotAnnotation.isFirst || pilotAnnotation.isLast {
+                trackNodeType = "special"
+            }
+
+            var annotationSizingFactor: CGFloat = 1
+            if trackNodeType != "normal" {
+                annotationSizingFactor = 3
+            }
+            let dotDiameter: CGFloat = parent.zoomLevel * mapPilotAnnotationZoomScaleFactor * annotationSizingFactor
+            let container = UIView()
+            container.backgroundColor = .clear
+
+            let pilotTrackColor = pilotColorMap[pilotAnnotation.pilotName] ?? .gray
+
+            // Dot
+            let dot = UIView(frame: CGRect(x: 0, y: 0, width: dotDiameter, height: dotDiameter))
+            dot.frame = CGRect(x: 0, y: 0, width: dotDiameter, height: dotDiameter)
+            dot.layer.cornerRadius = dotDiameter / 2
+            dot.backgroundColor = pilotTrackColor
+            dot.center = CGPoint(x: dotDiameter / 2, y: dotDiameter / 2)
+
+            // Overlay icon for emergency/message/first/last
+            if trackNodeType != "normal" {
+                let symbolName: String?
+                if pilotAnnotation.isEmergency {
+                    symbolName = pilotInEmergencyAnnotationImage
+                    dot.backgroundColor = UIColor(pilotEmergencyAnnotationColor)
+                } else if pilotAnnotation.hasMessage {
+                    symbolName = pilotMessageAnnotationImage
+                } else if pilotAnnotation.isFirst {
+                    symbolName = pilotLaunchAnnotationImage
+                } else {
+                    symbolName = pilotLatestAnnotationImage
+                }
+
+                if let symbolName = symbolName, let image = UIImage(systemName: symbolName) {
+                    let imageView = UIImageView(image: image)
+                    imageView.tintColor = .white
+                    imageView.contentMode = .scaleAspectFit
+                    let imageInset: CGFloat = dotDiameter * 0.15
+                    let imageSize = dotDiameter - 2 * imageInset
+                    imageView.frame = CGRect(x: imageInset, y: imageInset, width: imageSize, height: imageSize)
+                    dot.addSubview(imageView)
+                }
+            }
+
+            // Label
+            let label = UILabel()
+            label.numberOfLines = 0
+            label.textAlignment = .center
+            let attributedText = NSMutableAttributedString()
+            let span = mapView.region.span
+
+            if let name = pilotAnnotation.title {
+                attributedText.append(NSAttributedString(
+                    string: name + "\n",
+                    attributes: [
+                        .foregroundColor: UIColor(pilotLabelNameTextColor),
+                        .font: UIFont.systemFont(ofSize: 10, weight: .semibold)
+                    ]))
+            }
+
+            if span.latitudeDelta < pilotNodeLabelThreeRowSpan {
+                let pilotTrackNodeDateTime = getFormattedTimefromDate(pilotAnnotation.pilotTrack?.dateTime ?? Date())
+                attributedText.append(NSAttributedString(
+                    string: pilotTrackNodeDateTime + "\n",
+                    attributes: [
+                        .foregroundColor: UIColor(pilotLabelDateTextColor),
+                        .font: UIFont.systemFont(ofSize: 9)
+                    ]))
+
+                let pilotTrackNodeAltitude = pilotAnnotation.pilotTrack?.altitude ?? 0
+                let formattedAltitude = formatAltitude(String(pilotTrackNodeAltitude))
+                attributedText.append(NSAttributedString(
+                    string: formattedAltitude,
+                    attributes: [
+                        .foregroundColor: UIColor(pilotLabelAltTextColor),
+                        .font: UIFont.systemFont(ofSize: 9)
+                    ]))
+            }
+
+            label.attributedText = attributedText
+            label.sizeToFit()
+
+            let labelContainer = UIView()
+            var labelTopMargin: CGFloat = 2.0
+            if span.latitudeDelta < pilotNodeLabelThreeRowSpan {
+                labelContainer.backgroundColor = UIColor(pilotLabelBackgroundColor).withAlphaComponent(0.7)
+                labelContainer.layer.borderColor = pilotTrackColor.cgColor
+                labelContainer.layer.borderWidth = 0.5
+                labelContainer.layer.cornerRadius = 5
+                labelContainer.layer.masksToBounds = true
+                labelTopMargin = 6.0
+            }
+
+            let padding: CGFloat = 4
+            label.frame = CGRect(
+                x: padding,
+                y: padding,
+                width: label.frame.width,
+                height: label.frame.height
+            )
+            labelContainer.addSubview(label)
+            labelContainer.frame = CGRect(
+                x: 0,
+                y: dot.frame.maxY + labelTopMargin,
+                width: label.frame.width + 2 * padding,
+                height: label.frame.height + 2 * padding
+            )
+            let containerWidth = max(dot.frame.width, labelContainer.frame.width)
+            let containerHeight = dot.frame.height + labelTopMargin + labelContainer.frame.height
+
+            container.frame = CGRect(x: 0, y: 0, width: containerWidth, height: containerHeight)
+
+            // Align subviews
+            dot.center = CGPoint(x: containerWidth / 2, y: dot.frame.height / 2)
+            labelContainer.center.x = containerWidth / 2  // Only horizontal centering
+
+            container.addSubview(dot)
+            container.addSubview(labelContainer)
+
+            view.addSubview(container)
+            view.frame = container.frame
+
+            // Anchor the center of the dot to the annotation coordinate
+            // Center the dot exactly on the annotation coordinate
+            let dotCenterInContainer = dot.center
+            let containerCenter = CGPoint(x: container.frame.width / 2, y: container.frame.height / 2)
+            let offsetY = dotCenterInContainer.y - containerCenter.y
+            view.centerOffset = CGPoint(x: 0, y: -offsetY)
+                        
+            // Handle annotation display/filtering based on type
+            if trackNodeType != "normal" {
+                view.displayPriority = .required
+            } else {
+                view.displayPriority = .defaultLow
+            }
+            view.canShowCallout = false
+            view.clusteringIdentifier = nil
+            
+            return view
+        }
+        
+/*        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            guard let pilotAnnotation = annotation as? PilotTrackAnnotation else { return nil }
+
             if pilotAnnotation.isFirst || pilotAnnotation.isLast || pilotAnnotation.isEmergency || pilotAnnotation.hasMessage {
                 let identifier = "PilotMarkerAnnotation"
                 let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
@@ -339,7 +499,6 @@ struct MapView: UIViewRepresentable {
                 // Format and display dot and label view
                 view.addSubview(container)
                 view.frame = container.frame
-                view.displayPriority = .defaultLow
                 view.canShowCallout = false
                 view.clusteringIdentifier = nil
                 view.frame = CGRect(x: 0, y: 0, width: dotDiameter, height: dotDiameter)
@@ -348,6 +507,7 @@ struct MapView: UIViewRepresentable {
                 return view
             }
         }
+ */
 
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
             guard
