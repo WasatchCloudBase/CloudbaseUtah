@@ -67,9 +67,9 @@ struct SiteView: View {
                                                      .lineLimit(1)
                                                      .fixedSize(horizontal: true, vertical: false)
                                              } else {
-                                                 Text(String(Int(windSpeed)))
+                                                 Text(String(Int(windSpeed.rounded())))
                                                      .font(.subheadline)
-                                                     .foregroundColor(windSpeedColor(windSpeed: Int(windSpeed), siteType: site.siteType))
+                                                     .foregroundColor(windSpeedColor(windSpeed: Int(windSpeed.rounded()), siteType: site.siteType))
                                                      .lineLimit(1)
                                                      .fixedSize(horizontal: true, vertical: false)
                                              }
@@ -89,9 +89,9 @@ struct SiteView: View {
                                                          .foregroundColor(infoFontColor)
                                                          .lineLimit(1)
                                                          .fixedSize(horizontal: true, vertical: false)
-                                                     Text(String(Int(windGust)))
+                                                     Text(String(Int(windGust.rounded())))
                                                          .font(.subheadline)
-                                                         .foregroundColor(windSpeedColor(windSpeed: Int(windGust), siteType: site.siteType))
+                                                         .foregroundColor(windSpeedColor(windSpeed: Int(windGust.rounded()), siteType: site.siteType))
                                                          .lineLimit(1)
                                                          .fixedSize(horizontal: true, vertical: false)
                                                  }

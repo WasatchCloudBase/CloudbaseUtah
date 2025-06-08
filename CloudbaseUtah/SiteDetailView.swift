@@ -12,12 +12,12 @@ struct ReadingsHistoryBarChartView: View {
         
         Chart {
             ForEach(dataRange, id: \.self) { index in
-                let windSpeed = readingsHistoryData.windSpeed[index]
-                let windGust = readingsHistoryData.windGust[index] ?? 0.0
+                let windSpeed = readingsHistoryData.windSpeed[index].rounded()
+                let windGust = readingsHistoryData.windGust[index]?.rounded() ?? 0.0
                 let windDirection = readingsHistoryData.windDirection[index]
                 let time = readingsHistoryData.times[index]
-                let windColor = windSpeedColor(windSpeed: Int(windSpeed), siteType: siteType)
-                let gustColor = windSpeedColor(windSpeed: Int(windGust), siteType: siteType)
+                let windColor = windSpeedColor(windSpeed: Int(windSpeed.rounded()), siteType: siteType)
+                let gustColor = windSpeedColor(windSpeed: Int(windGust.rounded()), siteType: siteType)
                 
                 BarMark(
                     x: .value("Time", time),

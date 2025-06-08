@@ -122,15 +122,16 @@ class PilotTracksViewModel: ObservableObject {
         guard !placemarkStrings.isEmpty else {
             return []
         }
-
+        
         let formatter = DateFormatter()
         formatter.dateFormat = "M/d/yyyy h:mm:ss a"
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(abbreviation: "UTC")      // All live track date/time are in UTC
 
         var pilotTracks: [PilotTracks] = []
         for placemarkString in placemarkStrings {
             guard var trackPilotName = extractValue(from: placemarkString, using: "<Data name=\"Name\">", endTag: "</Data>"),
-                  let dateTimeString = extractValue(from: placemarkString, using: "<Data name=\"Time\">", endTag: "</Data>"),
+                  let dateTimeString = extractValue(from: placemarkString, using: "<Data name=\"Time UTC\">", endTag: "</Data>"),
                   let latitudeString = extractValue(from: placemarkString, using: "<Data name=\"Latitude\">", endTag: "</Data>"),
                   let longitudeString = extractValue(from: placemarkString, using: "<Data name=\"Longitude\">", endTag: "</Data>")
             else {
