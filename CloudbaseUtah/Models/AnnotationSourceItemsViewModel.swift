@@ -83,10 +83,8 @@ class AnnotationSourceItemsViewModel: ObservableObject {
             // Define another dispatch group for to ensure station annotations aren't added until prior calls complete
             let readingsGroup = DispatchGroup()
             readingsGroup.enter()
-            stationLatestReadingsViewModel.getLatestMesonetReadings(stationParameters: "") { [self] in
-                stationLatestReadingsViewModel.getLatestCUASAReadings() {
-                    readingsGroup.leave()
-                }
+            stationLatestReadingsViewModel.reloadLatestReadingsData() {
+                readingsGroup.leave()
             }
 
             // When all CUASA readings are received, update annotations

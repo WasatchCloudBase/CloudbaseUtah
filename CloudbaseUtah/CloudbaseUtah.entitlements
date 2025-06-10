@@ -8,5 +8,9 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-only</key>
 	<true/>
+<!-- Removes logging error on location use, but requires changes to app provisioning certificates
+<key>NSLocationWhenInUseUsageDescription</key>
+    <string>Allow Cloudbase Utah access to your location in device settings to show your position on the map.</string>
+-->
 </dict>
 </plist>
