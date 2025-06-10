@@ -1,7 +1,11 @@
 import SwiftUI
 import MapKit
 import Combine
+#if os(macOS)
+import AppKit
+#elseif os(iOS)
 import UIKit
+#endif
 
 // This view uses temporary variables while the sheet is open, then publishes when the sheet is closed.
 // This is done to prevent lag on this sheet each time a view item is changed.

@@ -8,34 +8,44 @@ struct ElevationResponse: Codable {
     let elevation: [Double]
 }
 
-// Display selected pilot live track node details
 struct PilotTrackNodeView: View {
     @EnvironmentObject var pilotsViewModel: PilotsViewModel
     @EnvironmentObject var pilotTracksViewModel: PilotTracksViewModel
     @Environment(\.presentationMode) var presentationMode
-    var pilotTrack: PilotTracks
+
+    let originalPilotTrack: PilotTracks
+    
     @State private var groundElevation: Int? = 0
     @State private var cancellables = Set<AnyCancellable>()
+    @State private var currentTrackIndex: Int = 0
 
     var body: some View {
-
         let colWidth: CGFloat = 140
         let rowVerticalPadding: CGFloat = 4
+
+        let calendar = Calendar.current
+        let sameDayTracks = pilotTracksViewModel.pilotTracks
+            .filter { $0.pilotName == originalPilotTrack.pilotName && calendar.isDate($0.dateTime, inSameDayAs: originalPilotTrack.dateTime) }
+            .sorted { $0.dateTime < $1.dateTime }
+
+        let pilotTrack = sameDayTracks[safe: currentTrackIndex] ?? originalPilotTrack
+
         let (flightStartDateTime, flightLatestDateTime, formattedFlightDuration, startToEndDistance, maxAltitude, totalDistance) = getPilotTrackInfo(pilotTrack: pilotTrack)
         var trackingShareURL: String { pilotsViewModel.trackingShareURL(for: pilotTrack.pilotName) ?? "" }
+
         var formattedNodeDate: String {
             let formatter = DateFormatter()
             formatter.dateFormat = "M/d/yyyy"
             return formatter.string(from: pilotTrack.dateTime)
         }
+
         var formattedNodeTime: String {
             let formatter = DateFormatter()
-            formatter.dateFormat = "h:mm a" // 12-hour format with AM/PM
+            formatter.dateFormat = "h:mm a"
             return formatter.string(from: pilotTrack.dateTime)
         }
-    
+
         VStack(alignment: .leading) {
-            
             HStack {
                 Button(action: {
                     presentationMode.wrappedValue.dismiss()
@@ -55,10 +65,50 @@ struct PilotTrackNodeView: View {
                 Spacer()
             }
             .background(toolbarBackgroundColor)
-            .padding(0)
+
+            HStack { //Arrows for navigating track nodes
+                Button(action: {
+                    currentTrackIndex -= 1
+                }) {
+                    HStack {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(toolbarActiveImageColor)
+                        Text("Back")
+                            .foregroundColor(toolbarActiveFontColor)
+                    }
+                    .padding(.horizontal, 8)
+                }
+                .id("backButton")
+                // Hide and disable the button when it's not applicable
+                .opacity(currentTrackIndex > 0 ? 1.0 : 0.0)
+                .disabled(currentTrackIndex == 0)
+
+                Spacer()
+                
+                Text("Track Points")
+                
+                Spacer()
+
+                Button(action: {
+                    currentTrackIndex += 1
+                }) {
+                    HStack {
+                        Text("Next")
+                            .foregroundColor(toolbarActiveFontColor)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(toolbarActiveImageColor)
+                    }
+                    .padding(.horizontal, 8)
+                }
+                .id("nextButton")
+                // Hide and disable the button when it's not applicable
+                .opacity(currentTrackIndex < sameDayTracks.count - 1 ? 1.0 : 0.0)
+                .disabled(currentTrackIndex >= sameDayTracks.count - 1)
+            }
+            .padding()
+            .background(navigationBackgroundColor)
             
             List {
-                
                 if pilotTrack.inEmergency {
                     Section(header: Text("Emergency Status")
                         .font(.headline)
@@ -71,133 +121,116 @@ struct PilotTrackNodeView: View {
                             .padding(.vertical, rowVerticalPadding)
                     }
                 }
-                
+
                 Section(header: Text("Track point")
                     .font(.headline)
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
                     VStack(alignment: .leading, spacing: 0) {
-                        
+
                         HStack {
                             Text("Date")
-                                .multilineTextAlignment(.trailing)
+                                .frame(width: colWidth, alignment: .trailing)
                                 .font(.subheadline)
                                 .padding(.trailing, 2)
                                 .foregroundColor(infoFontColor)
-                                .frame(width: colWidth, alignment: .trailing)
                             Text(formattedNodeDate)
                                 .font(.subheadline)
-                                .padding(.leading, 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-                        
+
                         HStack {
                             Text("Time")
-                                .multilineTextAlignment(.trailing)
+                                .frame(width: colWidth, alignment: .trailing)
                                 .font(.subheadline)
                                 .padding(.trailing, 2)
                                 .foregroundColor(infoFontColor)
-                                .frame(width: colWidth, alignment: .trailing)
                             Text(formattedNodeTime)
                                 .font(.subheadline)
-                                .padding(.leading, 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-                        
+
                         HStack {
                             Text("Coordinates")
-                                .multilineTextAlignment(.trailing)
+                                .frame(width: colWidth, alignment: .trailing)
                                 .font(.subheadline)
                                 .padding(.trailing, 2)
                                 .foregroundColor(infoFontColor)
-                                .frame(width: colWidth, alignment: .trailing)
                             Text("\(pilotTrack.latitude), \(pilotTrack.longitude)")
                                 .font(.subheadline)
-                                .padding(.leading, 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-                        
+
                         HStack {
                             Text("Speed")
-                                .multilineTextAlignment(.trailing)
+                                .frame(width: colWidth, alignment: .trailing)
                                 .font(.subheadline)
                                 .padding(.trailing, 2)
                                 .foregroundColor(infoFontColor)
-                                .frame(width: colWidth, alignment: .trailing)
                             Text("\(Int(pilotTrack.speed.rounded())) mph")
                                 .font(.subheadline)
-                                .padding(.leading, 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-                        
+
                         HStack {
                             Text("Altitude")
-                                .multilineTextAlignment(.trailing)
+                                .frame(width: colWidth, alignment: .trailing)
                                 .font(.subheadline)
                                 .padding(.trailing, 2)
                                 .foregroundColor(infoFontColor)
-                                .frame(width: colWidth, alignment: .trailing)
                             Text("\(Int(pilotTrack.altitude)) ft")
                                 .font(.subheadline)
-                                .padding(.leading, 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-                        
+
                         if let groundElevation = groundElevation {
                             HStack {
                                 Text("Surface")
-                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: colWidth, alignment: .trailing)
                                     .font(.subheadline)
                                     .padding(.trailing, 2)
                                     .foregroundColor(infoFontColor)
-                                    .frame(width: colWidth, alignment: .trailing)
                                 Text("\(groundElevation) ft")
                                     .font(.subheadline)
-                                    .padding(.leading, 2)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .padding(.vertical, rowVerticalPadding)
-                            
+
                             HStack {
                                 Text("Height")
-                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: colWidth, alignment: .trailing)
                                     .font(.subheadline)
                                     .padding(.trailing, 2)
                                     .foregroundColor(infoFontColor)
-                                    .frame(width: colWidth, alignment: .trailing)
                                 Text("\(Int(pilotTrack.altitude) - groundElevation) ft")
                                     .font(.subheadline)
-                                    .padding(.leading, 2)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .padding(.vertical, rowVerticalPadding)
                         }
-                        
+
                         if let message = pilotTrack.message, !message.isEmpty {
                             HStack {
                                 Text("Message")
-                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: colWidth, alignment: .trailing)
                                     .font(.subheadline)
                                     .padding(.trailing, 2)
                                     .foregroundColor(infoFontColor)
-                                    .frame(width: colWidth, alignment: .trailing)
                                 Text(message)
                                     .font(.subheadline)
-                                    .padding(.leading, 2)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .padding(.vertical, rowVerticalPadding)
                         }
-                        
                     }
                 }
-                
+
                 Section(header: Text("Track")
                     .font(.headline)
                     .foregroundColor(sectionHeaderColor)
@@ -315,13 +348,17 @@ struct PilotTrackNodeView: View {
                             .font(.subheadline)
                             .foregroundColor(rowHeaderColor)
                     }
-                    Button(action: openGoogleMaps) {
+                    Button(action: {
+                        openGoogleMaps(latitude: pilotTrack.latitude, longitude: pilotTrack.longitude)
+                    }) {
                         Text("Open track point in Google Maps")
                             .multilineTextAlignment(.trailing)
                             .font(.subheadline)
                             .foregroundColor(rowHeaderColor)
                     }
-                    Button(action: openAppleMaps) {
+                    Button(action: {
+                        openAppleMaps(latitude: pilotTrack.latitude, longitude: pilotTrack.longitude)
+                    }) {
                         Text("Open track point in Apple Maps")
                             .multilineTextAlignment(.trailing)
                             .font(.subheadline)
@@ -330,7 +367,11 @@ struct PilotTrackNodeView: View {
                 }
             }
             .padding(0)
+            
             .onAppear {
+                if let index = sameDayTracks.firstIndex(where: { $0.id == originalPilotTrack.id }) {
+                    currentTrackIndex = index // Match initial view to correct track
+                }
                 fetchGroundElevation(latitude: pilotTrack.latitude, longitude: pilotTrack.longitude)
             }
         }
@@ -397,19 +438,16 @@ struct PilotTrackNodeView: View {
         return (flightStartDateTime, flightLatestDateTime, formattedFlightDuration, startToEndDistance, maxAltitude, totalDistance)
     }
     
-    private func openGoogleMaps() {
-        let latitude = pilotTrack.latitude
-        let longitude = pilotTrack.longitude
+    private func openGoogleMaps(latitude: Double, longitude: Double) {
         if let url = URL(string: "https://www.google.com/maps/search/?api=1&query=\(latitude),\(longitude)") {
             UIApplication.shared.open(url)
         }
     }
     
-    private func openAppleMaps() {
-        let latitude = pilotTrack.latitude
-        let longitude = pilotTrack.longitude
+    private func openAppleMaps(latitude: Double, longitude: Double) {
         if let url = URL(string: "https://maps.apple.com/?q=Track&ll=\(latitude),\(longitude)") {
             UIApplication.shared.open(url)
         }
     }
 }
+

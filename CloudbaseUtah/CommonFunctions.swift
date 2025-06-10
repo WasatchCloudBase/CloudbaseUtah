@@ -1,7 +1,11 @@
 import SwiftUI
 import Foundation
 import SafariServices
+#if os(macOS)
+import AppKit
+#elseif os(iOS)
 import UIKit
+#endif
 import MapKit
 
 // Common utility functions

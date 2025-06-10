@@ -14,6 +14,9 @@ let toolbarFontColor: Color = .sky
 let toolbarActiveImageColor: Color = .white
 let toolbarActiveFontColor: Color = .white
 
+// Navigation bar (e.g., next/back nodes on pilot track detail)
+let navigationBackgroundColor: Color = .darksky
+
 // View page colors
 let rowHeaderColor: Color = .sky
 let sectionHeaderColor: Color = .white

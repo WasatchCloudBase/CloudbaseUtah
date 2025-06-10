@@ -1,7 +1,11 @@
 import SwiftUI
 import MapKit
 import Combine
+#if os(macOS)
+import AppKit
+#elseif os(iOS)
 import UIKit
+#endif
 import CoreGraphics
 import CoreLocation
 import Foundation
@@ -117,6 +121,13 @@ struct MapView: UIViewRepresentable {
                 mapView.addOverlay(polyline)
             }
 
+            // Partition tracks by display priority
+            var emergencyTracks: [PilotTracks] = []
+            var messageTracks: [PilotTracks] = []
+            var finishTracks: [PilotTracks] = []
+            var firstTracks: [PilotTracks] = []
+            var normalTracks: [PilotTracks] = []
+
             for (index, track) in sorted.enumerated() {
                 guard addedTrackIDs.insert(track.id).inserted else { continue }
 
@@ -128,20 +139,42 @@ struct MapView: UIViewRepresentable {
 
                 if !showAllMarkers && isNormalNode { continue }
 
-                let annotation = PilotTrackAnnotation(
-                    coordinate: CLLocationCoordinate2D(latitude: track.latitude, longitude: track.longitude),
-                    title: track.pilotName.components(separatedBy: " ").first ?? track.pilotName,
-                    subtitle: DateFormatter.localizedString(from: track.dateTime, dateStyle: .none, timeStyle: .short),
-                    annotationType: "pilot",
-                    pilotTrack: track,
-                    pilotName: track.pilotName,
-                    isFirst: isFirst,
-                    isLast: isLast,
-                    isEmergency: isEmergency,
-                    hasMessage: hasMessage
-                )
+                if isEmergency {
+                    emergencyTracks.append(track)
+                } else if hasMessage {
+                    messageTracks.append(track)
+                } else if isLast {
+                    finishTracks.append(track)
+                } else if isFirst {
+                    firstTracks.append(track)
+                } else {
+                    normalTracks.append(track)
+                }
+            }
 
-                mapView.addAnnotation(annotation)
+            // Add annotations in priority order
+            for group in [emergencyTracks, messageTracks, finishTracks, firstTracks, normalTracks] {
+                for track in group {
+                    let index = sorted.firstIndex(where: { $0.id == track.id }) ?? 0
+                    let isFirst = index == 0
+                    let isLast = index == sorted.count - 1
+                    let isEmergency = track.inEmergency == true
+                    let hasMessage = !(track.message?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+
+                    let annotation = PilotTrackAnnotation(
+                        coordinate: CLLocationCoordinate2D(latitude: track.latitude, longitude: track.longitude),
+                        title: track.pilotName.components(separatedBy: " ").first ?? track.pilotName,
+                        subtitle: DateFormatter.localizedString(from: track.dateTime, dateStyle: .none, timeStyle: .short),
+                        annotationType: "pilot",
+                        pilotTrack: track,
+                        pilotName: track.pilotName,
+                        isFirst: isFirst,
+                        isLast: isLast,
+                        isEmergency: isEmergency,
+                        hasMessage: hasMessage
+                    )
+                    mapView.addAnnotation(annotation)
+                }
             }
 
             // Add arrows between each pair of nodes
@@ -692,7 +725,7 @@ struct MapContainerView: View {
        }
         
        .sheet(item: $selectedPilotTrack) { track in
-           PilotTrackNodeView(pilotTrack: track)
+           PilotTrackNodeView(originalPilotTrack: track)
        }
         
         // Make sure pilot live track view model is published
