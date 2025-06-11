@@ -36,6 +36,7 @@ class ArrowOverlay: NSObject, MKOverlay {
 
 class ArrowOverlayRenderer: MKOverlayRenderer {
     private let arrow: ArrowOverlay
+    var zoomLevel: Double = 0  // Set from outside, e.g., in map delegate
 
     init(arrow: ArrowOverlay) {
         self.arrow = arrow
@@ -44,8 +45,10 @@ class ArrowOverlayRenderer: MKOverlayRenderer {
 
     override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
         let center = point(for: MKMapPoint(arrow.coordinate))
-        let size: CGFloat = CGFloat(arrow.size) * zoomScale * mapPilotAnnotationZoomScaleFactor
         
+        // Use zoomLevel instead of zoomScale directly
+        let sizeFactor: CGFloat = zoomLevelSizeFactor(for: zoomLevel)
+        let size: CGFloat = CGFloat(arrow.size) * zoomLevel * mapPilotAnnotationZoomScaleFactor * sizeFactor
         let path = CGMutablePath()
         path.move(to: CGPoint(x: center.x, y: center.y - size / 2))
         path.addLine(to: CGPoint(x: center.x - size / 2, y: center.y + size / 2))
@@ -62,6 +65,10 @@ class ArrowOverlayRenderer: MKOverlayRenderer {
         context.fillPath()
 
         context.restoreGState()
+    }
+
+    private func zoomLevelSizeFactor(for zoomLevel: Double) -> CGFloat {
+        return min(0.05 * pow(2.0,(20.0 - zoomLevel)), 200)
     }
 }
 
@@ -223,7 +230,10 @@ struct MapView: UIViewRepresentable {
                 renderer.lineWidth = mapPilotTrackWidth
                 return renderer
             } else if let arrow = overlay as? ArrowOverlay {
-                return ArrowOverlayRenderer(arrow: arrow)
+                let renderer = ArrowOverlayRenderer(arrow: arrow)
+                let zoomLevel = log2(360 * (Double(mapView.frame.size.width) / 256) / mapView.region.span.longitudeDelta)
+                renderer.zoomLevel = zoomLevel
+                return renderer
             }
             return MKOverlayRenderer()
         }

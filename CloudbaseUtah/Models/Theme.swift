@@ -107,5 +107,5 @@ let pilotColorPalette: [PlatformColor] = [
     PlatformColor(.orangetheme),
     PlatformColor(.magentatheme),
     PlatformColor(.slime),
-    PlatformColor(.darkgray)
+    PlatformColor(.titanium)
 ]
