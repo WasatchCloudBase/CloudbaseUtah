@@ -1,5 +1,14 @@
 import SwiftUI
 
+// Handle colors based on platform
+#if os(iOS)
+import UIKit
+typealias PlatformColor = UIColor
+#elseif os(macOS)
+import AppKit
+typealias PlatformColor = NSColor
+#endif
+
 // Title bar colors
 let backgroundColor: Color = .black
 let sunImageColor: Color = .sunshine
@@ -39,8 +48,8 @@ let tableSectionDividerColor: Color = .grayslime
 let tableLabelFontColor: Color = .white  // table data color is white, and changed based on conditional formatting
 let tableMajorDividerColor: Color = .titanium
 let tableMinorDividerColor: Color = tableBackgroundColor
-let chartGradientStartColor: Color = Color(.tertiarySystemBackground)
-let chartGradientEndColor: Color = Color(.tertiarySystemBackground)
+let chartGradientStartColor: Color = Color(.darkgray)
+let chartGradientEndColor: Color = Color(.darkgray)
 let chartLineColor: Color = .sky
 
 // Colors of forecast and reading values
@@ -89,14 +98,14 @@ let pilotInEmergencyAnnotationImage: String = "exclamationmark.triangle.fill"
 
 // Pilot track log colors
 // (assigned dynamically to differentiate pilot tracks on map)
-let pilotColorPalette: [UIColor] = [
-    UIColor(.electric),
-    UIColor(.champion),
-    UIColor(.bubblegum),
-    UIColor(.poppy),
-    UIColor(.periwinkle),
-    UIColor(.orangetheme),
-    UIColor(.magentatheme),
-    UIColor(.slime),
-    UIColor(.darkgray)
+let pilotColorPalette: [PlatformColor] = [
+    PlatformColor(.electric),
+    PlatformColor(.champion),
+    PlatformColor(.bubblegum),
+    PlatformColor(.poppy),
+    PlatformColor(.periwinkle),
+    PlatformColor(.orangetheme),
+    PlatformColor(.magentatheme),
+    PlatformColor(.slime),
+    PlatformColor(.darkgray)
 ]

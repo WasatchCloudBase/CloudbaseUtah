@@ -1,6 +1,15 @@
 import SwiftUI
 import MapKit
 
+// Use different time/date change events based on platform
+#if os(iOS)
+import UIKit
+let timeChangeNotification = UIApplication.significantTimeChangeNotification
+#elseif os(macOS)
+import AppKit
+let timeChangeNotification = NSWorkspace.dayDidChangeNotification
+#endif
+
 @main
 struct CloudbaseUtahApp: App {
     @Environment(\.scenePhase) private var scenePhase
