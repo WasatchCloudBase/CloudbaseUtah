@@ -80,7 +80,7 @@ struct MapView: UIViewRepresentable {
         let mapView = MKMapView()
         mapView.delegate = context.coordinator
         mapView.setRegion(region, animated: false)
-        mapView.showsUserLocation = true
+        mapView.showsUserLocation = false
         mapView.isZoomEnabled = true
         mapView.isScrollEnabled = true
         mapView.mapType = mapStyle.toMapType()
@@ -484,7 +484,7 @@ struct MapContainerView: View {
             } else if mapSettingsViewModel.isMapWeatherMode {
                 Map(coordinateRegion: $region,
                     interactionModes: .all,
-                    showsUserLocation: true,
+                    showsUserLocation: false,
                     annotationItems: annotationSourceItemsViewModel.clusteredAnnotationSourceItems)
                 { annotation in
                     MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: annotation.coordinates.latitude, longitude: annotation.coordinates.longitude)) {
@@ -678,7 +678,7 @@ struct MapContainerView: View {
                 else {
                     annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
                     annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
-                    stationLatestReadingsViewModel.reloadLatestReadingsData {
+                    stationLatestReadingsViewModel.getLatestReadingsData {
                         annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
                         annotationSourceItemsViewModel.updateAnnotationSourceItems {
                             annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
@@ -706,7 +706,7 @@ struct MapContainerView: View {
                
                annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
                annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
-               stationLatestReadingsViewModel.reloadLatestReadingsData {
+               stationLatestReadingsViewModel.getLatestReadingsData {
                    annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
                    annotationSourceItemsViewModel.updateAnnotationSourceItems {
                        annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)

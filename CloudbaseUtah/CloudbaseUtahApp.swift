@@ -32,28 +32,10 @@ struct CloudbaseUtahApp: App {
                 .environmentObject(pilotsViewModel)
                 .environmentObject(mapSettingsViewModel)
                 .environment(\.colorScheme, .dark)
-                .onAppear {
-                    loadInitialMetadata()
-                }
-                .onChange(of: refreshMetadata) { _, newValue in
-                    if newValue {
-                        loadInitialMetadata()
-                        refreshMetadata = false
-                    }
-                }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
                     refreshMetadata = true
                 }
         }
-    }
-
-    private func loadInitialMetadata() {
-        liftParametersViewModel.getLiftParameters() {}
-        weatherCodesViewModel.getWeatherCodes() {}
-        sunriseSunsetViewModel.getSunriseSunset() {}
-        sitesViewModel.getSites() {}
-        pilotsViewModel.getPilots() {}
-        initializeLoggingFile()
     }
 }
 

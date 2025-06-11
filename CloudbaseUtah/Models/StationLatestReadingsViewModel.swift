@@ -109,10 +109,10 @@ class StationLatestReadingsViewModel: ObservableObject {
         let stationParameters = mesonetStations.map { "&stid=\($0.readingsStation)" }.joined()
         
         // Get latest readings
-        self.reloadLatestReadingsData {}
+        self.getLatestReadingsData {}
     }
 
-    func reloadLatestReadingsData(completion: @escaping () -> Void) {
+    func getLatestReadingsData(completion: @escaping () -> Void) {
         var combinedReadings: [StationLatestReadings] = []
         let group = DispatchGroup()
 
