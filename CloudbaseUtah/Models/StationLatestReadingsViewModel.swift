@@ -139,6 +139,7 @@ class StationLatestReadingsViewModel: ObservableObject {
     func getLatestMesonetReadings(stationParameters: String, completion: @escaping ([StationLatestReadings]) -> Void) {
         let urlString = latestReadingsAPIHeader + stationParameters + latestReadingsAPITrailer + mesowestAPIToken
         guard let url = URL(string: urlString) else { return }
+        if printReadingsURL { print(url) }
         URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
             DispatchQueue.main.async {
                 guard let self = self, let data = data, error == nil else { return }
@@ -221,6 +222,8 @@ class StationLatestReadingsViewModel: ObservableObject {
                         DispatchQueue.main.async { group.leave() }
                         return
                     }
+                    
+                    if printReadingsURL { print(readingsURL) }
                     
                     URLSession.shared.dataTask(with: readingsURL) { data, response, error in
                         DispatchQueue.main.async {

@@ -42,6 +42,7 @@ class StationReadingsHistoryDataModel: ObservableObject {
             let parameters = "&stid=\(stationID)"
             let urlString = historyReadingsAPIHeader + parameters + historyReadingsAPITrailer + mesowestAPIToken
             let url = URL(string: urlString)!
+            if printReadingsURL { print(url) }
             cancellable = URLSession.shared.dataTaskPublisher(for: url)
                 .map { $0.data }
                 .map { data in
@@ -89,6 +90,7 @@ class StationReadingsHistoryDataModel: ObservableObject {
                 print("Invalid CUASA readings URL")
                 return
             }
+            if printReadingsURL { print(url) }
             URLSession.shared.dataTaskPublisher(for: url)
                 .map { $0.data }
                 .decode(type: [CUASAReadingsData].self, decoder: JSONDecoder())

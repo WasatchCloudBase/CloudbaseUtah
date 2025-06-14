@@ -15,14 +15,44 @@ struct AboutView: View {
                 .bold())
             {
                 VStack(alignment: .leading) {
-                    Text("Contact info")
+                    Text("Developed by Mike Brown")
                         .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
-                    Text("mike.del.brown@gmail.com")
+                    Text("cloudbaseutah@gmail.com")
                         .font(.subheadline)
+                }
+                    
+                //Github repo
+                Button(action: {
+                    if let url = URL(string: cloudbaseUtahGitLink) {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    Text("Cloudbase Utah github repository")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
                 }
             }
             
+            Section(header: Text("Application setup")
+                .font(.subheadline)
+                .foregroundColor(sectionHeaderColor)
+                .bold())
+            {
+                
+                // Force reload app (e.g., metadata changes)
+                Button(action: {
+                    // Trigger a change to appRefreshID to reload metadata by making BaseAppView reappear
+                    refreshMetadata = true
+                }) {
+                    Text("Reload metadata")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                }
+                                
+            }
+            
+
             if devMenuAvailable {
                 
             Section(header: Text("Development Tools")
@@ -30,16 +60,6 @@ struct AboutView: View {
                 .foregroundColor(sectionHeaderColor)
                 .bold())
                 {
-                    
-                    // Force reload app (e.g., metadata changes)
-                    Button(action: {
-                        // Trigger a change to appRefreshID to reload metadata by making BaseAppView reappear
-                        refreshMetadata = true
-                    }) {
-                        Text("Reload metadata changes")
-                            .font(.subheadline)
-                            .foregroundColor(rowHeaderColor)
-                    }
                     
                     // Metadata
                     Button(action: {
@@ -52,18 +72,7 @@ struct AboutView: View {
                             .foregroundColor(rowHeaderColor)
                     }
                     
-                    //Github repo
-                    Button(action: {
-                        if let url = URL(string: cloudbaseUtahGitLink) {
-                            UIApplication.shared.open(url)
-                        }
-                    }) {
-                        Text("Cloudbase Utah github repository")
-                            .font(.subheadline)
-                            .foregroundColor(rowHeaderColor)
-                    }
-                    
-                    // Site coordiunates map
+                    // Site coordinates map
                     NavigationLink(destination: DevSiteCoordView()) {
                         Text("Site coordinates updates")
                             .font(.subheadline)

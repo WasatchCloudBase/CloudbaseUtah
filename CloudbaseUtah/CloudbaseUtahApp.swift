@@ -85,6 +85,7 @@ struct BaseAppView: View {
                 isActive = false
                 metadataLoaded = false
                 loadInitialMetadata()
+                refreshMetadata = false
             }
         }
     }
