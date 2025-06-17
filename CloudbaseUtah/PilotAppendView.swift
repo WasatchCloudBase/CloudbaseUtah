@@ -10,7 +10,7 @@ struct PilotAppendView: View {
     @State private var duplicatePilotError = false
     @State private var duplicateShareURLError = false
     @Environment(\.presentationMode) var presentationMode
-
+    
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
@@ -28,7 +28,7 @@ struct PilotAppendView: View {
             }
             .background(Color.blue.opacity(0.2))
         }
- 
+        
         List {
             
             Section(header: Text("Add new pilot")
@@ -68,7 +68,10 @@ struct PilotAppendView: View {
                             .padding(.top, 0)
                         
                         if showValidationError && !isValidInreachURL(inreachURL) {
-                            Text("URL must be in the format: https://share.garmin.com/<pilot iD>")
+                            Text("URL must be in the format:")
+                                .foregroundColor(warningFontColor)
+                                .font(.caption)
+                            Text("https://share.garmin.com/<pilot ID>")
                                 .foregroundColor(warningFontColor)
                                 .font(.caption)
                         }
@@ -86,24 +89,24 @@ struct PilotAppendView: View {
                             showValidationError = false
                             duplicatePilotError = false
                             duplicateShareURLError = false
-
+                            
                             // Validate required fields
                             let trimmedName = pilotName.trimmingCharacters(in: .whitespacesAndNewlines)
                             let trimmedURL = inreachURL.trimmingCharacters(in: .whitespacesAndNewlines)
-
+                            
                             if trimmedName.isEmpty || !isValidInreachURL(trimmedURL) {
                                 showValidationError = true
                             }
-
+                            
                             // Check for duplicates
                             if pilotsViewModel.pilots.contains(where: { $0.pilotName.caseInsensitiveCompare(trimmedName) == .orderedSame }) {
                                 duplicatePilotError = true
                             }
-
+                            
                             if pilotsViewModel.pilots.contains(where: { $0.trackingShareURL.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(trimmedURL) == .orderedSame }) {
                                 duplicateShareURLError = true
                             }
-
+                            
                             // Return all errors
                             if showValidationError || duplicatePilotError || duplicateShareURLError {
                                 return
@@ -111,7 +114,7 @@ struct PilotAppendView: View {
                             
                             hideKeyboard()
                             statusMessage = "Authenticating..."
-
+                            
                             fetchAccessToken { token in
                                 guard let token = token else {
                                     DispatchQueue.main.async {
@@ -141,6 +144,7 @@ struct PilotAppendView: View {
             
         }
         Spacer()
+        
     }
     
     func isValidInreachURL(_ url: String) -> Bool {
@@ -236,7 +240,7 @@ struct PilotAppendView: View {
             let iat: Date
             let exp: Date
         }
-
+        
         let now = Date()
         let claims = GoogleClaims(
             iss: sa.client_email,
@@ -245,12 +249,12 @@ struct PilotAppendView: View {
             iat: now,
             exp: now.addingTimeInterval(3600)
         )
-
+        
         var jwt = JWT(header: Header(), claims: claims)
-
+        
         // Convert PEM string to Data
         let pemData = Data(sa.private_key.utf8)
-
+        
         // Create a JWTSigner (SwiftJWT 3.x API)
         let signer = JWTSigner.rs256(privateKey: pemData)
         

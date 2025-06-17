@@ -10,6 +10,7 @@ import UIKit
 // This view uses temporary variables while the sheet is open, then publishes when the sheet is closed.
 // This is done to prevent lag on this sheet each time a view item is changed.
 struct MapSettingsView: View {
+    @EnvironmentObject var pilotsViewModel: PilotsViewModel
     @Binding var selectedMapType: CustomMapStyle
     @Binding var pilotTrackDays: Double
     @Binding var mapDisplayMode: MapDisplayMode
@@ -23,6 +24,9 @@ struct MapSettingsView: View {
     @State private var tempMapDisplayMode: MapDisplayMode
     @State private var tempShowSites: Bool
     @State private var tempShowStations: Bool
+    
+    // Trigger sheet navigation
+    @State private var addPilot = false
 
     init(selectedMapType: Binding<CustomMapStyle>,
         pilotTrackDays: Binding<Double>,
@@ -80,26 +84,49 @@ struct MapSettingsView: View {
                 }
                 */
 
-                Section(header: Text("Weather layers")) {
-                    Toggle("Show Sites", isOn: $tempShowSites)
-                    Toggle("Show Stations", isOn: $tempShowStations)
-                }
-
-                Section(header: Text("Pilot track days")) {
-                    VStack(alignment: .trailing) {
-                        Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
-                        HStack {
-                            Text("Today")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Text("+ Yesterday")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                            Text("+ Prior Day")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                if $tempMapDisplayMode.wrappedValue == .weather {
+                    
+                    Section(header: Text("Weather layers")) {
+                        Toggle("Show Sites", isOn: $tempShowSites)
+                        Toggle("Show Stations", isOn: $tempShowStations)
+                    }
+                    
+                } else {
+                    
+                    Section(header: Text("Pilot track days")) {
+                        VStack(alignment: .trailing) {
+                            Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
+                            HStack {
+                                Text("Today")
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Text("+ Yesterday")
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                Text("+ Prior Day")
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
                         }
                     }
+                    
+                    Section(header: Text("Pilots to display")) {
+                        VStack(alignment: .trailing) {
+                            
+                            Button(action: {
+                                addPilot = true
+                            }) {
+                                Text("Add Pilot")
+                                    .foregroundColor(skewTButtonTextColor)
+                                    .padding(8)
+                            }
+                            .frame(width: skewTButtonWidth)
+                            .background(skewTButtonBackgroundColor)
+                            .cornerRadius(8)
+                            .padding(.vertical)
+                        }
+                    }
+                    
                 }
             }
             .padding(.horizontal)
@@ -107,6 +134,7 @@ struct MapSettingsView: View {
             .background(Color(UIColor.systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+        
         .onDisappear {
             // Update the main state variables when the sheet is dismissed
             selectedMapType = tempSelectedMapType
@@ -114,6 +142,12 @@ struct MapSettingsView: View {
             mapDisplayMode = tempMapDisplayMode
             showSites = tempShowSites
             showStations = tempShowStations
+        }
+        
+        .sheet(isPresented: $addPilot, onDismiss: {
+            pilotsViewModel.getPilots() {}
+        }) {
+            PilotAppendView()
         }
     }
 }

@@ -98,13 +98,6 @@ struct AboutView: View {
                             .foregroundColor(rowHeaderColor)
                     }
                     
-                    // Add pilot
-                    NavigationLink(destination:
-                                    PilotAppendView()) {
-                        Text("Add new pilot view")
-                            .font(.subheadline)
-                            .foregroundColor(rowHeaderColor)
-                    }
                 }
             }
         }

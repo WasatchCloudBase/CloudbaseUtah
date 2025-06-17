@@ -9,6 +9,30 @@ struct TopOfLiftDataPoint: Identifiable {
     var altitude: Double
 }
 
+// Simplify view creation for thermal forecast
+struct ThermalCell: View {
+    let text: String
+    let newDateFlag: Bool
+    
+    // these used to live up in SiteForecastView
+    let dataWidth: CGFloat
+    let dataHeight: CGFloat
+    let dividerWidth: CGFloat
+    let dividerColor: Color
+    
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .frame(width: dataWidth)
+            .overlay(
+                Divider()
+                    .frame(width: dividerWidth, height: dataHeight)
+                    .background(dividerColor),
+                alignment: .leading
+            )
+    }
+}
+
 struct SiteForecastView: View {
     @ObservedObject var liftParametersViewModel: LiftParametersViewModel
     @ObservedObject var sunriseSunsetViewModel: SunriseSunsetViewModel
@@ -486,77 +510,121 @@ struct SiteForecastView: View {
                                     ForEach(forecastData.hourly.dateTime?.indices ?? 0..<0, id: \.self) { index in
                                         Group {
                                             if maxPressureReading >= 500 {
-                                                Text("\(forecastData.hourly.thermalVelocity_500hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_500hPa?[index] ?? 0))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_500hPa?[index] ?? 0))
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                                let value = forecastData.hourly.thermalVelocity_500hPa?[index] ?? 0
+                                                let str = value == 0 ? "" : "\(value)"
+                                                let flag = forecastData.hourly.newDateFlag?[index] ?? false
+                                                ThermalCell(
+                                                  text:        str,
+                                                  newDateFlag: flag,
+                                                  dataWidth:   dataWidth,
+                                                  dataHeight:  dataHeight,
+                                                  dividerWidth: dateChangeDividerSize,
+                                                  dividerColor: getDividerColor(flag)
+                                                )
                                             }
-
                                             if maxPressureReading >= 550 {
-                                                Text("\(forecastData.hourly.thermalVelocity_550hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_550hPa?[index] ?? 0))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_550hPa?[index] ?? 0))
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                                let value = forecastData.hourly.thermalVelocity_550hPa?[index] ?? 0
+                                                let str = value == 0 ? "" : "\(value)"
+                                                let flag = forecastData.hourly.newDateFlag?[index] ?? false
+                                                ThermalCell(
+                                                  text:        str,
+                                                  newDateFlag: flag,
+                                                  dataWidth:   dataWidth,
+                                                  dataHeight:  dataHeight,
+                                                  dividerWidth: dateChangeDividerSize,
+                                                  dividerColor: getDividerColor(flag)
+                                                )
                                             }
                                             if maxPressureReading >= 600 {
-                                                Text("\(forecastData.hourly.thermalVelocity_600hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_600hPa?[index] ?? 0))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_600hPa?[index] ?? 0))
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                                let value = forecastData.hourly.thermalVelocity_600hPa?[index] ?? 0
+                                                let str = value == 0 ? "" : "\(value)"
+                                                let flag = forecastData.hourly.newDateFlag?[index] ?? false
+                                                ThermalCell(
+                                                  text:        str,
+                                                  newDateFlag: flag,
+                                                  dataWidth:   dataWidth,
+                                                  dataHeight:  dataHeight,
+                                                  dividerWidth: dateChangeDividerSize,
+                                                  dividerColor: getDividerColor(flag)
+                                                )
                                             }
                                             if maxPressureReading >= 650 {
-                                                Text("\(forecastData.hourly.thermalVelocity_650hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_650hPa?[index] ?? 0))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_650hPa?[index] ?? 0))
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                                let value = forecastData.hourly.thermalVelocity_650hPa?[index] ?? 0
+                                                let str = value == 0 ? "" : "\(value)"
+                                                let flag = forecastData.hourly.newDateFlag?[index] ?? false
+                                                ThermalCell(
+                                                  text:        str,
+                                                  newDateFlag: flag,
+                                                  dataWidth:   dataWidth,
+                                                  dataHeight:  dataHeight,
+                                                  dividerWidth: dateChangeDividerSize,
+                                                  dividerColor: getDividerColor(flag)
+                                                )
                                             }
                                             if maxPressureReading >= 700 {
-                                                Text("\(forecastData.hourly.thermalVelocity_700hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_700hPa?[index] ?? 0))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_700hPa?[index] ?? 0))
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                                let value = forecastData.hourly.thermalVelocity_700hPa?[index] ?? 0
+                                                let str = value == 0 ? "" : "\(value)"
+                                                let flag = forecastData.hourly.newDateFlag?[index] ?? false
+                                                ThermalCell(
+                                                  text:        str,
+                                                  newDateFlag: flag,
+                                                  dataWidth:   dataWidth,
+                                                  dataHeight:  dataHeight,
+                                                  dividerWidth: dateChangeDividerSize,
+                                                  dividerColor: getDividerColor(flag)
+                                                )
                                             }
                                             if maxPressureReading >= 750 {
-                                                Text("\(forecastData.hourly.thermalVelocity_750hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_750hPa?[index] ?? 0))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_750hPa?[index] ?? 0))
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                                let value = forecastData.hourly.thermalVelocity_750hPa?[index] ?? 0
+                                                let str = value == 0 ? "" : "\(value)"
+                                                let flag = forecastData.hourly.newDateFlag?[index] ?? false
+                                                ThermalCell(
+                                                  text:        str,
+                                                  newDateFlag: flag,
+                                                  dataWidth:   dataWidth,
+                                                  dataHeight:  dataHeight,
+                                                  dividerWidth: dateChangeDividerSize,
+                                                  dividerColor: getDividerColor(flag)
+                                                )
                                             }
                                             if maxPressureReading >= 800 {
-                                                Text("\(forecastData.hourly.thermalVelocity_800hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_800hPa?[index] ?? 0))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_800hPa?[index] ?? 0))
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                                let value = forecastData.hourly.thermalVelocity_800hPa?[index] ?? 0
+                                                let str = value == 0 ? "" : "\(value)"
+                                                let flag = forecastData.hourly.newDateFlag?[index] ?? false
+                                                ThermalCell(
+                                                  text:        str,
+                                                  newDateFlag: flag,
+                                                  dataWidth:   dataWidth,
+                                                  dataHeight:  dataHeight,
+                                                  dividerWidth: dateChangeDividerSize,
+                                                  dividerColor: getDividerColor(flag)
+                                                )
                                             }
                                             if maxPressureReading >= 850 {
-                                                Text("\(forecastData.hourly.thermalVelocity_850hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_850hPa?[index] ?? 0))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_850hPa?[index] ?? 0))
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                                let value = forecastData.hourly.thermalVelocity_850hPa?[index] ?? 0
+                                                let str = value == 0 ? "" : "\(value)"
+                                                let flag = forecastData.hourly.newDateFlag?[index] ?? false
+                                                ThermalCell(
+                                                  text:        str,
+                                                  newDateFlag: flag,
+                                                  dataWidth:   dataWidth,
+                                                  dataHeight:  dataHeight,
+                                                  dividerWidth: dateChangeDividerSize,
+                                                  dividerColor: getDividerColor(flag)
+                                                )
                                             }
                                             if maxPressureReading >= 900 {
-                                                Text("\(forecastData.hourly.thermalVelocity_900hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_900hPa?[index] ?? 0))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(thermalColor(forecastData.hourly.thermalVelocity_900hPa?[index] ?? 0))
-                                                    .frame(width: dataWidth)
-                                                    // Display divider when date changes
-                                                    .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
+                                                let value = forecastData.hourly.thermalVelocity_900hPa?[index] ?? 0
+                                                let str = value == 0 ? "" : "\(value)"
+                                                let flag = forecastData.hourly.newDateFlag?[index] ?? false
+                                                ThermalCell(
+                                                  text:        str,
+                                                  newDateFlag: flag,
+                                                  dataWidth:   dataWidth,
+                                                  dataHeight:  dataHeight,
+                                                  dividerWidth: dateChangeDividerSize,
+                                                  dividerColor: getDividerColor(flag)
+                                                )
                                             }
                                         }
                                     }
@@ -616,4 +684,5 @@ struct SiteForecastView: View {
             Text("No data available")
         }
     }
+
 }
