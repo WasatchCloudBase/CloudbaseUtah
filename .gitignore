@@ -1,0 +1,2 @@
+// Files to ignore on git push to remote repo
+service-account.json

@@ -15,6 +15,9 @@
 		4571E3102DF91BF10064CD7C /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 4571E30F2DF91BF10064CD7C /* SDWebImageSwiftUI */; };
 		4571E3122DF91C0E0064CD7C /* SDWebImage in Frameworks */ = {isa = PBXBuildFile; productRef = 4571E3112DF91C0E0064CD7C /* SDWebImage */; };
 		4571E3142DF91C0E0064CD7C /* SDWebImageMapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4571E3132DF91C0E0064CD7C /* SDWebImageMapKit */; };
+		45A3B9E32E0069B00047F7D4 /* SwiftJWT in Frameworks */ = {isa = PBXBuildFile; productRef = 45A3B9E22E0069B00047F7D4 /* SwiftJWT */; };
+		45A3B9E52E00E4BB0047F7D4 /* service-account.json in Resources */ = {isa = PBXBuildFile; fileRef = 45A3B9E42E00E4BB0047F7D4 /* service-account.json */; };
+		45A3B9E62E00E4BB0047F7D4 /* service-account.json in Resources */ = {isa = PBXBuildFile; fileRef = 45A3B9E42E00E4BB0047F7D4 /* service-account.json */; };
 		85DEF3A7792939CF8F3E781D /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B230A66054A288D59DB916C /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework */; };
 		9B49846FE83472CBAD3279FF /* Pods_CloudbaseUtahTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A11BF600A46CB5D2FDDD6C4 /* Pods_CloudbaseUtahTests.framework */; };
 		CF7EC554CE2E110231E21E75 /* Pods_CloudbaseUtah.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5A3DE006FF57B90665038B54 /* Pods_CloudbaseUtah.framework */; };
@@ -55,12 +58,14 @@
 		1A11BF600A46CB5D2FDDD6C4 /* Pods_CloudbaseUtahTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CloudbaseUtahTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F8D3B4BE52EC7CAB933230A /* Pods-CloudbaseUtahTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtahTests.debug.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtahTests/Pods-CloudbaseUtahTests.debug.xcconfig"; sourceTree = "<group>"; };
 		430C5D8F2041BE5E8731A2EB /* Pods-CloudbaseUtahTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtahTests.release.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtahTests/Pods-CloudbaseUtahTests.release.xcconfig"; sourceTree = "<group>"; };
+		452964142E00672700F731B4 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		4571E25C2DF915D30064CD7C /* Cloudbase Utah - Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Cloudbase Utah - Mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4571E26B2DF915D50064CD7C /* Cloudbase Utah - MacTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Cloudbase Utah - MacTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4571E2752DF915D50064CD7C /* Cloudbase Utah - MacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Cloudbase Utah - MacUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4572B6662D7A8B5200B2723D /* CloudbaseUtah.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudbaseUtah.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4572B67A2D7A8B5300B2723D /* CloudbaseUtahTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CloudbaseUtahTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4572B6842D7A8B5300B2723D /* CloudbaseUtahUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CloudbaseUtahUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		45A3B9E42E00E4BB0047F7D4 /* service-account.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "service-account.json"; sourceTree = "<group>"; };
 		5A3DE006FF57B90665038B54 /* Pods_CloudbaseUtah.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CloudbaseUtah.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B230A66054A288D59DB916C /* Pods_CloudbaseUtah_CloudbaseUtahUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CloudbaseUtah_CloudbaseUtahUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		96A4F9D6A4C48C650F194A7B /* Pods-CloudbaseUtah-CloudbaseUtahUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtah-CloudbaseUtahUITests.debug.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtah-CloudbaseUtahUITests/Pods-CloudbaseUtah-CloudbaseUtahUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -149,6 +154,7 @@
 				4526B8C02D9CD8FF001DF2E6 /* SDWebImageMapKit in Frameworks */,
 				451418E82D9CD67300F46C8D /* SDWebImageMapKit in Frameworks */,
 				4526B8BE2D9CD8FF001DF2E6 /* SDWebImage in Frameworks */,
+				45A3B9E32E0069B00047F7D4 /* SwiftJWT in Frameworks */,
 				CF7EC554CE2E110231E21E75 /* Pods_CloudbaseUtah.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -185,6 +191,8 @@
 		4572B65D2D7A8B5200B2723D = {
 			isa = PBXGroup;
 			children = (
+				45A3B9E42E00E4BB0047F7D4 /* service-account.json */,
+				452964142E00672700F731B4 /* .gitignore */,
 				4572B6682D7A8B5200B2723D /* CloudbaseUtah */,
 				4572B67D2D7A8B5300B2723D /* CloudbaseUtahTests */,
 				4572B6872D7A8B5300B2723D /* CloudbaseUtahUITests */,
@@ -371,7 +379,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1640;
-				LastUpgradeCheck = 1630;
+				LastUpgradeCheck = 1640;
 				TargetAttributes = {
 					4571E25B2DF915D30064CD7C = {
 						CreatedOnToolsVersion = 16.4;
@@ -409,6 +417,7 @@
 			packageReferences = (
 				451418E42D9CD67300F46C8D /* XCRemoteSwiftPackageReference "SDWebImage" */,
 				453103262D9CDB450014FF75 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
+				45A3B9E12E0069040047F7D4 /* XCRemoteSwiftPackageReference "Swift-JWT" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4572B6672D7A8B5200B2723D /* Products */;
@@ -430,6 +439,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				45A3B9E62E00E4BB0047F7D4 /* service-account.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -451,6 +461,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				45A3B9E52E00E4BB0047F7D4 /* service-account.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -617,6 +628,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -649,6 +661,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -677,6 +690,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -698,6 +712,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -717,6 +732,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -737,6 +753,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 2764B72323;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -777,7 +794,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtah;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -816,7 +833,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtah;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -886,7 +903,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -1108,6 +1125,14 @@
 				minimumVersion = 3.1.3;
 			};
 		};
+		45A3B9E12E0069040047F7D4 /* XCRemoteSwiftPackageReference "Swift-JWT" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Kitura/Swift-JWT.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1148,6 +1173,11 @@
 		4571E3132DF91C0E0064CD7C /* SDWebImageMapKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SDWebImageMapKit;
+		};
+		45A3B9E22E0069B00047F7D4 /* SwiftJWT */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 45A3B9E12E0069040047F7D4 /* XCRemoteSwiftPackageReference "Swift-JWT" */;
+			productName = SwiftJWT;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

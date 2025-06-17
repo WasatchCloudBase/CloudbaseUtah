@@ -423,7 +423,7 @@ struct SiteForecastView: View {
                                         .opacity(areaChartOpacity)
                                 )
                                 .background(tableBackgroundColor)
- 
+
                                 // Surface wind and Top of Lift forecast table
                                 LazyHGrid(rows: surfaceGridItems, spacing: 0) {
                                     ForEach(forecastData.hourly.dateTime?.indices ?? 0..<0, id: \.self) { index in
@@ -493,6 +493,7 @@ struct SiteForecastView: View {
                                                     // Display divider when date changes
                                                     .overlay ( Divider() .frame(width: dateChangeDividerSize, height: dataHeight) .background(getDividerColor(forecastData.hourly.newDateFlag?[index] ?? true)), alignment: .leading )
                                             }
+
                                             if maxPressureReading >= 550 {
                                                 Text("\(forecastData.hourly.thermalVelocity_550hPa?[index] == 0 ? "" : String(forecastData.hourly.thermalVelocity_550hPa?[index] ?? 0))")
                                                     .font(.caption)
