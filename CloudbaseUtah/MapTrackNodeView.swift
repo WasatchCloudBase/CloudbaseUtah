@@ -19,6 +19,12 @@ struct PilotTrackNodeView: View {
     @State private var cancellables = Set<AnyCancellable>()
     @State private var currentTrackIndex: Int = 0
 
+    // Set a live timer to track time elapsed since the last track update
+    @State private var now = Date()
+    private let timer = Timer
+        .publish(every: 1, on: .main, in: .common)
+        .autoconnect()
+    
     var body: some View {
         let colWidth: CGFloat = 140
         let rowVerticalPadding: CGFloat = 4
@@ -44,7 +50,7 @@ struct PilotTrackNodeView: View {
             formatter.dateFormat = "h:mm a"
             return formatter.string(from: pilotTrack.dateTime)
         }
-
+        
         VStack(alignment: .leading) {
             HStack {
                 Button(action: {
@@ -230,13 +236,41 @@ struct PilotTrackNodeView: View {
                         }
                     }
                 }
-
+                
                 Section(header: Text("Track")
                     .font(.headline)
                     .foregroundColor(sectionHeaderColor)
-                    .bold())
+                    .bold()
+                    .onReceive(timer) { now = $0 })  // Track current time to calculate elapsed time since track update
                 {
                     VStack(alignment: .leading, spacing: 0) {
+                        
+                        HStack {
+                            Text("Track last updated")
+                                .multilineTextAlignment(.trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                                .frame(width: colWidth, alignment: .trailing)
+                            
+                            // calculate time interval
+                            let interval = now.timeIntervalSince(flightLatestDateTime)
+                            let days = Int(interval) / 86_400
+                            let hours = (Int(interval) % 86_400) / 3_600
+                            let minutes = (Int(interval) % 3_600) / 60
+                            let seconds = Int(interval) % 60
+                            
+                            if days > 0 {
+                                Text("\(days) d \(hours):\(String(format: "%02d", minutes)):\(String(format: "%02d", seconds))")
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            } else {
+                                Text("\(hours):\(String(format: "%02d", minutes)):\(String(format: "%02d", seconds))")
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .padding(.vertical, rowVerticalPadding)
                         
                         HStack {
                             Text("Start")
