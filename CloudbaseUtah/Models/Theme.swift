@@ -63,8 +63,8 @@ let displayValueRed: Color = .displayValueRed
 let repeatDateTimeColor: Color = .titanium
 
 // Map page colors
-let layersIconColor: Color = toolbarImageColor
-let layersFontColor: Color = toolbarFontColor
+let layersIconColor: Color = .sky
+let layersFontColor: Color = .sky
 let layersIconBackgroundColor: Color = .black
 let cameraAnnotationColor: Color = .white
 let cameraAnnotationTextColor: Color = cameraAnnotationColor

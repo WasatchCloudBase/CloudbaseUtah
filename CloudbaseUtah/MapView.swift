@@ -479,15 +479,23 @@ struct MapContainerView: View {
             
             // Create map for pilot tracks
             if mapSettingsViewModel.isMapTrackingMode {
+                
+                let selectedNames = Set(mapSettingsViewModel.selectedPilots.map { $0.pilotName })
+                let filteredTracks: [PilotTracks] =
+                    selectedNames.isEmpty
+                      ? pilotTracksViewModel.pilotTracks
+                      : pilotTracksViewModel.pilotTracks.filter { selectedNames.contains($0.pilotName) }
+
                 MapView(
                     region: $region,
                     zoomLevel: $currentZoomLevel,
                     mapStyle: $mapSettingsViewModel.selectedMapType,
-                    pilotTracks: pilotTracksViewModel.pilotTracks,
+                    pilotTracks: filteredTracks,
                     onPilotSelected: { track in
                         selectedPilotTrack = track
                     }
-                )                .cornerRadius(10)
+                )
+                .cornerRadius(10)
                 .padding(.vertical, 8)
                 
             // Create map for weather
@@ -610,8 +618,12 @@ struct MapContainerView: View {
                                 pilotTrackDays: $mapSettingsViewModel.pilotTrackDays,
                                 mapDisplayMode: $mapSettingsViewModel.mapDisplayMode,
                                 showSites: $mapSettingsViewModel.showSites,
-                                showStations: $mapSettingsViewModel.showStations
+                                showStations: $mapSettingsViewModel.showStations,
+                                selectedPilots: $mapSettingsViewModel.selectedPilots
                             )
+                            .interactiveDismissDisabled(true) // Disables swipe-to-dismiss (force use of back button)\
+                            .environmentObject(pilotsViewModel)
+                            
                         }
                     }
                     .padding()
@@ -665,15 +677,16 @@ struct MapContainerView: View {
                          */
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 24)
+                .padding(.horizontal, 8)
+                .padding(.bottom, 16)
             }
         }
         .onChange(of: MapSettingsState(pilotTrackDays: mapSettingsViewModel.pilotTrackDays,
                                        mapDisplayMode: mapSettingsViewModel.mapDisplayMode,
                                        showSites: mapSettingsViewModel.showSites,
                                        showStations: mapSettingsViewModel.showStations,
-                                       scenePhase: scenePhase
+                                       scenePhase: scenePhase,
+                                       selectedPilots: mapSettingsViewModel.selectedPilots
                                       )) {
             // Check all changes together to only execute updateMapAnnotations once
             if scenePhase == .active {

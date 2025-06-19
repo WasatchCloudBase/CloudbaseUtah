@@ -31,16 +31,15 @@ struct PilotAppendView: View {
         
         List {
             
-            Section(header: Text("Add new pilot")
-                .font(.headline)
-                .foregroundColor(sectionHeaderColor)
-                .bold()) {
+            Section(header: Text("Add new pilot")) {
                     
                     VStack(alignment: .leading) {
                         Text("Pilot name")
+                            .font(.subheadline)
                             .padding(.bottom, 0)
                         
                         TextField("Pilot Name", text: $pilotName)
+                            .font(.subheadline)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .cornerRadius(8)
                             .padding(.top, 0)
@@ -59,10 +58,12 @@ struct PilotAppendView: View {
                         }
                         
                         Text("InReach Share URL")
+                            .font(.subheadline)
                             .padding(.top)
                             .padding(.bottom, 0)
                         
                         TextField("https://share.garmin.com/<pilot id>", text: $inreachURL)
+                            .font(.subheadline)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .cornerRadius(8)
                             .padding(.top, 0)

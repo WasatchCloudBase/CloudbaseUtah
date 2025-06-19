@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 
 // Get pilots for live tracking
-struct Pilots: Codable, Identifiable {
+struct Pilots: Codable, Identifiable, Equatable {
     var id = UUID()
     var pilotName: String
     var trackingShareURL: String

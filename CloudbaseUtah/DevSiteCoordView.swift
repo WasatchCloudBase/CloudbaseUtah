@@ -36,6 +36,7 @@ struct DevSiteCoordView: View {
             .sheet(isPresented: $showMapSheet) {
                 if let selectedSite = selectedSite {
                     SiteMapView(site: selectedSite, coordinateRegion: $coordinateRegion)
+                        .interactiveDismissDisabled(true) // ← disables swipe-to-dismiss
                 } else {
                     Text("No selected site found")
                 }

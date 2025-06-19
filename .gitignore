@@ -1,2 +1,8 @@
 // Files to ignore on git push to remote repo
+
+# private key info
 service-account.json
+
+# Xcode user data (UI state, breakpoints, etc)
+xcuserdata/
+*.xcuserstate
