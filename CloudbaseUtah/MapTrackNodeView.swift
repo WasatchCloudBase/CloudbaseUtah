@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 import Combine
 import Foundation
+import Charts
 
 // Structure to process API call to elevation for a set of coordinates
 struct ElevationResponse: Codable {
@@ -15,7 +16,8 @@ struct PilotTrackNodeView: View {
 
     let originalPilotTrack: PilotTracks
     
-    @State private var groundElevation: Int? = 0
+    @State private var currentNodeGroundElevation: Int? = 0
+    @State private var groundElevations: [Int] = []
     @State private var cancellables = Set<AnyCancellable>()
     @State private var currentTrackIndex: Int = 0
 
@@ -127,14 +129,14 @@ struct PilotTrackNodeView: View {
                             .padding(.vertical, rowVerticalPadding)
                     }
                 }
-
+                
                 Section(header: Text("Track point")
                     .font(.headline)
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
                     VStack(alignment: .leading, spacing: 0) {
-
+                        
                         HStack {
                             Text("Date")
                                 .frame(width: colWidth, alignment: .trailing)
@@ -146,7 +148,7 @@ struct PilotTrackNodeView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-
+                        
                         HStack {
                             Text("Time")
                                 .frame(width: colWidth, alignment: .trailing)
@@ -158,7 +160,7 @@ struct PilotTrackNodeView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-
+                        
                         HStack {
                             Text("Coordinates")
                                 .frame(width: colWidth, alignment: .trailing)
@@ -170,7 +172,7 @@ struct PilotTrackNodeView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-
+                        
                         HStack {
                             Text("Speed")
                                 .frame(width: colWidth, alignment: .trailing)
@@ -182,7 +184,7 @@ struct PilotTrackNodeView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-
+                        
                         HStack {
                             Text("Altitude")
                                 .frame(width: colWidth, alignment: .trailing)
@@ -194,8 +196,8 @@ struct PilotTrackNodeView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-
-                        if let groundElevation = groundElevation {
+                        
+                        if let groundElevation = currentNodeGroundElevation {
                             HStack {
                                 Text("Surface")
                                     .frame(width: colWidth, alignment: .trailing)
@@ -207,7 +209,7 @@ struct PilotTrackNodeView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .padding(.vertical, rowVerticalPadding)
-
+                            
                             HStack {
                                 Text("Height")
                                     .frame(width: colWidth, alignment: .trailing)
@@ -220,7 +222,7 @@ struct PilotTrackNodeView: View {
                             }
                             .padding(.vertical, rowVerticalPadding)
                         }
-
+                        
                         if let message = pilotTrack.message, !message.isEmpty {
                             HStack {
                                 Text("Message")
@@ -327,7 +329,7 @@ struct PilotTrackNodeView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-
+                        
                         HStack {
                             Text("Distance flown")
                                 .multilineTextAlignment(.trailing)
@@ -341,7 +343,7 @@ struct PilotTrackNodeView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, rowVerticalPadding)
-
+                        
                         HStack {
                             Text("Start to end")
                                 .multilineTextAlignment(.trailing)
@@ -358,12 +360,28 @@ struct PilotTrackNodeView: View {
                     }
                 }
                 
+                // ─────────────── Elevation chart ───────────────
+                Section(header: Text("Track Elevation Chart")
+                    .font(.headline)
+                    .foregroundColor(sectionHeaderColor)
+                    .bold())
+                {
+                    
+                    if sameDayTracks.count == groundElevations.count {
+                        ElevationChartView(
+                            tracks: sameDayTracks,
+                            groundElevations: groundElevations,
+                            selectedTime: pilotTrack.dateTime
+                        )
+                    }
+                }
+                
                 Section(header: Text("Links")
                     .font(.headline)
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
-
+                    
                     Button(action: {
                         if let url = URL(string: trackingShareURL) {
                             UIApplication.shared.open(url)
@@ -407,6 +425,7 @@ struct PilotTrackNodeView: View {
                     currentTrackIndex = index // Match initial view to correct track
                 }
                 fetchGroundElevation(latitude: pilotTrack.latitude, longitude: pilotTrack.longitude)
+                fetchAllGroundElevations(for: sameDayTracks)
             }
         }
         Spacer()
@@ -423,7 +442,36 @@ struct PilotTrackNodeView: View {
             .replaceError(with: nil)
             .receive(on: DispatchQueue.main)
             .sink { elevation in
-                self.groundElevation = convertMetersToFeet(elevation ?? 0)
+                self.currentNodeGroundElevation = convertMetersToFeet(elevation ?? 0)
+            }
+            .store(in: &cancellables)
+    }
+    
+    // fetch elevations for array of points in one request
+    private func fetchAllGroundElevations(for tracks: [PilotTracks]) {
+        // build comma-separated latitude and longitude lists
+        let latList = tracks.map { "\($0.latitude)" }.joined(separator: ",")
+        let lonList = tracks.map { "\($0.longitude)" }.joined(separator: ",")
+
+        let urlString = "https://api.open-meteo.com/v1/elevation?latitude=\(latList)&longitude=\(lonList)"
+        guard let url = URL(string: urlString) else { return }
+
+        struct MultiElevationResponse: Codable {
+            let elevation: [Double]    // meters
+        }
+
+        URLSession.shared.dataTaskPublisher(for: url)
+            .map(\.data)
+            .decode(type: MultiElevationResponse.self, decoder: JSONDecoder())
+            .map { response in
+                // convert each meter value to feet
+                response.elevation.map { Int(convertMetersToFeet($0)) }
+            }
+            .replaceError(with: [])
+            .receive(on: DispatchQueue.main)
+            .sink { elevations in
+                // store the parallel array of ground elevations
+                self.groundElevations = elevations
             }
             .store(in: &cancellables)
     }
@@ -485,3 +533,81 @@ struct PilotTrackNodeView: View {
     }
 }
 
+struct ElevationChartView: View {
+    let tracks: [PilotTracks]         // your time‐sorted same-day tracks
+    let groundElevations: [Int]       // parallels `tracks`
+    let selectedTime: Date
+    
+    // ← Declare the formatter here so it's visible throughout the struct
+    private let decimalFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.groupingSeparator = ","
+        return f
+    }()
+
+
+    var body: some View {
+        Chart {
+            // Ground elevation area chart
+            ForEach(Array(tracks.enumerated()), id: \.offset) { idx, track in
+                AreaMark(
+                    x: .value("Time", track.dateTime),
+                    y: .value("Ground Elevation", groundElevations[idx])
+                )
+                // give it a slight opacity
+                .opacity(0.3)
+                // can also tint with a named color:
+                //.foregroundStyle(.blue.gradient)
+            }
+
+            // Pilot altitude line chart
+            ForEach(tracks) { track in
+                LineMark(
+                    x: .value("Time", track.dateTime),
+                    y: .value("Pilot Altitude", track.altitude)
+                )
+                .lineStyle(StrokeStyle(lineWidth: 2))
+                // optional: color the line
+                //.foregroundStyle(.red)
+            }
+
+            //selected node indicator (vertical line)
+            RuleMark(x: .value("Selected", selectedTime))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
+        }
+        
+        .chartXAxis {
+            AxisMarks(values: .automatic(desiredCount: 6)) { value in
+                AxisGridLine()    // optional grid lines
+                AxisTick()
+                AxisValueLabel {
+                    // format Date → “12 pm”
+                    if let date = value.as(Date.self) {
+                        let hour = Calendar.current.component(.hour, from: date) % 12
+                        let displayHour = hour == 0 ? 12 : hour
+                        let isAM = Calendar.current.component(.hour, from: date) < 12
+                        Text("\(displayHour) \(isAM ? "am" : "pm")")
+                    }
+                }
+            }
+        }
+
+        .chartYAxis {
+            AxisMarks(position: .leading) { value in
+                AxisGridLine()
+                AxisTick()
+                AxisValueLabel {
+                    if let number = value.as(Double.self) {
+                        // divide by 1,000 and round
+                        let thousands = Int((number / 1_000).rounded())
+                        Text("\(thousands)k ft")
+                    }
+                }
+            }
+        }
+        .frame(height: 220)
+        .padding(.horizontal, 0)
+        .padding(.vertical, 8)
+    }
+}
