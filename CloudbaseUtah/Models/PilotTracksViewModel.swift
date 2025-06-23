@@ -140,7 +140,7 @@ class PilotTracksViewModel: ObservableObject {
             }
 
             // Update name if track uses a different name
-            if trackPilotName != pilotName {
+            if trackPilotName.lowercased() != pilotName.lowercased() {
                 trackPilotName = "\(trackPilotName) (\(pilotName))"
             }
                 

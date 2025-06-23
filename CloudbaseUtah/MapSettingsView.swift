@@ -17,6 +17,7 @@ struct MapSettingsView: View {
     @Binding var showStations: Bool
     @Binding var selectedPilots: [Pilots]
     @EnvironmentObject var pilotsViewModel: PilotsViewModel
+    @EnvironmentObject var pilotTracksViewModel: PilotTracksViewModel
     @Environment(\.presentationMode) var presentationMode
 
     // Temporary state variables
@@ -113,6 +114,16 @@ struct MapSettingsView: View {
                     Section(header: Text("Pilot track days")) {
                         VStack(alignment: .trailing) {
                             Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
+                                .onChange(of: tempPilotTrackDays) { newDays in
+                                    // Refresh tracks for each pilot with the updated days
+                                    for pilot in pilotsViewModel.pilots {
+                                        pilotTracksViewModel.getPilotTrackingData(
+                                            pilotName: pilot.pilotName,
+                                            trackingURL: pilot.trackingFeedURL,
+                                            days: newDays
+                                        ) { }
+                                    }
+                                }
                             HStack {
                                 Text("Today")
                                     .font(.subheadline)
@@ -171,6 +182,10 @@ struct MapSettingsView: View {
 
                             // Pilot checkboxes
                             ForEach(pilotsViewModel.pilots.sorted { $0.pilotName.localizedCaseInsensitiveCompare($1.pilotName) == .orderedAscending }) { pilot in
+                                
+                                // determine if this pilot has any tracks
+                                let hasTrack = pilotTracksViewModel.pilotTracks.contains { $0.pilotName == pilot.pilotName }
+                                                  
                                 Button(action: {
                                     if selectedPilotIDs.contains(pilot.id) {
                                         selectedPilotIDs.remove(pilot.id)
@@ -180,9 +195,12 @@ struct MapSettingsView: View {
                                 }) {
                                     HStack {
                                         Image(systemName: selectedPilotIDs.contains(pilot.id) ? "checkmark.square" : "square")
-                                            .foregroundColor(.blue)
+                                        // gray out if no track
+                                            .foregroundColor(hasTrack ? pilotActiveFontColor : pilotInactiveFontColor)
                                         Text(pilot.pilotName)
-                                            .foregroundColor(.primary)
+                                        // gray out if no track
+                                            .foregroundColor(hasTrack ? pilotActiveFontColor : pilotInactiveFontColor)
+
                                         Spacer()
                                     }
                                     .contentShape(Rectangle()) // Ensures only the intended area is tappable

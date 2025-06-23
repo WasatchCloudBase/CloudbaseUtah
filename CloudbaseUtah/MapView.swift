@@ -278,27 +278,37 @@ struct MapView: UIViewRepresentable {
 
             // Overlay icon for emergency/message/first/last
             if trackNodeType != "normal" {
-                let symbolName: String?
+                let imageName: UIImage?
+                var imageSizeFactor: CGFloat = 1.0
                 if pilotAnnotation.isEmergency {
-                    symbolName = pilotInEmergencyAnnotationImage
+                    imageName = pilotInEmergencyAnnotationImage
                     dot.backgroundColor = UIColor(pilotEmergencyAnnotationColor)
                 } else if pilotAnnotation.hasMessage {
-                    symbolName = pilotMessageAnnotationImage
+                    imageName = pilotMessageAnnotationImage
                 } else if pilotAnnotation.isFirst {
-                    symbolName = pilotLaunchAnnotationImage
+                    imageName = pilotLaunchAnnotationImage
                 } else {
-                    symbolName = pilotLatestAnnotationImage
+                    imageName = pilotLatestAnnotationImage
+                    imageSizeFactor = 2.5
                 }
 
-                if let symbolName = symbolName, let image = UIImage(systemName: symbolName) {
-                    let imageView = UIImageView(image: image)
+                if let imageName = imageName {
+                    let imageView = UIImageView(image: imageName.withRenderingMode(.alwaysTemplate))
                     imageView.tintColor = .white
                     imageView.contentMode = .scaleAspectFit
-                    let imageInset: CGFloat = dotDiameter * 0.15
-                    let imageSize = dotDiameter - 2 * imageInset
-                    imageView.frame = CGRect(x: imageInset, y: imageInset, width: imageSize, height: imageSize)
+                    imageView.translatesAutoresizingMaskIntoConstraints = false
                     dot.addSubview(imageView)
-                }
+
+                    // calculate the size you want:
+                    let baseInset = dotDiameter * 0.15
+                    let imageSize = (dotDiameter - (2 * baseInset)) * imageSizeFactor
+
+                    NSLayoutConstraint.activate([
+                        imageView.widthAnchor.constraint(equalToConstant: imageSize),
+                        imageView.heightAnchor.constraint(equalToConstant: imageSize),
+                        imageView.centerXAnchor.constraint(equalTo: dot.centerXAnchor),
+                        imageView.centerYAnchor.constraint(equalTo: dot.centerYAnchor),
+                    ])                }
             }
 
             // Label
@@ -623,6 +633,7 @@ struct MapContainerView: View {
                             )
                             .interactiveDismissDisabled(true) // Disables swipe-to-dismiss (force use of back button)\
                             .environmentObject(pilotsViewModel)
+                            .environmentObject(pilotTracksViewModel)
                             
                         }
                     }

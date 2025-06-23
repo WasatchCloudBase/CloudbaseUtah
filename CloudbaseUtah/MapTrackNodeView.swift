@@ -360,7 +360,7 @@ struct PilotTrackNodeView: View {
                     }
                 }
                 
-                // ─────────────── Elevation chart ───────────────
+                // Elevation chart
                 Section(header: Text("Track Elevation Chart")
                     .font(.headline)
                     .foregroundColor(sectionHeaderColor)
@@ -534,11 +534,29 @@ struct PilotTrackNodeView: View {
 }
 
 struct ElevationChartView: View {
-    let tracks: [PilotTracks]         // your time‐sorted same-day tracks
+    let tracks: [PilotTracks]         // time‐sorted same-day tracks
     let groundElevations: [Int]       // parallels `tracks`
     let selectedTime: Date
-    
-    // ← Declare the formatter here so it's visible throughout the struct
+
+    // Compute all Y values (ground + pilot altitudes)
+    private var allYValues: [Int] {
+        let pilotAltitudes = tracks.map { Int($0.altitude) }
+        return groundElevations + pilotAltitudes
+    }
+
+    // Truncate down to nearest 1,000 ft
+    private var yMin: Int {
+        let rawMin = allYValues.min() ?? 0
+        return (rawMin / 1_000) * 1_000
+    }
+
+    // Round up to next 1,000 ft
+    private var yMax: Int {
+        let rawMax = allYValues.max() ?? 0
+        return ((rawMax + 999) / 1_000) * 1_000
+    }
+
+    // Formatter for axis labels
     private let decimalFormatter: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
@@ -546,60 +564,64 @@ struct ElevationChartView: View {
         return f
     }()
 
-
     var body: some View {
+        
         Chart {
-            // Ground elevation area chart
+            // Ground elevation area, with explicit baseline
             ForEach(Array(tracks.enumerated()), id: \.offset) { idx, track in
                 AreaMark(
                     x: .value("Time", track.dateTime),
-                    y: .value("Ground Elevation", groundElevations[idx])
+                    yStart: .value("Baseline", yMin),
+                    yEnd: .value("Ground Elevation", groundElevations[idx])
                 )
-                // give it a slight opacity
-                .opacity(0.3)
-                // can also tint with a named color:
-                //.foregroundStyle(.blue.gradient)
+                .opacity(0.2)
             }
-
-            // Pilot altitude line chart
+ 
+            // Pilot altitude line
             ForEach(tracks) { track in
                 LineMark(
                     x: .value("Time", track.dateTime),
                     y: .value("Pilot Altitude", track.altitude)
                 )
-                .lineStyle(StrokeStyle(lineWidth: 2))
-                // optional: color the line
-                //.foregroundStyle(.red)
+                .lineStyle(StrokeStyle(lineWidth: 1))
+                .foregroundStyle(chartLineColor)
             }
 
-            //selected node indicator (vertical line)
+            // Selected-point indicator
             RuleMark(x: .value("Selected", selectedTime))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
+                .foregroundStyle(chartCurrentNodeColor)
         }
+        .chartYScale(domain: Double(yMin)...Double(yMax))
         
         .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 6)) { value in
-                AxisGridLine()    // optional grid lines
+            AxisMarks(
+                preset: .aligned,
+                values: .automatic(desiredCount: 6)
+            ) { value in
+                AxisGridLine()
                 AxisTick()
                 AxisValueLabel {
-                    // format Date → “12 pm”
                     if let date = value.as(Date.self) {
-                        let hour = Calendar.current.component(.hour, from: date) % 12
+                        let cal = Calendar.current
+                        let hour = cal.component(.hour, from: date) % 12
                         let displayHour = hour == 0 ? 12 : hour
-                        let isAM = Calendar.current.component(.hour, from: date) < 12
-                        Text("\(displayHour) \(isAM ? "am" : "pm")")
+                        let minute = cal.component(.minute, from: date)
+                        let isAM = cal.component(.hour, from: date) < 12
+                        let minuteString = String(format: "%02d", minute)
+                        Text("\(displayHour):\(minuteString)\n\(isAM ? "am" : "pm")")
+                            .multilineTextAlignment(.center)
                     }
                 }
             }
         }
-
+        
         .chartYAxis {
             AxisMarks(position: .leading) { value in
                 AxisGridLine()
                 AxisTick()
                 AxisValueLabel {
                     if let number = value.as(Double.self) {
-                        // divide by 1,000 and round
                         let thousands = Int((number / 1_000).rounded())
                         Text("\(thousands)k ft")
                     }
@@ -607,7 +629,6 @@ struct ElevationChartView: View {
             }
         }
         .frame(height: 220)
-        .padding(.horizontal, 0)
         .padding(.vertical, 8)
     }
 }

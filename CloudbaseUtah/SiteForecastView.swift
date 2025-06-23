@@ -11,6 +11,7 @@ struct TopOfLiftDataPoint: Identifiable {
 
 // Simplify view creation for thermal forecast
 struct ThermalCell: View {
+    let value: Double
     let text: String
     let newDateFlag: Bool
     
@@ -23,6 +24,7 @@ struct ThermalCell: View {
     var body: some View {
         Text(text)
             .font(.caption)
+            .foregroundStyle(thermalColor(value))
             .frame(width: dataWidth)
             .overlay(
                 Divider()
@@ -514,12 +516,13 @@ struct SiteForecastView: View {
                                                 let str = value == 0 ? "" : "\(value)"
                                                 let flag = forecastData.hourly.newDateFlag?[index] ?? false
                                                 ThermalCell(
-                                                  text:        str,
-                                                  newDateFlag: flag,
-                                                  dataWidth:   dataWidth,
-                                                  dataHeight:  dataHeight,
-                                                  dividerWidth: dateChangeDividerSize,
-                                                  dividerColor: getDividerColor(flag)
+                                                    value:          value,
+                                                    text:           str,
+                                                    newDateFlag:    flag,
+                                                    dataWidth:      dataWidth,
+                                                    dataHeight:     dataHeight,
+                                                    dividerWidth:   dateChangeDividerSize,
+                                                    dividerColor:   getDividerColor(flag)
                                                 )
                                             }
                                             if maxPressureReading >= 550 {
@@ -527,12 +530,13 @@ struct SiteForecastView: View {
                                                 let str = value == 0 ? "" : "\(value)"
                                                 let flag = forecastData.hourly.newDateFlag?[index] ?? false
                                                 ThermalCell(
-                                                  text:        str,
-                                                  newDateFlag: flag,
-                                                  dataWidth:   dataWidth,
-                                                  dataHeight:  dataHeight,
-                                                  dividerWidth: dateChangeDividerSize,
-                                                  dividerColor: getDividerColor(flag)
+                                                    value:          value,
+                                                    text:           str,
+                                                    newDateFlag:    flag,
+                                                    dataWidth:      dataWidth,
+                                                    dataHeight:     dataHeight,
+                                                    dividerWidth:   dateChangeDividerSize,
+                                                    dividerColor:   getDividerColor(flag)
                                                 )
                                             }
                                             if maxPressureReading >= 600 {
@@ -540,12 +544,13 @@ struct SiteForecastView: View {
                                                 let str = value == 0 ? "" : "\(value)"
                                                 let flag = forecastData.hourly.newDateFlag?[index] ?? false
                                                 ThermalCell(
-                                                  text:        str,
-                                                  newDateFlag: flag,
-                                                  dataWidth:   dataWidth,
-                                                  dataHeight:  dataHeight,
-                                                  dividerWidth: dateChangeDividerSize,
-                                                  dividerColor: getDividerColor(flag)
+                                                    value:          value,
+                                                    text:           str,
+                                                    newDateFlag:    flag,
+                                                    dataWidth:      dataWidth,
+                                                    dataHeight:     dataHeight,
+                                                    dividerWidth:   dateChangeDividerSize,
+                                                    dividerColor:   getDividerColor(flag)
                                                 )
                                             }
                                             if maxPressureReading >= 650 {
@@ -553,12 +558,13 @@ struct SiteForecastView: View {
                                                 let str = value == 0 ? "" : "\(value)"
                                                 let flag = forecastData.hourly.newDateFlag?[index] ?? false
                                                 ThermalCell(
-                                                  text:        str,
-                                                  newDateFlag: flag,
-                                                  dataWidth:   dataWidth,
-                                                  dataHeight:  dataHeight,
-                                                  dividerWidth: dateChangeDividerSize,
-                                                  dividerColor: getDividerColor(flag)
+                                                    value:          value,
+                                                    text:           str,
+                                                    newDateFlag:    flag,
+                                                    dataWidth:      dataWidth,
+                                                    dataHeight:     dataHeight,
+                                                    dividerWidth:   dateChangeDividerSize,
+                                                    dividerColor:   getDividerColor(flag)
                                                 )
                                             }
                                             if maxPressureReading >= 700 {
@@ -566,12 +572,13 @@ struct SiteForecastView: View {
                                                 let str = value == 0 ? "" : "\(value)"
                                                 let flag = forecastData.hourly.newDateFlag?[index] ?? false
                                                 ThermalCell(
-                                                  text:        str,
-                                                  newDateFlag: flag,
-                                                  dataWidth:   dataWidth,
-                                                  dataHeight:  dataHeight,
-                                                  dividerWidth: dateChangeDividerSize,
-                                                  dividerColor: getDividerColor(flag)
+                                                    value:          value,
+                                                    text:           str,
+                                                    newDateFlag:    flag,
+                                                    dataWidth:      dataWidth,
+                                                    dataHeight:     dataHeight,
+                                                    dividerWidth:   dateChangeDividerSize,
+                                                    dividerColor:   getDividerColor(flag)
                                                 )
                                             }
                                             if maxPressureReading >= 750 {
@@ -579,12 +586,13 @@ struct SiteForecastView: View {
                                                 let str = value == 0 ? "" : "\(value)"
                                                 let flag = forecastData.hourly.newDateFlag?[index] ?? false
                                                 ThermalCell(
-                                                  text:        str,
-                                                  newDateFlag: flag,
-                                                  dataWidth:   dataWidth,
-                                                  dataHeight:  dataHeight,
-                                                  dividerWidth: dateChangeDividerSize,
-                                                  dividerColor: getDividerColor(flag)
+                                                    value:          value,
+                                                    text:           str,
+                                                    newDateFlag:    flag,
+                                                    dataWidth:      dataWidth,
+                                                    dataHeight:     dataHeight,
+                                                    dividerWidth:   dateChangeDividerSize,
+                                                    dividerColor:   getDividerColor(flag)
                                                 )
                                             }
                                             if maxPressureReading >= 800 {
@@ -592,12 +600,13 @@ struct SiteForecastView: View {
                                                 let str = value == 0 ? "" : "\(value)"
                                                 let flag = forecastData.hourly.newDateFlag?[index] ?? false
                                                 ThermalCell(
-                                                  text:        str,
-                                                  newDateFlag: flag,
-                                                  dataWidth:   dataWidth,
-                                                  dataHeight:  dataHeight,
-                                                  dividerWidth: dateChangeDividerSize,
-                                                  dividerColor: getDividerColor(flag)
+                                                    value:          value,
+                                                    text:           str,
+                                                    newDateFlag:    flag,
+                                                    dataWidth:      dataWidth,
+                                                    dataHeight:     dataHeight,
+                                                    dividerWidth:   dateChangeDividerSize,
+                                                    dividerColor:   getDividerColor(flag)
                                                 )
                                             }
                                             if maxPressureReading >= 850 {
@@ -605,12 +614,13 @@ struct SiteForecastView: View {
                                                 let str = value == 0 ? "" : "\(value)"
                                                 let flag = forecastData.hourly.newDateFlag?[index] ?? false
                                                 ThermalCell(
-                                                  text:        str,
-                                                  newDateFlag: flag,
-                                                  dataWidth:   dataWidth,
-                                                  dataHeight:  dataHeight,
-                                                  dividerWidth: dateChangeDividerSize,
-                                                  dividerColor: getDividerColor(flag)
+                                                    value:          value,
+                                                    text:           str,
+                                                    newDateFlag:    flag,
+                                                    dataWidth:      dataWidth,
+                                                    dataHeight:     dataHeight,
+                                                    dividerWidth:   dateChangeDividerSize,
+                                                    dividerColor:   getDividerColor(flag)
                                                 )
                                             }
                                             if maxPressureReading >= 900 {
@@ -618,12 +628,13 @@ struct SiteForecastView: View {
                                                 let str = value == 0 ? "" : "\(value)"
                                                 let flag = forecastData.hourly.newDateFlag?[index] ?? false
                                                 ThermalCell(
-                                                  text:        str,
-                                                  newDateFlag: flag,
-                                                  dataWidth:   dataWidth,
-                                                  dataHeight:  dataHeight,
-                                                  dividerWidth: dateChangeDividerSize,
-                                                  dividerColor: getDividerColor(flag)
+                                                    value:          value,
+                                                    text:           str,
+                                                    newDateFlag:    flag,
+                                                    dataWidth:      dataWidth,
+                                                    dataHeight:     dataHeight,
+                                                    dividerWidth:   dateChangeDividerSize,
+                                                    dividerColor:   getDividerColor(flag)
                                                 )
                                             }
                                         }

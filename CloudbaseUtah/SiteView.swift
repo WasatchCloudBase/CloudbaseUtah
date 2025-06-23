@@ -140,8 +140,8 @@ struct SiteView: View {
         }) { site in
             SiteDetailView(site: site)
         }
-        .onChange(of: scenePhase) {
-            if scenePhase == .active {
+        .onChange(of: scenePhase) { oldValue, newValue in
+            if newValue == .active {
                 stationLatestReadingsViewModel.getLatestReadingsData() {}
             } else {
                 isActive = false

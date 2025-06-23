@@ -51,6 +51,7 @@ let tableMinorDividerColor: Color = tableBackgroundColor
 let chartGradientStartColor: Color = Color(.darkgray)
 let chartGradientEndColor: Color = Color(.darkgray)
 let chartLineColor: Color = .sky
+let chartCurrentNodeColor: Color = .white
 
 // Colors of forecast and reading values
 let displayValueWhite: Color = .white
@@ -83,6 +84,10 @@ let pilotTrackColor: Color = .white
 let defaultAnnotationColor: Color = .black
 let defaultAnnotationTextColor: Color = .white
 
+// Pilot listing colors
+let pilotActiveFontColor: Color = .white
+let pilotInactiveFontColor: Color = .titanium
+
 // Images
 let windArrow: String = "arrow.up"
 let layersImage: String = "square.3.layers.3d"
@@ -91,10 +96,10 @@ let pauseImage: String = "pause.fill"
 let cameraAnnotationImage: String = "camera.circle"
 let defaultAnnotationImage:  String = "questionmark"
 let siteAnnotationImage: String = "roundPGicon"
-let pilotLaunchAnnotationImage: String = "paperplane.fill" // Could use arrow.up.right.circle.fill"
-let pilotLatestAnnotationImage: String = "flag.checkered"  // Needs to be system image based on current code.  "PGIconNoBorder"
-let pilotMessageAnnotationImage: String = "envelope.fill"  // Could use "bubble.fill"
-let pilotInEmergencyAnnotationImage: String = "exclamationmark.triangle.fill"
+let pilotLaunchAnnotationImage: UIImage = UIImage(systemName: "play.fill")! // Could use "dot.circle", "paperplane.fill", "arrow.up.right.circle.fill"
+let pilotLatestAnnotationImage: UIImage = UIImage(imageLiteralResourceName: "PGIconNoBorder") // Could use systemName: "flag.checkered")!
+let pilotMessageAnnotationImage: UIImage = UIImage(systemName: "envelope.fill")! // Could use "bubble.fill"
+let pilotInEmergencyAnnotationImage: UIImage = UIImage(systemName: "exclamationmark.triangle.fill")!
 
 // Pilot track log colors
 // (assigned dynamically to differentiate pilot tracks on map)

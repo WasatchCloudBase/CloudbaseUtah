@@ -241,8 +241,8 @@ struct SiteDetailView: View {
         .onDisappear {
             isActive = false
         }
-        .onChange(of: scenePhase) {
-            if scenePhase == .active {
+        .onChange(of: scenePhase) { oldValue, newValue in
+            if newValue == .active {
                 viewModel.GetReadingsHistoryData(stationID: site.readingsStation, readingsSource: site.readingsSource)
             } else {
                 isActive = false
