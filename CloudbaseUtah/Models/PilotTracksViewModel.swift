@@ -90,7 +90,11 @@ class PilotTracksViewModel: ObservableObject {
 
         // Query InReach KML feed
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self, let data = data, error == nil else { return }
+            guard let self = self, let data = data, error == nil else {
+                print(error as Any)
+                return
+            }
+            
             let newTracks = self.parseKML(pilotName: pilotName, data: data)
             // Check if track node already exists for pilot and time stamp; if so, don't append
             let existingKeys: Set<PilotTrackKey> = Set(self.pilotTracks.map { PilotTrackKey(pilotName: $0.pilotName, date: $0.dateTime) })
@@ -159,9 +163,8 @@ class PilotTracksViewModel: ObservableObject {
             let inEmergencyString = extractValue(from: placemarkString, using: "<Data name=\"In Emergency\">", endTag: "</Data>")?.lowercased()
             let inEmergency = Bool(inEmergencyString ?? "false") ?? false
             let message = extractValue(from: placemarkString, using: "<Data name=\"Text\">", endTag: "</Data>") ?? ""
-
             let trackPoint = PilotTracks(
-                pilotName: trackPilotName,
+                pilotName: pilotName,
                 dateTime: dateTime,
                 latitude: latitude,
                 longitude: longitude,

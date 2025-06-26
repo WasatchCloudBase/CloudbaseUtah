@@ -106,18 +106,27 @@ class StationLatestReadingsViewModel: ObservableObject {
             //print ("filtered sites are empty:  none matched 'Mesonet' and had a readingsStation ")
             return
         }
-        let stationParameters = mesonetStations.map { "&stid=\($0.readingsStation)" }.joined()
+        
+        // Save map of stations into the published property that the fetching methods uses
+        self.stationParameters = mesonetStations.map { "&stid=\($0.readingsStation)" }.joined()
         
         // Get latest readings
-        self.getLatestReadingsData {}
+        self.getLatestReadingsData (sitesOnly: true) {}
+
     }
 
-    func getLatestReadingsData(completion: @escaping () -> Void) {
+    // sitesOnly determines whether to only get Mesonet readings for stations associated with sites (SiteView)
+    // or all stations in Utah (MapView)
+    func getLatestReadingsData(sitesOnly: Bool, completion: @escaping () -> Void) {
         var combinedReadings: [StationLatestReadings] = []
         let group = DispatchGroup()
 
         group.enter()
-        self.getLatestMesonetReadings(stationParameters: self.stationParameters) {
+        var stationParameters: String = ""
+        if sitesOnly {
+            stationParameters = self.stationParameters
+        }
+        self.getLatestMesonetReadings(stationParameters: stationParameters) {
             mesonetReadings in
             combinedReadings.append(contentsOf: mesonetReadings)
             group.leave()

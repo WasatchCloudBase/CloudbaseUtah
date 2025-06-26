@@ -399,8 +399,23 @@ struct MapView: UIViewRepresentable {
             // Handle annotation display/filtering based on type
             if trackNodeType != "normal" {
                 view.displayPriority = .required
+                view.collisionMode = .none
             } else {
-                view.displayPriority = .defaultLow
+                // Normal nodes: more visible as you zoom in
+                switch span.latitudeDelta {
+                case ..<0.005:
+                    // really close in → show everything
+                    view.displayPriority = .required
+                    view.collisionMode = .none
+                case 0.005..<0.02:
+                    // mid-zoom → moderate density
+                    view.displayPriority = .defaultHigh
+                    view.collisionMode    = .circle
+                default:
+                    // zoomed way out → thin them out
+                    view.displayPriority = .defaultLow
+                    view.collisionMode    = .circle
+                }
             }
             view.canShowCallout = false
             view.clusteringIdentifier = nil
@@ -439,8 +454,8 @@ struct MapContainerView: View {
     @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
     @Environment(\.scenePhase) private var scenePhase
 
-    @StateObject private var stationLatestReadingsViewModel: StationLatestReadingsViewModel
-    @StateObject private var pilotTracksViewModel = PilotTracksViewModel()
+    @StateObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
+    @StateObject var pilotTracksViewModel = PilotTracksViewModel()
     @StateObject private var annotationSourceItemsViewModel: AnnotationSourceItemsViewModel
 
     @State private var selectedSite: Sites?
@@ -479,251 +494,267 @@ struct MapContainerView: View {
     }
     
     var body: some View {
-        ZStack {
-            
-            // Validate annotation coordinates
-            let _ = annotationSourceItemsViewModel.clusteredAnnotationSourceItems.forEach { annotation in
-                assert(annotation.coordinates.latitude >= -90 && annotation.coordinates.latitude <= 90, "Invalid latitude: \(annotation.coordinates.latitude)")
-                assert(annotation.coordinates.longitude >= -180 && annotation.coordinates.longitude <= 180, "Invalid longitude: \(annotation.coordinates.longitude)")
-            }
-            
-            // Create map for pilot tracks
-            if mapSettingsViewModel.isMapTrackingMode {
+        VStack {
+            ZStack {
                 
-                let selectedNames = Set(mapSettingsViewModel.selectedPilots.map { $0.pilotName })
-                let filteredTracks: [PilotTracks] =
-                    selectedNames.isEmpty
-                      ? pilotTracksViewModel.pilotTracks
-                      : pilotTracksViewModel.pilotTracks.filter { selectedNames.contains($0.pilotName) }
-
-                MapView(
-                    region: $region,
-                    zoomLevel: $currentZoomLevel,
-                    mapStyle: $mapSettingsViewModel.selectedMapType,
-                    pilotTracks: filteredTracks,
-                    onPilotSelected: { track in
-                        selectedPilotTrack = track
-                    }
-                )
-                .cornerRadius(10)
-                .padding(.vertical, 8)
+                // Validate annotation coordinates
+                let _ = annotationSourceItemsViewModel.clusteredAnnotationSourceItems.forEach { annotation in
+                    assert(annotation.coordinates.latitude >= -90 && annotation.coordinates.latitude <= 90, "Invalid latitude: \(annotation.coordinates.latitude)")
+                    assert(annotation.coordinates.longitude >= -180 && annotation.coordinates.longitude <= 180, "Invalid longitude: \(annotation.coordinates.longitude)")
+                }
                 
-            // Create map for weather
-            } else if mapSettingsViewModel.isMapWeatherMode {
-                Map(coordinateRegion: $region,
-                    interactionModes: .all,
-                    showsUserLocation: false,
-                    annotationItems: annotationSourceItemsViewModel.clusteredAnnotationSourceItems)
-                { annotation in
-                    MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: annotation.coordinates.latitude, longitude: annotation.coordinates.longitude)) {
-                        
-                        Button(action: {
-                            switch annotation.annotationType {
-                                
-                            case "site":
-                                DispatchQueue.main.async {
-                                    selectedSite = sitesViewModel.sites.first(where: { $0.siteName == annotation.annotationID })
-                                    return
-                                }
-                            case "station":
-                                DispatchQueue.main.async {
-                                    selectedSite = Sites(
-                                        id: UUID(),
-                                        area: "",
-                                        siteName: annotation.annotationName,
-                                        readingsNote: "",
-                                        forecastNote: "",
-                                        siteType: "",
-                                        readingsAlt: String(annotation.altitude),
-                                        readingsSource: annotation.readingsSource,
-                                        readingsStation: annotation.annotationID,
-                                        pressureZoneReadingTime: "",
-                                        siteLat: "\(annotation.coordinates.latitude)",
-                                        siteLon: "\(annotation.coordinates.longitude)",
-                                        sheetRow: 0
-                                    )
-                                    return
-                                }
-                            default:
-                                return
-                            }
-                        }) {
-                            switch annotation.annotationType {
-                                
-                            case "site" :
-                                VStack (spacing: 0) {
-                                    Image(siteAnnotationImage)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(width: defaultAnnotationImageWidth)
-                                    Text(annotation.annotationName)
-                                        .font(.footnote)
-                                        .foregroundColor(siteAnnotationTextColor)
-                                        .frame(width: annotationTextWidth, height: annotationTextHeight)
-                                }
-                                
-                            case "station" :
-                                HStack (spacing: 1) {
-                                    Text(String(Int(annotation.windSpeed?.rounded() ?? 0)))
-                                        .font(.caption)
-                                        .foregroundStyle(windSpeedColor(windSpeed: Int(annotation.windSpeed?.rounded() ?? 0), siteType: ""))
-                                        .bold()
-                                    /* Not displaying gusts
-                                     Text("g")
-                                     .font(.caption2)
-                                     Text(String(Int(customAnnotation.windGust?.rounded() ?? 0)))
-                                     .font(.caption)
-                                     .foregroundStyle(windSpeedColor(windSpeed: Int(customAnnotation.windGust?.rounded() ?? 0), siteType: ""))
-                                     .bold()
-                                     */
-                                    Image(systemName: windArrow)
-                                        .rotationEffect(.degrees((Double(annotation.windDirection ?? 180)) - 180))
-                                        .font(.footnote)
-                                }
-                                .padding (4)
-                                .frame(width: stationAnnotationWidth, height: stationAnnotationHeight)
-                                .background(stationAnnotationColor)
-                                .cornerRadius(5)
-                                
-                            default:
-                                VStack (spacing: 0) {
-                                    Image(systemName: defaultAnnotationImage)
-                                        .foregroundColor(defaultAnnotationColor)
-                                    Text(annotation.annotationName)
-                                        .font(.footnote)
-                                        .foregroundColor(defaultAnnotationTextColor)
-                                        .frame(width: annotationTextWidth, height: annotationTextHeight)
-                                }
-                            }
-                        }
-                    }
-                }
-                .mapStyle(mapSettingsViewModel.selectedMapType.toMapStyle())
-                .cornerRadius(10)
-                .padding(.vertical, 8)
-
-            } else {
-                Text("Map not in a valid mode (weather, tracking")
-            }
-
-            // Floating Item Bar
-            VStack {
-                Spacer()
-                HStack(alignment: .bottom) {
-                    VStack(alignment: .leading) {
-                        Button(action: { isLayerSheetPresented.toggle() }) {
-                            VStack {
-                                Image(systemName: layersImage)
-                                    .imageScale(.large)
-                                    .foregroundStyle(layersIconColor)
-                                    .padding(.bottom, 6)
-                                Text("Settings")
-                                    .font(.caption)
-                                    .foregroundColor(layersFontColor)
-                            }
-                        }
-                        .sheet(isPresented: $isLayerSheetPresented) {
-                            MapSettingsView(
-                                selectedMapType: $mapSettingsViewModel.selectedMapType,
-                                pilotTrackDays: $mapSettingsViewModel.pilotTrackDays,
-                                mapDisplayMode: $mapSettingsViewModel.mapDisplayMode,
-                                showSites: $mapSettingsViewModel.showSites,
-                                showStations: $mapSettingsViewModel.showStations,
-                                selectedPilots: $mapSettingsViewModel.selectedPilots
-                            )
-                            .interactiveDismissDisabled(true) // Disables swipe-to-dismiss (force use of back button)\
-                            .environmentObject(pilotsViewModel)
-                            .environmentObject(pilotTracksViewModel)
-                            
-                        }
-                    }
-                    .padding()
-                    .background(layersIconBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
-                    Spacer()
-                    
-                    VStack (alignment: .center) {
-                        Picker("Display", selection: $mapSettingsViewModel.mapDisplayMode) {
-                            Text("Weather").tag(MapDisplayMode.weather)
-                            Text("Tracking").tag(MapDisplayMode.tracking)
-                        }
-                        .pickerStyle(SegmentedPickerStyle())
-                        .padding(.bottom, 6)
-                        Text ("Map Type")
-                            .font(.caption)
-                            .foregroundColor(layersFontColor)
-                    }
-                    .padding(.top, 15)
-                    .padding(.trailing, 16)
-                    .padding(.leading, 16)
-                    .padding(.bottom, 12)
-                    .background(layersIconBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
-                    VStack(alignment: .trailing) {
-                        
-                        
-                        /*
-                         if mapSettingsViewModel.activeLayers.contains(.precipitation) ||
-                         mapSettingsViewModel.activeLayers.contains(.cloudCover) {
-                         VStack(alignment: .trailing) {
-                         HStack(alignment: .center) {
-                         Button(action: { isPlaying.toggle() }) {
-                         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                         .imageScale(.large)
-                         }
-                         .padding(.horizontal, 8)
-                         ProgressView(value: animationProgress)
-                         .frame(width: 100)
-                         Text(currentTime)
-                         .font(.headline)
-                         .padding(.horizontal, 8)
-                         }
-                         }
-                         .padding()
-                         .background(.thinMaterial)
-                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                         }
-                         */
-                    }
-                }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 16)
-            }
-        }
-        .onChange(of: MapSettingsState(pilotTrackDays: mapSettingsViewModel.pilotTrackDays,
-                                       mapDisplayMode: mapSettingsViewModel.mapDisplayMode,
-                                       showSites: mapSettingsViewModel.showSites,
-                                       showStations: mapSettingsViewModel.showStations,
-                                       scenePhase: scenePhase,
-                                       selectedPilots: mapSettingsViewModel.selectedPilots
-                                      )) {
-            // Check all changes together to only execute updateMapAnnotations once
-            if scenePhase == .active {
-                // Reload latest pilot tracks
+                // Create map for pilot tracks
                 if mapSettingsViewModel.isMapTrackingMode {
-                    for pilot in pilotsViewModel.pilots {
-                        pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {}
-                    }
-                }
-                
-                // Reload weather readings
-                else {
-                    annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
-                    annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
-                    stationLatestReadingsViewModel.getLatestReadingsData {
-                        annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-                        annotationSourceItemsViewModel.updateAnnotationSourceItems {
-                            annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                    
+                    let selectedNames = Set(mapSettingsViewModel.selectedPilots.map { $0.pilotName })
+                    let filteredTracks: [PilotTracks] =
+                    selectedNames.isEmpty
+                    ? pilotTracksViewModel.pilotTracks
+                    : pilotTracksViewModel.pilotTracks.filter { selectedNames.contains($0.pilotName) }
+                    
+                    MapView(
+                        region: $region,
+                        zoomLevel: $currentZoomLevel,
+                        mapStyle: $mapSettingsViewModel.selectedMapType,
+                        pilotTracks: filteredTracks,
+                        onPilotSelected: { track in
+                            selectedPilotTrack = track
+                        }
+                    )
+                    .cornerRadius(10)
+                    .padding(.vertical, 8)
+                    
+                    // Create map for weather
+                } else if mapSettingsViewModel.isMapWeatherMode {
+                    Map(coordinateRegion: $region,
+                        interactionModes: .all,
+                        showsUserLocation: false,
+                        annotationItems: annotationSourceItemsViewModel.clusteredAnnotationSourceItems)
+                    { annotation in
+                        MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: annotation.coordinates.latitude, longitude: annotation.coordinates.longitude)) {
+                            
+                            Button(action: {
+                                switch annotation.annotationType {
+                                    
+                                case "site":
+                                    DispatchQueue.main.async {
+                                        selectedSite = sitesViewModel.sites.first(where: { $0.siteName == annotation.annotationID })
+                                        return
+                                    }
+                                case "station":
+                                    DispatchQueue.main.async {
+                                        selectedSite = Sites(
+                                            id: UUID(),
+                                            area: "",
+                                            siteName: annotation.annotationName,
+                                            readingsNote: "",
+                                            forecastNote: "",
+                                            siteType: "",
+                                            readingsAlt: String(annotation.altitude),
+                                            readingsSource: annotation.readingsSource,
+                                            readingsStation: annotation.annotationID,
+                                            pressureZoneReadingTime: "",
+                                            siteLat: "\(annotation.coordinates.latitude)",
+                                            siteLon: "\(annotation.coordinates.longitude)",
+                                            sheetRow: 0
+                                        )
+                                        return
+                                    }
+                                default:
+                                    return
+                                }
+                            }) {
+                                switch annotation.annotationType {
+                                    
+                                case "site" :
+                                    VStack (spacing: 0) {
+                                        Image(siteAnnotationImage)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: defaultAnnotationImageWidth)
+                                        Text(annotation.annotationName)
+                                            .font(.footnote)
+                                            .foregroundColor(siteAnnotationTextColor)
+                                            .frame(width: annotationTextWidth, height: annotationTextHeight)
+                                    }
+                                    
+                                case "station" :
+                                    HStack (spacing: 1) {
+                                        Text(String(Int(annotation.windSpeed?.rounded() ?? 0)))
+                                            .font(.caption)
+                                            .foregroundStyle(windSpeedColor(windSpeed: Int(annotation.windSpeed?.rounded() ?? 0), siteType: ""))
+                                            .bold()
+                                        /* Not displaying gusts
+                                         Text("g")
+                                         .font(.caption2)
+                                         Text(String(Int(customAnnotation.windGust?.rounded() ?? 0)))
+                                         .font(.caption)
+                                         .foregroundStyle(windSpeedColor(windSpeed: Int(customAnnotation.windGust?.rounded() ?? 0), siteType: ""))
+                                         .bold()
+                                         */
+                                        Image(systemName: windArrow)
+                                            .rotationEffect(.degrees((Double(annotation.windDirection ?? 180)) - 180))
+                                            .font(.footnote)
+                                    }
+                                    .padding (4)
+                                    .frame(width: stationAnnotationWidth, height: stationAnnotationHeight)
+                                    .background(stationAnnotationColor)
+                                    .cornerRadius(5)
+                                    
+                                default:
+                                    VStack (spacing: 0) {
+                                        Image(systemName: defaultAnnotationImage)
+                                            .foregroundColor(defaultAnnotationColor)
+                                        Text(annotation.annotationName)
+                                            .font(.footnote)
+                                            .foregroundColor(defaultAnnotationTextColor)
+                                            .frame(width: annotationTextWidth, height: annotationTextHeight)
+                                    }
+                                }
+                            }
                         }
                     }
+                    .mapStyle(mapSettingsViewModel.selectedMapType.toMapStyle())
+                    .cornerRadius(10)
+                    .padding(.vertical, 8)
+                    
+                } else {
+                    Text("Map not in a valid mode (weather, tracking")
                 }
-                startTimer() // Cancels existing timer and restarts
-                isActive = true
-                startMonitoringRegion()
-            } else {
-                isActive = false
+                
+                // Floating Item Bar
+                VStack {
+                    Spacer()
+                    HStack(alignment: .bottom) {
+                        VStack(alignment: .leading) {
+                            Button(action: { isLayerSheetPresented.toggle() }) {
+                                VStack {
+                                    Image(systemName: layersImage)
+                                        .imageScale(.large)
+                                        .foregroundStyle(layersIconColor)
+                                        .padding(.bottom, 6)
+                                    Text("Settings")
+                                        .font(.caption)
+                                        .foregroundColor(layersFontColor)
+                                }
+                            }
+                            .sheet(isPresented: $isLayerSheetPresented) {
+                                MapSettingsView(
+                                    selectedMapType: $mapSettingsViewModel.selectedMapType,
+                                    pilotTrackDays: $mapSettingsViewModel.pilotTrackDays,
+                                    mapDisplayMode: $mapSettingsViewModel.mapDisplayMode,
+                                    showSites: $mapSettingsViewModel.showSites,
+                                    showStations: $mapSettingsViewModel.showStations,
+                                    selectedPilots: $mapSettingsViewModel.selectedPilots
+                                )
+                                .interactiveDismissDisabled(true) // Disables swipe-to-dismiss (force use of back button)\
+                                .environmentObject(pilotsViewModel)
+                                .environmentObject(pilotTracksViewModel)
+                                
+                            }
+                        }
+                        .padding()
+                        .background(layersIconBackgroundColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        
+                        Spacer()
+                        
+                        VStack (alignment: .center) {
+                            Picker("Display", selection: $mapSettingsViewModel.mapDisplayMode) {
+                                Text("Weather").tag(MapDisplayMode.weather)
+                                Text("Tracking").tag(MapDisplayMode.tracking)
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .padding(.bottom, 6)
+                            Text ("Map Type")
+                                .font(.caption)
+                                .foregroundColor(layersFontColor)
+                        }
+                        .padding(.top, 15)
+                        .padding(.trailing, 16)
+                        .padding(.leading, 16)
+                        .padding(.bottom, 12)
+                        .background(layersIconBackgroundColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        
+                        VStack(alignment: .trailing) {
+                            
+                            
+                            /*
+                             if mapSettingsViewModel.activeLayers.contains(.precipitation) ||
+                             mapSettingsViewModel.activeLayers.contains(.cloudCover) {
+                             VStack(alignment: .trailing) {
+                             HStack(alignment: .center) {
+                             Button(action: { isPlaying.toggle() }) {
+                             Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                             .imageScale(.large)
+                             }
+                             .padding(.horizontal, 8)
+                             ProgressView(value: animationProgress)
+                             .frame(width: 100)
+                             Text(currentTime)
+                             .font(.headline)
+                             .padding(.horizontal, 8)
+                             }
+                             }
+                             .padding()
+                             .background(.thinMaterial)
+                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                             }
+                             */
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 16)
+                }
+            }
+            .onChange(of: MapSettingsState(pilotTrackDays: mapSettingsViewModel.pilotTrackDays,
+                                           mapDisplayMode: mapSettingsViewModel.mapDisplayMode,
+                                           showSites: mapSettingsViewModel.showSites,
+                                           showStations: mapSettingsViewModel.showStations,
+                                           scenePhase: scenePhase,
+                                           selectedPilots: mapSettingsViewModel.selectedPilots
+                                          )) {
+                // Check all changes together to only execute updateMapAnnotations once
+                if scenePhase == .active {
+                    // Reload latest pilot tracks
+                    if mapSettingsViewModel.isMapTrackingMode {
+                        for pilot in pilotsViewModel.pilots {
+                            pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {}
+                        }
+                    }
+                    
+                    // Reload weather readings
+                    else {
+                        annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
+                        annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
+                        stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
+                            annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
+                            annotationSourceItemsViewModel.updateAnnotationSourceItems {
+                                annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                            }
+                        }
+                    }
+                    startTimer() // Cancels existing timer and restarts
+                    isActive = true
+                    startMonitoringRegion()
+                } else {
+                    isActive = false
+                }
+            }
+            
+            if devMenuAvailable {
+                
+                // Pilot track listing
+                NavigationLink(destination:
+                                PilotTracksView()
+                    .environmentObject(pilotsViewModel)
+                    .environmentObject(pilotTracksViewModel)) {
+                        Text("Pilot track list")
+                            .font(.subheadline)
+                            .foregroundColor(rowHeaderColor)
+                    }
+                    .padding(.bottom)
             }
         }
        .onAppear {
@@ -740,7 +771,7 @@ struct MapContainerView: View {
                
                annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
                annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
-               stationLatestReadingsViewModel.getLatestReadingsData {
+               stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
                    annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
                    annotationSourceItemsViewModel.updateAnnotationSourceItems {
                        annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)

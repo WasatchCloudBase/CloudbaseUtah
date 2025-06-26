@@ -114,7 +114,7 @@ struct MapSettingsView: View {
                     Section(header: Text("Pilot track days")) {
                         VStack(alignment: .trailing) {
                             Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
-                                .onChange(of: tempPilotTrackDays) { newDays in
+                                .onChange(of: tempPilotTrackDays) { oldDays, newDays in
                                     // Refresh tracks for each pilot with the updated days
                                     for pilot in pilotsViewModel.pilots {
                                         pilotTracksViewModel.getPilotTrackingData(

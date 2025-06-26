@@ -1,62 +1,72 @@
 import SwiftUI
 import Foundation
 
-// Developer view to check on pilot live track nodes being created
+// Developer view to check on pilot live tracks being created
 struct PilotTracksView: View {
     @EnvironmentObject var pilotsViewModel: PilotsViewModel
-    @ObservedObject var pilotTracksViewModel: PilotTracksViewModel
-    let pilotTrackDays: Double
-    @State private var hasFetched = false
+    @EnvironmentObject var pilotTracksViewModel: PilotTracksViewModel
     
+    // for driving the sheet
+    @State private var selectedPilotTrack: PilotTracks?
+
+    // formatters
+    private let dayFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .none
+        return df
+    }()
+    private let timeFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateStyle = .none
+        df.timeStyle = .short
+        return df
+    }()
+
     var body: some View {
-        VStack {
-            if pilotTracksViewModel.pilotTracks.isEmpty {
-                Text("No pilot track data loaded.")
-            } else {
-                List(pilotTracksViewModel.pilotTracks, id: \.dateTime) { track in
+        NavigationView {
+            List {
+
+                ForEach(pilotsViewModel.pilots) { pilot in
                     
-                    var trackingShareURL: String { pilotsViewModel.trackingShareURL(for: track.pilotName) ?? "" }
+                    // Filter tracks by pilot
+                    let tracksForPilot = pilotTracksViewModel.pilotTracks
+                        .filter { $0.pilotName == pilot.pilotName }
                     
-                    VStack(alignment: .leading) {
-                        Text("Pilot: \(track.pilotName)")
-                            .font(.subheadline)
-                            .bold()
-                        Text("Time: \(track.dateTime.formatted())")
-                            .font(.caption)
-                        Text("Coordinates: \(track.latitude), \(track.longitude)")
-                            .font(.caption)
-                        Text("Speed: \(track.speed)")
-                            .font(.caption)
-                        Text("Altitude: \(track.altitude)")
-                            .font(.caption)
-                        if track.message != nil {
-                            Text("Message: \(track.message ?? "")")
-                                .font(.caption)
-                        }
-                        if track.inEmergency {
-                            Text("InReach is in emergency status; track points not provided (except to emergency services)")
-                                .font(.subheadline)
-                                .foregroundColor(warningFontColor)
-                                .bold()
-                        }
-                        Button(action: {
-                            if let url = URL(string: trackingShareURL) {
-                                UIApplication.shared.open(url)
+                    // Group tracks by date
+                    let tracksByDay = Dictionary(
+                        grouping: tracksForPilot,
+                        by: { Calendar.current.startOfDay(for: $0.dateTime) }
+                    )
+                    
+                    // Only show a pilot if there are any tracks
+                    if !tracksByDay.isEmpty {
+                        Section(header: Text(pilot.pilotName)) {
+                            // sort the days descending, for example
+                            ForEach(
+                                tracksByDay.keys.sorted(by: >),
+                                id: \.self
+                            ) { day in
+                                Button {
+                                    // Choose the first track point of that day
+                                    selectedPilotTrack = tracksByDay[day]?.first
+                                } label: {
+                                    HStack {
+                                        Text(dayFormatter.string(from: day))
+                                        Spacer()
+                                        // maybe show how many points?
+                                        Text("(\(tracksByDay[day]?.count ?? 0) pts)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
                             }
-                        }) {
-                            Text("InReach share page")
-                                .font(.caption)
-                                .foregroundColor(rowHeaderColor)
                         }
                     }
                 }
             }
-        }
-        .onAppear {
-            guard !hasFetched else { return }
-            hasFetched = true
-            for pilot in pilotsViewModel.pilots {
-                pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: pilotTrackDays) {}
+            .sheet(item: $selectedPilotTrack) { track in
+                PilotTrackNodeView(originalPilotTrack: track)
             }
         }
     }

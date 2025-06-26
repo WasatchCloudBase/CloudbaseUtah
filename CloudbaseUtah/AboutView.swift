@@ -3,8 +3,6 @@ import SwiftUI
 struct AboutView: View {
     @Binding var refreshMetadata: Bool
     @EnvironmentObject var sitesViewModel: SitesViewModel
-    @EnvironmentObject var pilotsViewModel: PilotsViewModel
-    @StateObject private var pilotTracksViewModel = PilotTracksViewModel()
     
     var body: some View {
         backgroundColor.edgesIgnoringSafeArea(.all)
@@ -52,7 +50,6 @@ struct AboutView: View {
                                 
             }
             
-
             if devMenuAvailable {
                 
             Section(header: Text("Development Tools")
@@ -86,18 +83,6 @@ struct AboutView: View {
                             .foregroundColor(rowHeaderColor)
                     }
                  
-                    // Pilot track listing
-                    NavigationLink(destination:
-                                   PilotTracksView(
-                                       pilotTracksViewModel: pilotTracksViewModel,
-                                       pilotTrackDays: defaultPilotTrackDays
-                                   )
-                        .environmentObject(pilotsViewModel)) {
-                        Text("Pilot track node list")
-                            .font(.subheadline)
-                            .foregroundColor(rowHeaderColor)
-                    }
-                    
                 }
             }
         }

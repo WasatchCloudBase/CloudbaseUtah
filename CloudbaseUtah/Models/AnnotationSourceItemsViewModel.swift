@@ -83,7 +83,7 @@ class AnnotationSourceItemsViewModel: ObservableObject {
             // Define another dispatch group for to ensure station annotations aren't added until prior calls complete
             let readingsGroup = DispatchGroup()
             readingsGroup.enter()
-            stationLatestReadingsViewModel.getLatestReadingsData() {
+            stationLatestReadingsViewModel.getLatestReadingsData(sitesOnly: false) {
                 readingsGroup.leave()
             }
 

@@ -4,6 +4,18 @@ import Combine
 import Foundation
 import Charts
 
+// Splits an array into sub-arrays of at most `size` elements
+// (used because elevation API call is limited to 99 elements per call)
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0, count > 0 else { return [] }
+        return stride(from: 0, to: count, by: size).map { start in
+            let end = Swift.min(start + size, count)
+            return Array(self[start..<end])
+        }
+    }
+}
+
 // Structure to process API call to elevation for a set of coordinates
 struct ElevationResponse: Codable {
     let elevation: [Double]
@@ -127,115 +139,6 @@ struct PilotTrackNodeView: View {
                             .foregroundColor(warningFontColor)
                             .bold()
                             .padding(.vertical, rowVerticalPadding)
-                    }
-                }
-                
-                Section(header: Text("Track point")
-                    .font(.headline)
-                    .foregroundColor(sectionHeaderColor)
-                    .bold())
-                {
-                    VStack(alignment: .leading, spacing: 0) {
-                        
-                        HStack {
-                            Text("Date")
-                                .frame(width: colWidth, alignment: .trailing)
-                                .font(.subheadline)
-                                .padding(.trailing, 2)
-                                .foregroundColor(infoFontColor)
-                            Text(formattedNodeDate)
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(.vertical, rowVerticalPadding)
-                        
-                        HStack {
-                            Text("Time")
-                                .frame(width: colWidth, alignment: .trailing)
-                                .font(.subheadline)
-                                .padding(.trailing, 2)
-                                .foregroundColor(infoFontColor)
-                            Text(formattedNodeTime)
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(.vertical, rowVerticalPadding)
-                        
-                        HStack {
-                            Text("Coordinates")
-                                .frame(width: colWidth, alignment: .trailing)
-                                .font(.subheadline)
-                                .padding(.trailing, 2)
-                                .foregroundColor(infoFontColor)
-                            Text("\(pilotTrack.latitude), \(pilotTrack.longitude)")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(.vertical, rowVerticalPadding)
-                        
-                        HStack {
-                            Text("Speed")
-                                .frame(width: colWidth, alignment: .trailing)
-                                .font(.subheadline)
-                                .padding(.trailing, 2)
-                                .foregroundColor(infoFontColor)
-                            Text("\(Int(pilotTrack.speed.rounded())) mph")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(.vertical, rowVerticalPadding)
-                        
-                        HStack {
-                            Text("Altitude")
-                                .frame(width: colWidth, alignment: .trailing)
-                                .font(.subheadline)
-                                .padding(.trailing, 2)
-                                .foregroundColor(infoFontColor)
-                            Text("\(Int(pilotTrack.altitude)) ft")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(.vertical, rowVerticalPadding)
-                        
-                        if let groundElevation = currentNodeGroundElevation {
-                            HStack {
-                                Text("Surface")
-                                    .frame(width: colWidth, alignment: .trailing)
-                                    .font(.subheadline)
-                                    .padding(.trailing, 2)
-                                    .foregroundColor(infoFontColor)
-                                Text("\(groundElevation) ft")
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .padding(.vertical, rowVerticalPadding)
-                            
-                            HStack {
-                                Text("Height")
-                                    .frame(width: colWidth, alignment: .trailing)
-                                    .font(.subheadline)
-                                    .padding(.trailing, 2)
-                                    .foregroundColor(infoFontColor)
-                                Text("\(Int(pilotTrack.altitude) - groundElevation) ft")
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .padding(.vertical, rowVerticalPadding)
-                        }
-                        
-                        if let message = pilotTrack.message, !message.isEmpty {
-                            HStack {
-                                Text("Message")
-                                    .frame(width: colWidth, alignment: .trailing)
-                                    .font(.subheadline)
-                                    .padding(.trailing, 2)
-                                    .foregroundColor(infoFontColor)
-                                Text(message)
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .padding(.vertical, rowVerticalPadding)
-                        }
                     }
                 }
                 
@@ -366,13 +269,121 @@ struct PilotTrackNodeView: View {
                     .foregroundColor(sectionHeaderColor)
                     .bold())
                 {
-                    
                     if sameDayTracks.count == groundElevations.count {
                         ElevationChartView(
                             tracks: sameDayTracks,
                             groundElevations: groundElevations,
                             selectedTime: pilotTrack.dateTime
                         )
+                    }
+                }
+                
+                Section(header: Text("Track point")
+                    .font(.headline)
+                    .foregroundColor(sectionHeaderColor)
+                    .bold())
+                {
+                    VStack(alignment: .leading, spacing: 0) {
+                        
+                        HStack {
+                            Text("Date")
+                                .frame(width: colWidth, alignment: .trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                            Text(formattedNodeDate)
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Time")
+                                .frame(width: colWidth, alignment: .trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                            Text(formattedNodeTime)
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Coordinates")
+                                .frame(width: colWidth, alignment: .trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                            Text("\(pilotTrack.latitude), \(pilotTrack.longitude)")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Speed")
+                                .frame(width: colWidth, alignment: .trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                            Text("\(Int(pilotTrack.speed.rounded())) mph")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        HStack {
+                            Text("Altitude")
+                                .frame(width: colWidth, alignment: .trailing)
+                                .font(.subheadline)
+                                .padding(.trailing, 2)
+                                .foregroundColor(infoFontColor)
+                            Text("\(Int(pilotTrack.altitude)) ft")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, rowVerticalPadding)
+                        
+                        if let groundElevation = currentNodeGroundElevation {
+                            HStack {
+                                Text("Surface")
+                                    .frame(width: colWidth, alignment: .trailing)
+                                    .font(.subheadline)
+                                    .padding(.trailing, 2)
+                                    .foregroundColor(infoFontColor)
+                                Text("\(groundElevation) ft")
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(.vertical, rowVerticalPadding)
+                            
+                            HStack {
+                                Text("Height")
+                                    .frame(width: colWidth, alignment: .trailing)
+                                    .font(.subheadline)
+                                    .padding(.trailing, 2)
+                                    .foregroundColor(infoFontColor)
+                                Text("\(Int(pilotTrack.altitude) - groundElevation) ft")
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(.vertical, rowVerticalPadding)
+                        }
+                        
+                        if let message = pilotTrack.message, !message.isEmpty {
+                            HStack {
+                                Text("Message")
+                                    .frame(width: colWidth, alignment: .trailing)
+                                    .font(.subheadline)
+                                    .padding(.trailing, 2)
+                                    .foregroundColor(infoFontColor)
+                                Text(message)
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(.vertical, rowVerticalPadding)
+                        }
                     }
                 }
                 
@@ -422,10 +433,34 @@ struct PilotTrackNodeView: View {
             
             .onAppear {
                 if let index = sameDayTracks.firstIndex(where: { $0.id == originalPilotTrack.id }) {
-                    currentTrackIndex = index // Match initial view to correct track
+                    currentTrackIndex = index
                 }
-                fetchGroundElevation(latitude: pilotTrack.latitude, longitude: pilotTrack.longitude)
+                fetchGroundElevation(latitude: pilotTrack.latitude,
+                                     longitude: pilotTrack.longitude)
                 fetchAllGroundElevations(for: sameDayTracks)
+            }
+            // Update ground elevation when the user taps “Next”/“Back”:
+            .onChange(of: currentTrackIndex) { oldIndex, newIndex in
+                // Determine the newly‐visible track node
+                let newTrack = sameDayTracks[safe: newIndex] ?? originalPilotTrack
+                fetchGroundElevation(latitude: newTrack.latitude,
+                                     longitude: newTrack.longitude)
+            }
+            // Update all ground elevations when the view model publishes a new track array
+            .onReceive(pilotTracksViewModel.$pilotTracks) { fullArray in
+                // re‐build the same‐day subset and re‐call the batch fetch
+                let updatedSameDay = fullArray
+                    .filter { $0.pilotName == originalPilotTrack.pilotName
+                           && Calendar.current.isDate($0.dateTime,
+                                                       inSameDayAs: originalPilotTrack.dateTime) }
+                    .sorted { $0.dateTime < $1.dateTime }
+
+                // reset the current index if out‐of‐bounds
+                if currentTrackIndex >= updatedSameDay.count {
+                    currentTrackIndex = max(0, updatedSameDay.count - 1)
+                }
+
+                fetchAllGroundElevations(for: updatedSameDay)
             }
         }
         Spacer()
@@ -449,29 +484,39 @@ struct PilotTrackNodeView: View {
     
     // fetch elevations for array of points in one request
     private func fetchAllGroundElevations(for tracks: [PilotTracks]) {
-        // build comma-separated latitude and longitude lists
-        let latList = tracks.map { "\($0.latitude)" }.joined(separator: ",")
-        let lonList = tracks.map { "\($0.longitude)" }.joined(separator: ",")
-
-        let urlString = "https://api.open-meteo.com/v1/elevation?latitude=\(latList)&longitude=\(lonList)"
-        guard let url = URL(string: urlString) else { return }
-
         struct MultiElevationResponse: Codable {
-            let elevation: [Double]    // meters
+            let elevation: [Double]
         }
 
-        URLSession.shared.dataTaskPublisher(for: url)
-            .map(\.data)
-            .decode(type: MultiElevationResponse.self, decoder: JSONDecoder())
-            .map { response in
-                // convert each meter value to feet
-                response.elevation.map { Int(convertMetersToFeet($0)) }
+        // elevation API call is limited to 99 coordinates per call,
+        // so break break into pages of up to 99 coordinates each
+        let pages = tracks.chunked(into: 99)
+
+        // For each page, create a publisher that returns [Int] (feet)
+        let elevationPublishers = pages.map { page -> AnyPublisher<[Int], Never> in
+            let latList = page.map { "\($0.latitude)" }.joined(separator: ",")
+            let lonList = page.map { "\($0.longitude)" }.joined(separator: ",")
+            let urlString = "https://api.open-meteo.com/v1/elevation?latitude=\(latList)&longitude=\(lonList)"
+            guard let url = URL(string: urlString) else {
+                // if URL fails, return an empty array immediately
+                return Just([Int]()).eraseToAnyPublisher()
             }
-            .replaceError(with: [])
+
+            return URLSession.shared.dataTaskPublisher(for: url)
+                .map(\.data)
+                .decode(type: MultiElevationResponse.self, decoder: JSONDecoder())
+                .map { resp in resp.elevation.map { Int(convertMetersToFeet($0)) } }
+                .replaceError(with: [])
+                .eraseToAnyPublisher()
+        }
+
+        // Merge all pages:  Collect the [ [Int] ] into a single [[Int]], then flatten and assign
+        Publishers.MergeMany(elevationPublishers)
+            .collect()                           // [[Int]]
+            .map { $0.flatMap { $0 } }           // [Int]
             .receive(on: DispatchQueue.main)
-            .sink { elevations in
-                // store the parallel array of ground elevations
-                self.groundElevations = elevations
+            .sink { allElevations in
+                self.groundElevations = allElevations
             }
             .store(in: &cancellables)
     }
@@ -537,37 +582,37 @@ struct ElevationChartView: View {
     let tracks: [PilotTracks]         // time‐sorted same-day tracks
     let groundElevations: [Int]       // parallels `tracks`
     let selectedTime: Date
-
+    
     // Compute all Y values (ground + pilot altitudes)
     private var allYValues: [Int] {
         let pilotAltitudes = tracks.map { Int($0.altitude) }
-        return groundElevations + pilotAltitudes
+        let all = groundElevations + pilotAltitudes
+        return all
     }
-
+    
     // Truncate down to nearest 1,000 ft
     private var yMin: Int {
         let rawMin = allYValues.min() ?? 0
-        return (rawMin / 1_000) * 1_000
+        let m = (rawMin / 1_000) * 1_000
+        return m
     }
-
+    
     // Round up to next 1,000 ft
     private var yMax: Int {
         let rawMax = allYValues.max() ?? 0
-        return ((rawMax + 999) / 1_000) * 1_000
+        let M = ((rawMax + 999) / 1_000) * 1_000
+        return M
     }
-
-    // Formatter for axis labels
-    private let decimalFormatter: NumberFormatter = {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.groupingSeparator = ","
-        return f
-    }()
-
+    
     var body: some View {
+        let pilotAltitudes = tracks.map { Int($0.altitude) }
+        let allY = groundElevations + pilotAltitudes
+        let rawMin = allY.min() ?? 0
+        let rawMax = allY.max() ?? 0
+        let yMin = (rawMin / 1_000) * 1_000
+        let yMax = ((rawMax + 999) / 1_000) * 1_000
         
         Chart {
-            // Ground elevation area, with explicit baseline
             ForEach(Array(tracks.enumerated()), id: \.offset) { idx, track in
                 AreaMark(
                     x: .value("Time", track.dateTime),
@@ -576,8 +621,7 @@ struct ElevationChartView: View {
                 )
                 .opacity(0.2)
             }
- 
-            // Pilot altitude line
+            
             ForEach(tracks) { track in
                 LineMark(
                     x: .value("Time", track.dateTime),
@@ -586,48 +630,12 @@ struct ElevationChartView: View {
                 .lineStyle(StrokeStyle(lineWidth: 1))
                 .foregroundStyle(chartLineColor)
             }
-
-            // Selected-point indicator
+            
             RuleMark(x: .value("Selected", selectedTime))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
                 .foregroundStyle(chartCurrentNodeColor)
         }
         .chartYScale(domain: Double(yMin)...Double(yMax))
-        
-        .chartXAxis {
-            AxisMarks(
-                preset: .aligned,
-                values: .automatic(desiredCount: 6)
-            ) { value in
-                AxisGridLine()
-                AxisTick()
-                AxisValueLabel {
-                    if let date = value.as(Date.self) {
-                        let cal = Calendar.current
-                        let hour = cal.component(.hour, from: date) % 12
-                        let displayHour = hour == 0 ? 12 : hour
-                        let minute = cal.component(.minute, from: date)
-                        let isAM = cal.component(.hour, from: date) < 12
-                        let minuteString = String(format: "%02d", minute)
-                        Text("\(displayHour):\(minuteString)\n\(isAM ? "am" : "pm")")
-                            .multilineTextAlignment(.center)
-                    }
-                }
-            }
-        }
-        
-        .chartYAxis {
-            AxisMarks(position: .leading) { value in
-                AxisGridLine()
-                AxisTick()
-                AxisValueLabel {
-                    if let number = value.as(Double.self) {
-                        let thousands = Int((number / 1_000).rounded())
-                        Text("\(thousands)k ft")
-                    }
-                }
-            }
-        }
         .frame(height: 220)
         .padding(.vertical, 8)
     }
