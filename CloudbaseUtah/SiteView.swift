@@ -49,7 +49,13 @@ struct SiteView: View {
                                      }
                                      Spacer()
                                      
-                                     if let latestReading = stationLatestReadingsViewModel.latestReadings.first (where: { $0.stationID == site.readingsStation }) {
+                                     if stationLatestReadingsViewModel.isLoading {
+                                         ProgressView()
+                                             .progressViewStyle(CircularProgressViewStyle())
+                                             .scaleEffect(0.75)
+                                             .frame(width: 20, height: 20)
+                                     }
+                                     else if let latestReading = stationLatestReadingsViewModel.latestReadings.first (where: { $0.stationID == site.readingsStation }) {
                                          if let windTime = latestReading.windTime {
                                              // Split keeps hh:mm and strips the trailing "  %p" the JSON parser is creating
                                              let windTimeText = windTime.split(separator: " ", maxSplits: 1)[0]
@@ -130,6 +136,7 @@ struct SiteView: View {
          }
         .onAppear {
             isActive = true
+            stationLatestReadingsViewModel.getLatestReadingsData(sitesOnly: true) { }
             startTimer()
         }
         .onDisappear {

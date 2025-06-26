@@ -94,6 +94,7 @@ struct CUASAReadingsData: Codable {
 class StationLatestReadingsViewModel: ObservableObject {
     @Published var latestReadings: [StationLatestReadings] = []
     @Published var stationParameters: String = ""
+    @Published var isLoading = false
     let sitesViewModel: SitesViewModel
     
     // sites available in this view model
@@ -118,6 +119,7 @@ class StationLatestReadingsViewModel: ObservableObject {
     // sitesOnly determines whether to only get Mesonet readings for stations associated with sites (SiteView)
     // or all stations in Utah (MapView)
     func getLatestReadingsData(sitesOnly: Bool, completion: @escaping () -> Void) {
+        isLoading = true
         var combinedReadings: [StationLatestReadings] = []
         let group = DispatchGroup()
 
@@ -141,6 +143,7 @@ class StationLatestReadingsViewModel: ObservableObject {
 
         group.notify(queue: .main) {
             self.latestReadings = combinedReadings
+            self.isLoading = false
             completion()
         }
     }
