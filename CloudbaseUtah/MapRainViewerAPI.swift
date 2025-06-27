@@ -53,7 +53,7 @@ struct Frame: Decodable {
 }
 
 func fetchRainViewerFrames(completion: @escaping ([RainViewerTileOverlay]) -> Void) {
-    guard let url = URL(string: "https://api.rainviewer.com/public/weather-maps.json") else { return }
+    guard let url = URL(string: rainviewerAPI) else { return }
 
     URLSession.shared.dataTask(with: url) { data, _, _ in
         guard let data = data,
@@ -61,6 +61,7 @@ func fetchRainViewerFrames(completion: @escaping ([RainViewerTileOverlay]) -> Vo
               let radarFrames = decoded.radar?.past else { return }
 
         // Get only the last radar frame for simplicity (or animate multiple later)
+        // nowcast would be used for future forecast (30 min)
         if let last = radarFrames.last {
             let overlay = RainViewerTileOverlay(host: decoded.host, path: last.path)
             completion([overlay])

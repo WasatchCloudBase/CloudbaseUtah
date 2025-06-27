@@ -15,6 +15,8 @@ struct MapSettingsView: View {
     @Binding var mapDisplayMode: MapDisplayMode
     @Binding var showSites: Bool
     @Binding var showStations: Bool
+    @Binding var showRadar: Bool
+    @Binding var showInfrared: Bool
     @Binding var selectedPilots: [Pilots]
     @EnvironmentObject var pilotsViewModel: PilotsViewModel
     @EnvironmentObject var pilotTracksViewModel: PilotTracksViewModel
@@ -26,6 +28,8 @@ struct MapSettingsView: View {
     @State private var tempMapDisplayMode: MapDisplayMode
     @State private var tempShowSites: Bool
     @State private var tempShowStations: Bool
+    @State private var tempShowRadar: Bool
+    @State private var tempShowInfrared: Bool
     
     // Selected pilot list variables
     @State private var selectedPilotIDs: Set<UUID> = []
@@ -36,10 +40,12 @@ struct MapSettingsView: View {
     @State private var addPilot = false
 
     init(selectedMapType: Binding<CustomMapStyle>,
-        pilotTrackDays: Binding<Double>,
-        mapDisplayMode: Binding<MapDisplayMode>,
-        showSites: Binding<Bool>,
-        showStations: Binding<Bool>,
+         pilotTrackDays: Binding<Double>,
+         mapDisplayMode: Binding<MapDisplayMode>,
+         showSites: Binding<Bool>,
+         showStations: Binding<Bool>,
+         showRadar: Binding<Bool>,
+         showInfrared: Binding<Bool>,
          selectedPilots: Binding<[Pilots]>
     ) {
         _selectedMapType = selectedMapType
@@ -47,6 +53,8 @@ struct MapSettingsView: View {
         _mapDisplayMode = mapDisplayMode
         _showSites = showSites
         _showStations = showStations
+        _showRadar = showRadar
+        _showInfrared = showInfrared
         _selectedPilots = selectedPilots
         
         // Initialize temporary states with current values
@@ -55,8 +63,9 @@ struct MapSettingsView: View {
         _tempMapDisplayMode = State(initialValue: mapDisplayMode.wrappedValue)
         _tempShowSites = State(initialValue: showSites.wrappedValue)
         _tempShowStations = State(initialValue: showStations.wrappedValue)
+        _tempShowRadar = State(initialValue: showRadar.wrappedValue)
+        _tempShowInfrared = State(initialValue: showInfrared.wrappedValue)
     }
-    
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -83,6 +92,7 @@ struct MapSettingsView: View {
                         }
 
             List {
+                
                 Section(header: Text("Map type")) {
                     Picker("Map Type", selection: $tempSelectedMapType) {
                         ForEach(CustomMapStyle.allCases, id: \.self) { style in
@@ -103,13 +113,18 @@ struct MapSettingsView: View {
                 */
 
                 if $tempMapDisplayMode.wrappedValue == .weather {
+                    Section(header: Text("Display layers")) {
+                        Toggle("Sites", isOn: $tempShowSites)
+                        Toggle("Stations", isOn: $tempShowStations)
+                    }
+                }
+                
+                if $tempMapDisplayMode.wrappedValue == .tracking {
                     
                     Section(header: Text("Weather layers")) {
-                        Toggle("Show Sites", isOn: $tempShowSites)
-                        Toggle("Show Stations", isOn: $tempShowStations)
+                        Toggle("Radar", isOn: $tempShowRadar)
+//                        Toggle("Infrared", isOn: $tempShowInfrared)
                     }
-                    
-                } else {
                     
                     Section(header: Text("Pilot track days")) {
                         VStack(alignment: .trailing) {
@@ -234,6 +249,8 @@ struct MapSettingsView: View {
             mapDisplayMode = tempMapDisplayMode
             showSites = tempShowSites
             showStations = tempShowStations
+            showRadar = tempShowRadar
+            showInfrared = tempShowInfrared
             selectedPilots = pilotsViewModel.pilots.filter { selectedPilotIDs.contains($0.id) }
         }
         

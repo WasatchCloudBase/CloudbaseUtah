@@ -76,6 +76,8 @@ struct MapView: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
     @Binding var zoomLevel: Double
     @Binding var mapStyle: CustomMapStyle
+    @Binding var showRadar: Bool
+    @Binding var showInfrared: Bool
     let rainviewerOverlays: [MKTileOverlay]
     let pilotTracks: [PilotTracks]
     let onPilotSelected: (PilotTracks) -> Void
@@ -95,8 +97,10 @@ struct MapView: UIViewRepresentable {
         mapView.mapType = mapStyle.toMapType()
         
         // Overlay radar/infrared satellite
-        for overlay in rainviewerOverlays {
-            mapView.addOverlay(overlay, level: .aboveLabels)
+        if showRadar {
+            for overlay in rainviewerOverlays {
+                mapView.addOverlay(overlay, level: .aboveLabels)
+            }
         }
         
         return mapView
@@ -110,6 +114,13 @@ struct MapView: UIViewRepresentable {
         // Clear out old overlays & annotations
         mapView.removeAnnotations(mapView.annotations)
         mapView.removeOverlays(mapView.overlays)
+
+        // Display radar/satellite tiles
+        if showRadar {
+            for tile in rainviewerOverlays {
+                mapView.addOverlay(tile, level: .aboveLabels)
+            }
+        }
         
         // Build a stable, ordered list of pilots → color map
         let uniquePilots = Array(Set(pilotTracks.map { $0.pilotName }))
@@ -554,6 +565,8 @@ struct MapContainerView: View {
                         region: $region,
                         zoomLevel: $currentZoomLevel,
                         mapStyle: $mapSettingsViewModel.selectedMapType,
+                        showRadar: $mapSettingsViewModel.showRadar,
+                        showInfrared: $mapSettingsViewModel.showInfrared,
                         rainviewerOverlays: rainviewerOverlays,
                         pilotTracks: filteredTracks,
                         onPilotSelected: { track in
@@ -563,8 +576,11 @@ struct MapContainerView: View {
                     .cornerRadius(10)
                     .padding(.vertical, 8)
                     
-                    // Create map for weather
-                } else if mapSettingsViewModel.isMapWeatherMode {
+
+                } else
+                
+                // Create map for weather
+                if mapSettingsViewModel.isMapWeatherMode {
                     Map(coordinateRegion: $region,
                         interactionModes: .all,
                         showsUserLocation: false,
@@ -684,6 +700,8 @@ struct MapContainerView: View {
                                     mapDisplayMode: $mapSettingsViewModel.mapDisplayMode,
                                     showSites: $mapSettingsViewModel.showSites,
                                     showStations: $mapSettingsViewModel.showStations,
+                                    showRadar: $mapSettingsViewModel.showRadar,
+                                    showInfrared: $mapSettingsViewModel.showInfrared,
                                     selectedPilots: $mapSettingsViewModel.selectedPilots
                                 )
                                 .interactiveDismissDisabled(true) // Disables swipe-to-dismiss (force use of back button)\
@@ -700,7 +718,7 @@ struct MapContainerView: View {
                         
                         VStack (alignment: .center) {
                             Picker("Display", selection: $mapSettingsViewModel.mapDisplayMode) {
-                                Text("Weather").tag(MapDisplayMode.weather)
+                                Text("Stations").tag(MapDisplayMode.weather)
                                 Text("Tracking").tag(MapDisplayMode.tracking)
                             }
                             .pickerStyle(SegmentedPickerStyle())
@@ -751,6 +769,8 @@ struct MapContainerView: View {
                                            mapDisplayMode: mapSettingsViewModel.mapDisplayMode,
                                            showSites: mapSettingsViewModel.showSites,
                                            showStations: mapSettingsViewModel.showStations,
+                                           showRadar: mapSettingsViewModel.showRadar,
+                                           showInfrared: mapSettingsViewModel.showInfrared,
                                            scenePhase: scenePhase,
                                            selectedPilots: mapSettingsViewModel.selectedPilots
                                           )) {

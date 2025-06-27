@@ -39,14 +39,18 @@ class MapSettingsViewModel: ObservableObject {
     @Published var mapDisplayMode: MapDisplayMode
     @Published var showSites: Bool
     @Published var showStations: Bool
+    @Published var showRadar: Bool
+    @Published var showInfrared: Bool
     @Published var selectedPilots: [Pilots]
         
     init(region: MKCoordinateRegion,
          selectedMapType: CustomMapStyle = defaultmapType,
          pilotTrackDays: Double = defaultPilotTrackDays,
          mapDisplayMode: MapDisplayMode = defaultmapDisplayMode,
-         showSites: Bool = false,
-         showStations: Bool = true,
+         showSites: Bool = defaultShowSites,
+         showStations: Bool = defaultShowStations,
+         showRadar: Bool = defaultShowRadar,
+         showInfrared: Bool = defaultShowInfrared,
          selectedPilots: [Pilots] = []
     ) {
         self.region = region
@@ -55,6 +59,8 @@ class MapSettingsViewModel: ObservableObject {
         self.mapDisplayMode = mapDisplayMode
         self.showSites = showSites
         self.showStations = showStations
+        self.showRadar = showRadar
+        self.showInfrared = showInfrared
         self.selectedPilots = selectedPilots
     }
     
@@ -71,6 +77,8 @@ struct MapSettingsState: Equatable {
     let mapDisplayMode: MapDisplayMode
     let showSites: Bool
     let showStations: Bool
+    let showRadar: Bool
+    let showInfrared: Bool
     let scenePhase: ScenePhase
     let selectedPilots: [Pilots]
 }
