@@ -31,7 +31,7 @@ struct PilotTrackNodeView: View {
     @State private var currentNodeGroundElevation: Int? = 0
     @State private var groundElevations: [Int] = []
     @State private var cancellables = Set<AnyCancellable>()
-    @State private var currentTrackIndex: Int = 0
+    @State private var currentTrackIndex: Int = -1      // Set to -1 to force the index change to trigger on appear (fetching altitude)
 
     // Set a live timer to track time elapsed since the last track update
     @State private var now = Date()
@@ -435,11 +435,9 @@ struct PilotTrackNodeView: View {
                 if let index = sameDayTracks.firstIndex(where: { $0.id == originalPilotTrack.id }) {
                     currentTrackIndex = index
                 }
-                fetchGroundElevation(latitude: pilotTrack.latitude,
-                                     longitude: pilotTrack.longitude)
-                fetchAllGroundElevations(for: sameDayTracks)
             }
-            // Update ground elevation when the user taps “Next”/“Back”:
+            // Update ground elevation when the user taps “Next”/“Back”
+            // (change is also triggered when sheet is opened and currentTrackIndex is populated)
             .onChange(of: currentTrackIndex) { oldIndex, newIndex in
                 // Determine the newly‐visible track node
                 let newTrack = sameDayTracks[safe: newIndex] ?? originalPilotTrack
@@ -447,6 +445,7 @@ struct PilotTrackNodeView: View {
                                      longitude: newTrack.longitude)
             }
             // Update all ground elevations when the view model publishes a new track array
+            // (also executes when sheet is opened)
             .onReceive(pilotTracksViewModel.$pilotTracks) { fullArray in
                 // re‐build the same‐day subset and re‐call the batch fetch
                 let updatedSameDay = fullArray
@@ -469,7 +468,6 @@ struct PilotTrackNodeView: View {
     private func fetchGroundElevation(latitude: Double, longitude: Double) {
         let urlString = "https://api.open-meteo.com/v1/elevation?latitude=\(latitude)&longitude=\(longitude)"
         guard let url = URL(string: urlString) else { return }
-        
         URLSession.shared.dataTaskPublisher(for: url)
             .map { $0.data }
             .decode(type: ElevationResponse.self, decoder: JSONDecoder())

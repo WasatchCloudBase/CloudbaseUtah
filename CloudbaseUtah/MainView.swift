@@ -31,6 +31,7 @@ struct MainView: View {
                 }
                 if selectedView == .map {
                     MapContainerView(
+                        pilotsViewModel: pilotsViewModel,
                         sitesViewModel: sitesViewModel,
                         mapSettingsViewModel: mapSettingsViewModel
                     )

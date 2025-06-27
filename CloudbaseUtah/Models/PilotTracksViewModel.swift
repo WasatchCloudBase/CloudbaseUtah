@@ -3,7 +3,7 @@ import Combine
 import MapKit
 
 // Pilot live tracking structure
-struct PilotTracks: Identifiable, Equatable {
+struct PilotTracks: Identifiable, Equatable, Hashable {
     let id: UUID = UUID()
     let pilotName: String
     let dateTime: Date
@@ -62,15 +62,64 @@ class PilotTrackAnnotation: NSObject, MKAnnotation {
 }
 
 class PilotTracksViewModel: ObservableObject {
-    @Published var pilotTracks: [PilotTracks] = []
-    
-    func getPilotTrackingData(pilotName: String, trackingURL: String, days: Double, completion: @escaping () -> Void) {
+    @Published private(set) var pilotTracks: [PilotTracks] = []
 
-        // Clear all pilot tracks to reload
-        // (in case days is reduced or time has elapsed)
-        self.pilotTracks.removeAll()
+    private let pilotsViewModel: PilotsViewModel
+    private var cancellables = Set<AnyCancellable>()
+
+    init(pilotsViewModel: PilotsViewModel) {
+        self.pilotsViewModel = pilotsViewModel
         
-        guard let url = constructURL(trackingURL: trackingURL, days: days) else { return }
+        // Subscribe to any changes in the pilots array
+        // Note that this assumes mapView will then make a call to refresh pilotTracks
+        pilotsViewModel.$pilots
+            .sink { [weak self] newPilots in
+                guard let self = self else { return }
+            }
+            .store(in: &cancellables)
+    }
+    
+    func getAllPilotTracks(
+        days: Double,
+        completion: @escaping () -> Void
+    ) {
+        let group = DispatchGroup()
+        var allResults = [PilotTracks]()
+
+        for pilot in pilotsViewModel.pilots {
+            group.enter()
+            fetchTracksForPilot(for: pilot, days: days) { results in
+                allResults.append(contentsOf: results)
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            // 1) Optionally filter-out old tracks if you want a full rebuild:
+            //    let filtered = allResults
+
+            // 2) Or if you want to preserve some existing but update others:
+            //    merge with self.pilotTracks, drop stale entries, etc.
+
+            // Here, we’ll do a straight rebuild:
+            self.pilotTracks = allResults
+                .sorted { $0.dateTime < $1.dateTime }
+
+            completion()
+        }
+    }
+
+    private func fetchTracksForPilot (
+        for pilot: Pilots,
+        days: Double,
+        completion: @escaping ([PilotTracks]) -> Void
+    ) {
+        guard let url = constructURL(trackingURL: pilot.trackingFeedURL,
+                                     days: days) else {
+            completion([])
+            return
+        }
+
         var request = URLRequest(url: url)
 
         // Set headers to handle InReach requirements and redirect to data file location
@@ -87,24 +136,21 @@ class PilotTracksViewModel: ObservableObject {
         request.setValue("\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"", forHTTPHeaderField: "sec-ch-ua")
         request.setValue("?0", forHTTPHeaderField: "sec-ch-ua-mobile")
         request.setValue("\"macOS\"", forHTTPHeaderField: "sec-ch-ua-platform")
-
-        // Query InReach KML feed
-        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self, let data = data, error == nil else {
+        
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
+            guard let data = data, error == nil else {
                 print(error as Any)
+                completion([])
                 return
             }
-            
-            let newTracks = self.parseKML(pilotName: pilotName, data: data)
-            // Check if track node already exists for pilot and time stamp; if so, don't append
-            let existingKeys: Set<PilotTrackKey> = Set(self.pilotTracks.map { PilotTrackKey(pilotName: $0.pilotName, date: $0.dateTime) })
-            let uniqueNewTracks = newTracks.filter { !existingKeys.contains(PilotTrackKey(pilotName: $0.pilotName, date: $0.dateTime)) }
-            DispatchQueue.main.async {
-                self.pilotTracks.append(contentsOf: uniqueNewTracks)
-                completion()
-            }
+
+            let parsed = self?.parseKML(pilotName: pilot.pilotName,
+                                        data: data) ?? []
+            // dedupe within this pilot’s own data if you like…
+            completion(parsed)
         }
-        task.resume()
+        .resume()
     }
 
     private func constructURL(trackingURL: String, days: Double) -> URL? {

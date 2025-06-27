@@ -116,13 +116,7 @@ struct MapSettingsView: View {
                             Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
                                 .onChange(of: tempPilotTrackDays) { oldDays, newDays in
                                     // Refresh tracks for each pilot with the updated days
-                                    for pilot in pilotsViewModel.pilots {
-                                        pilotTracksViewModel.getPilotTrackingData(
-                                            pilotName: pilot.pilotName,
-                                            trackingURL: pilot.trackingFeedURL,
-                                            days: newDays
-                                        ) { }
-                                    }
+                                    pilotTracksViewModel.getAllPilotTracks(days: newDays) {}
                                 }
                             HStack {
                                 Text("Today")

@@ -76,8 +76,10 @@ struct MapView: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
     @Binding var zoomLevel: Double
     @Binding var mapStyle: CustomMapStyle
+    let rainviewerOverlays: [MKTileOverlay]
     let pilotTracks: [PilotTracks]
     let onPilotSelected: (PilotTracks) -> Void
+    @State private var lastPilotTracksHash: Int = 0     // Used to identify track changes requiring re-rendering
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self, onPilotSelected: onPilotSelected)
@@ -91,112 +93,135 @@ struct MapView: UIViewRepresentable {
         mapView.isZoomEnabled = true
         mapView.isScrollEnabled = true
         mapView.mapType = mapStyle.toMapType()
+        
+        // Overlay radar/infrared satellite
+        for overlay in rainviewerOverlays {
+            mapView.addOverlay(overlay, level: .aboveLabels)
+        }
+        
         return mapView
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
         
-        // Update map type in case it was changed
+        // Update map type
         mapView.mapType = mapStyle.toMapType()
         
-        // Clear all prior pilot track node annotations and line overlays
+        // Clear out old overlays & annotations
         mapView.removeAnnotations(mapView.annotations)
         mapView.removeOverlays(mapView.overlays)
-
-        // Assign pilot colors
-        let uniquePilots = Array(Set(pilotTracks.map { $0.pilotName })).sorted()
-        let pilotColorMap = Dictionary(uniqueKeysWithValues: uniquePilots.enumerated().map {
-            ($1, pilotColorPalette[$0 % pilotColorPalette.count])
-        })
+        
+        // Build a stable, ordered list of pilots → color map
+        let uniquePilots = Array(Set(pilotTracks.map { $0.pilotName }))
+            .sorted()
+        let pilotColorMap = Dictionary(
+            uniqueKeysWithValues:
+                uniquePilots.enumerated().map { idx, name in
+                    (name, pilotColorPalette[idx % pilotColorPalette.count])
+                }
+        )
         context.coordinator.pilotColorMap = pilotColorMap
-
-        let calendar = Calendar.current
-        let groupedTracks = Dictionary(grouping: pilotTracks) {
-            PilotTrackKey(pilotName: $0.pilotName, date: calendar.startOfDay(for: $0.dateTime))
-        }
-
+        
+        // Determine whether to show all markers
         let showAllMarkers = zoomLevel > mapShowAllMarkersZoomLevel
-        var addedTrackIDs = Set<UUID>()
-
-        for (_, tracks) in groupedTracks {
-            let sorted = tracks.sorted { $0.dateTime < $1.dateTime }
-            let coords = sorted.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-
+        
+        // For each pilot, in sorted order:
+        for pilotName in uniquePilots {
+            // — grab & time-sort their tracks
+            let tracksForPilot = pilotTracks
+                .filter { $0.pilotName == pilotName }
+                .sorted { $0.dateTime < $1.dateTime }
+            
+            // — extract coords for polyline
+            let coords = tracksForPilot.map {
+                CLLocationCoordinate2D(latitude: $0.latitude,
+                                       longitude: $0.longitude)
+            }
+            
+            // — add line if we have at least two points
             if coords.count > 1 {
                 let polyline = MKPolyline(coordinates: coords, count: coords.count)
-                polyline.title = tracks.first?.pilotName
+                polyline.title = pilotName
                 mapView.addOverlay(polyline)
             }
-
-            // Partition tracks by display priority
+            
+            // — partition into emergency / message / finish / first / normal
             var emergencyTracks: [PilotTracks] = []
-            var messageTracks: [PilotTracks] = []
-            var finishTracks: [PilotTracks] = []
-            var firstTracks: [PilotTracks] = []
-            var normalTracks: [PilotTracks] = []
-
-            for (index, track) in sorted.enumerated() {
-                guard addedTrackIDs.insert(track.id).inserted else { continue }
-
-                let isFirst = index == 0
-                let isLast = index == sorted.count - 1
-                let isEmergency = track.inEmergency == true
-                let hasMessage = !(track.message?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-                let isNormalNode = !isFirst && !isLast && !isEmergency && !hasMessage
-
-                if !showAllMarkers && isNormalNode { continue }
-
-                if isEmergency {
+            var messageTracks:   [PilotTracks] = []
+            var finishTracks:    [PilotTracks] = []
+            var firstTracks:     [PilotTracks] = []
+            var normalTracks:    [PilotTracks] = []
+            
+            for (i, track) in tracksForPilot.enumerated() {
+                let isFirst   = (i == 0)
+                let isLast    = (i == tracksForPilot.count - 1)
+                let isEmerg   = track.inEmergency == true
+                let hasMsg    = !(track.message?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+                let isNormal  = !isFirst && !isLast && !isEmerg && !hasMsg
+                
+                // drop normal if zoomed out
+                if !showAllMarkers && isNormal { continue }
+                
+                switch true {
+                case isEmerg:
                     emergencyTracks.append(track)
-                } else if hasMessage {
+                case hasMsg:
                     messageTracks.append(track)
-                } else if isLast {
+                case isLast:
                     finishTracks.append(track)
-                } else if isFirst {
+                case isFirst:
                     firstTracks.append(track)
-                } else {
+                default:
                     normalTracks.append(track)
                 }
             }
-
-            // Add annotations in priority order
+            
+            // — add annotations in that priority order
             for group in [emergencyTracks, messageTracks, finishTracks, firstTracks, normalTracks] {
                 for track in group {
-                    let index = sorted.firstIndex(where: { $0.id == track.id }) ?? 0
-                    let isFirst = index == 0
-                    let isLast = index == sorted.count - 1
-                    let isEmergency = track.inEmergency == true
-                    let hasMessage = !(track.message?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-
+                    let idx = tracksForPilot.firstIndex { $0.id == track.id } ?? 0
+                    let isFirst = idx == 0
+                    let isLast  = idx == tracksForPilot.count - 1
+                    let isEmerg = track.inEmergency == true
+                    let hasMsg  = !(track.message?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+                    
                     let annotation = PilotTrackAnnotation(
-                        coordinate: CLLocationCoordinate2D(latitude: track.latitude, longitude: track.longitude),
-                        title: track.pilotName.components(separatedBy: " ").first ?? track.pilotName,
-                        subtitle: DateFormatter.localizedString(from: track.dateTime, dateStyle: .none, timeStyle: .short),
+                        coordinate: CLLocationCoordinate2D(
+                            latitude:  track.latitude,
+                            longitude: track.longitude
+                        ),
+                        title:      pilotName.components(separatedBy: " ").first ?? pilotName,
+                        subtitle:   DateFormatter
+                            .localizedString(from: track.dateTime,
+                                             dateStyle: .none,
+                                             timeStyle: .short),
                         annotationType: "pilot",
-                        pilotTrack: track,
-                        pilotName: track.pilotName,
-                        isFirst: isFirst,
-                        isLast: isLast,
-                        isEmergency: isEmergency,
-                        hasMessage: hasMessage
+                        pilotTrack:     track,
+                        pilotName:      pilotName,
+                        isFirst:        isFirst,
+                        isLast:         isLast,
+                        isEmergency:    isEmerg,
+                        hasMessage:     hasMsg
                     )
                     mapView.addAnnotation(annotation)
                 }
             }
-
-            // Add arrows between each pair of nodes
+            
+            // — if zoomed in, draw arrows between each consecutive pair
             if showAllMarkers {
-                for i in 0..<(coords.count - 1) {
+                for i in 0..<coords.count - 1 {
                     let start = coords[i]
-                    let end = coords[i + 1]
-                    let mid = CLLocationCoordinate2D(
-                        latitude: (start.latitude + end.latitude) / 2,
+                    let end   = coords[i + 1]
+                    let mid   = CLLocationCoordinate2D(
+                        latitude:  (start.latitude  + end.latitude)  / 2,
                         longitude: (start.longitude + end.longitude) / 2
                     )
                     let angle = bearing(from: start, to: end)
-                    let color = pilotColorMap[tracks.first?.pilotName ?? ""] ?? .gray
-                    let overlay = ArrowOverlay(center: mid, angle: CGFloat(angle), color: color)
-                    mapView.addOverlay(overlay)
+                    let color = pilotColorMap[pilotName] ?? .gray
+                    let arrow = ArrowOverlay(center: mid,
+                                             angle: CGFloat(angle),
+                                             color: color)
+                    mapView.addOverlay(arrow)
                 }
             }
         }
@@ -223,21 +248,33 @@ struct MapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            
+            // Tile overlays (radar / infrared satellite)
+            if let tile = overlay as? MKTileOverlay {
+                return MKTileOverlayRenderer(tileOverlay: tile)
+            }
+            
+            // Pilot track lines
             if let polyline = overlay as? MKPolyline,
                let pilotName = polyline.title {
-                let renderer = MKPolylineRenderer(polyline: polyline)
-                renderer.strokeColor = pilotColorMap[pilotName] ?? .gray
-                renderer.lineWidth = mapPilotTrackWidth
-                return renderer
-            } else if let arrow = overlay as? ArrowOverlay {
+                let r = MKPolylineRenderer(polyline: polyline)
+                r.strokeColor = pilotColorMap[pilotName] ?? .gray
+                r.lineWidth = mapPilotTrackWidth
+                return r
+            }
+            
+            // Arrows between nodes
+            if let arrow = overlay as? ArrowOverlay {
                 let renderer = ArrowOverlayRenderer(arrow: arrow)
-                let zoomLevel = log2(360 * (Double(mapView.frame.size.width) / 256) / mapView.region.span.longitudeDelta)
-                renderer.zoomLevel = zoomLevel
+                let zl = log2(360 * (Double(mapView.frame.size.width)/256) / mapView.region.span.longitudeDelta)
+                renderer.zoomLevel = zl
                 return renderer
             }
-            return MKOverlayRenderer()
+            
+            // Fallback empty
+            return MKOverlayRenderer(overlay: overlay)
         }
-
+        
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             guard let pilotAnnotation = annotation as? PilotTrackAnnotation else { return nil }
 
@@ -455,7 +492,7 @@ struct MapContainerView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @StateObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
-    @StateObject var pilotTracksViewModel = PilotTracksViewModel()
+    @StateObject private var pilotTracksViewModel: PilotTracksViewModel
     @StateObject private var annotationSourceItemsViewModel: AnnotationSourceItemsViewModel
 
     @State private var selectedSite: Sites?
@@ -467,6 +504,7 @@ struct MapContainerView: View {
     @State private var annotationSourceItems: [AnnotationSourceItem] = []
     @State private var isActive = false
     @State private var refreshWorkItem: DispatchWorkItem?
+    @State var rainviewerOverlays: [MKTileOverlay] = []
 
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
@@ -480,17 +518,17 @@ struct MapContainerView: View {
     @State private var currentZoomLevel: Double = defaultMapZoomLevel
 
     private var cancellables = Set<AnyCancellable>()
-
-    init(sitesViewModel: SitesViewModel, mapSettingsViewModel: MapSettingsViewModel) {
+    
+    init(pilotsViewModel: PilotsViewModel, sitesViewModel: SitesViewModel, mapSettingsViewModel: MapSettingsViewModel) {
         let stationVM = StationLatestReadingsViewModel(viewModel: sitesViewModel)
+        _pilotTracksViewModel = StateObject(wrappedValue:
+            PilotTracksViewModel(pilotsViewModel: pilotsViewModel))
         _stationLatestReadingsViewModel = StateObject(wrappedValue: stationVM)
         _annotationSourceItemsViewModel = StateObject(wrappedValue:
             AnnotationSourceItemsViewModel(
                 mapSettingsViewModel: mapSettingsViewModel,
                 sitesViewModel: sitesViewModel,
-                stationLatestReadingsViewModel: stationVM
-            )
-        )
+                stationLatestReadingsViewModel: stationVM))
     }
     
     var body: some View {
@@ -516,6 +554,7 @@ struct MapContainerView: View {
                         region: $region,
                         zoomLevel: $currentZoomLevel,
                         mapStyle: $mapSettingsViewModel.selectedMapType,
+                        rainviewerOverlays: rainviewerOverlays,
                         pilotTracks: filteredTracks,
                         onPilotSelected: { track in
                             selectedPilotTrack = track
@@ -719,19 +758,24 @@ struct MapContainerView: View {
                 if scenePhase == .active {
                     // Reload latest pilot tracks
                     if mapSettingsViewModel.isMapTrackingMode {
-                        for pilot in pilotsViewModel.pilots {
-                            pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {}
+                        DispatchQueue.main.async {
+                            pilotTracksViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
                         }
                     }
                     
                     // Reload weather readings
                     else {
-                        annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
-                        annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
-                        stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
-                            annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-                            annotationSourceItemsViewModel.updateAnnotationSourceItems {
-                                annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                        // Reload weather readings
+                        DispatchQueue.main.async {
+                            annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
+                            annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
+                        }
+                        DispatchQueue.main.async {
+                            stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
+                                annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
+                                annotationSourceItemsViewModel.updateAnnotationSourceItems {
+                                    annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                                }
                             }
                         }
                     }
@@ -758,26 +802,36 @@ struct MapContainerView: View {
             }
         }
        .onAppear {
-           // Reload latest pilot tracks
+
            if mapSettingsViewModel.isMapTrackingMode {
+               // Reload latest pilot tracks
                DispatchQueue.main.async {
-                   for pilot in pilotsViewModel.pilots {
-                       pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {}
-                   }
+                   pilotTracksViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
                }
            }
-           // Reload weather readings
            else {
-               
-               annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
-               annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
-               stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
-                   annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-                   annotationSourceItemsViewModel.updateAnnotationSourceItems {
-                       annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+               // Reload weather readings
+               DispatchQueue.main.async {
+                   annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
+                   annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
+               }
+               DispatchQueue.main.async {
+                   stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
+                       annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
+                       annotationSourceItemsViewModel.updateAnnotationSourceItems {
+                           annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                       }
                    }
                }
            }
+           
+           // Load radar/infrared satellite overlays
+           fetchRainViewerFrames { overlays in
+               DispatchQueue.main.async {
+                   self.rainviewerOverlays = overlays
+               }
+           }
+
            startTimer() // Cancels existing timer and restarts
            isActive = true
            startMonitoringRegion()
@@ -807,22 +861,23 @@ struct MapContainerView: View {
             if isActive {
                 // Reload latest pilot tracks
                 if mapSettingsViewModel.isMapTrackingMode {
-                    for pilot in pilotsViewModel.pilots {
-                        pilotTracksViewModel.getPilotTrackingData(pilotName: pilot.pilotName, trackingURL: pilot.trackingFeedURL, days: mapSettingsViewModel.pilotTrackDays) {}
+                    DispatchQueue.main.async {
+                        pilotTracksViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
                     }
                 }
                 // Reload weather readings
                 else {
+                    // Reload weather readings
                     DispatchQueue.main.async {
                         annotationSourceItemsViewModel.mapSettingsViewModel = mapSettingsViewModel
                         annotationSourceItemsViewModel.sitesViewModel = sitesViewModel
                     }
                     DispatchQueue.main.async {
-                        annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-                    }
-                    DispatchQueue.main.async {
-                        annotationSourceItemsViewModel.updateAnnotationSourceItems {
-                            annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                        stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
+                            annotationSourceItemsViewModel.stationLatestReadingsViewModel = stationLatestReadingsViewModel
+                            annotationSourceItemsViewModel.updateAnnotationSourceItems {
+                                annotationSourceItemsViewModel.clusterAnnotationSourceItems(regionSpan: region.span)
+                            }
                         }
                     }
                 }
