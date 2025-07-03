@@ -38,7 +38,8 @@ let mapInitLongitudeSpan: Double = 5.2                  //mapInitLatitudeSpan * 
 let defaultMapZoomLevel: Double = 6.7
 let mapBatchProcessingInterval: Double = 0.2
 let mapScaleChangeTolerance: Double = 0.01              // Don't refresh annotation filtering for minor scale changes
-let mapEnableRotation: Bool = false
+let mapEnableRotate: Bool = false
+let mapEnablePitch: Bool = false
 
 // Map annotation parameters
 let mapShowAllMarkersZoomLevel: Double = 10.0
