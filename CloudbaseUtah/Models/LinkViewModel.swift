@@ -1,7 +1,6 @@
 import SwiftUI
 import Combine
 
-
 struct LinkGoogleSheetResponse: Codable {
     let range: String
     let majorDimension: String
@@ -18,25 +17,42 @@ struct LinkItem: Identifiable {
 
 class LinkViewModel: ObservableObject {
     @Published var groupedLinks: [String: [LinkItem]] = [:]
+    @Published var isLoading = false
     private var cancellable: AnyCancellable?
+
     func fetchLinks() {
+        DispatchQueue.main.async {
+            self.isLoading = true
+        }
+
         let rangeName = "Links"
         let urlString = "https://sheets.googleapis.com/v4/spreadsheets/\(googleSpreadsheetID)/values/\(rangeName)?alt=json&key=\(googleApiKey)"
-        guard let url = URL(string: urlString) else
-        {
+        guard let url = URL(string: urlString) else {
+            isLoading = false
             return
         }
+
         cancellable = URLSession.shared.dataTaskPublisher(for: url)
-            .map { $0.data }
+            .map(\.data)
             .decode(type: LinkGoogleSheetResponse.self, decoder: JSONDecoder())
-            .map { response in
-                // Skip the first row (headers)
+            .map { response -> [String:[LinkItem]] in
                 let dataRows = response.values.dropFirst()
-                // Map and group the data
-                return Dictionary(grouping: dataRows.map { LinkItem(category: $0[0], title: $0[1], description: $0[2], link: $0[3]) }) { $0.category }
+                let linkItems = dataRows.compactMap { row -> LinkItem? in
+                    guard row.count >= 4,
+                          !row[3].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    else { return nil }
+                    return LinkItem(category: row[0],
+                                    title: row[1],
+                                    description: row[2],
+                                    link: row[3])
+                }
+                return Dictionary(grouping: linkItems, by: \.category)
             }
-            .replaceError(with: [:])
+            .replaceError(with: [:] as [String:[LinkItem]]) 
             .receive(on: DispatchQueue.main)
-            .assign(to: \.groupedLinks, on: self)
+            .sink { [weak self] grouped in
+                self?.groupedLinks = grouped
+                self?.isLoading = false
+            }
     }
 }

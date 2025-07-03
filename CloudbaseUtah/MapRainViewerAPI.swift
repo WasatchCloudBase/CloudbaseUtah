@@ -1,72 +1,111 @@
-import SwiftUI
-import MapKit
-import Combine
-#if os(macOS)
-import AppKit
-#elseif os(iOS)
-import UIKit
-#endif
-import CoreGraphics
-import CoreLocation
 import Foundation
+import MapKit
 
 class RainViewerTileOverlay: MKTileOverlay {
-    let path: String
-    let host: String
-    let colorScheme = 3
-    let smoothing = 1
-    let snow = 0
-    let tileSizePx = 256
+    enum OverlayType { case radar, satellite }
 
-    init(host: String, path: String) {
-        self.host = host
-        self.path = path
-        super.init(urlTemplate: nil)
-        self.tileSize = CGSize(width: tileSizePx, height: tileSizePx)
+    private let radarColorScheme: Int
+    private let satelliteColorScheme = 0
+
+    private let smoothing   = 1
+    private let snow        = 0
+    private let tileSizePx  = 256
+
+    init(
+        host: String,
+        framePath: String,
+        type: OverlayType,
+        radarColorScheme: Int
+    ) {
+        self.radarColorScheme = radarColorScheme
+
+        // pick segment
+        let segment = (type == .radar) ? "radar" : "satellite"
+        // pick the proper scheme
+        let colorScheme = (type == .radar)
+            ? self.radarColorScheme
+            : self.satelliteColorScheme
+
+        let template = "\(host)/v2/\(segment)/\(framePath)/" +
+                       "\(tileSizePx)/{z}/{x}/{y}/" +
+                       "\(colorScheme)/\(smoothing)_\(snow).png"
+
+        super.init(urlTemplate: template)
         self.canReplaceMapContent = false
-    }
-
-    override func url(forTilePath path: MKTileOverlayPath) -> URL {
-        let urlString = "\(host)\(self.path)/\(tileSizePx)/\(path.z)/\(path.x)/\(path.y)/\(colorScheme)/\(smoothing)_\(snow).png"
-        return URL(string: urlString)!
+        self.tileSize = CGSize(width: tileSizePx, height: tileSizePx)
     }
 }
 
+// JSON models
 struct RainViewerResponse: Decodable {
     let host: String
-    let radar: RadarData?
+    let radar:   RadarData?
     let satellite: SatelliteData?
 }
 
-struct RadarData: Decodable {
-    let past: [Frame]
-    let nowcast: [Frame]
-}
+struct RadarData: Decodable { let past: [Frame]; let nowcast: [Frame]? }
+struct SatelliteData: Decodable { let infrared: [Frame] }
+struct Frame: Decodable { let time: Int; let path: String }
 
-struct SatelliteData: Decodable {
-    let infrared: [Frame]
-}
+class RainViewerOverlayProvider {
+    private let apiURL = "https://api.rainviewer.com/public/weather-maps.json"
 
-struct Frame: Decodable {
-    let time: Int
-    let path: String
-}
+    // Fetch both overlays, using the passed-in radarColorScheme.
+    func getRainViewerOverlays(
+        radarColorScheme: Int,
+        completion: @escaping (
+            _ radarOverlays: [RainViewerTileOverlay],
+            _ infraredOverlays: [RainViewerTileOverlay]
+        ) -> Void
+    ) {
+        let group = DispatchGroup()
+        var radarResult:    [RainViewerTileOverlay] = []
+        var infraredResult: [RainViewerTileOverlay] = []
 
-func fetchRainViewerFrames(completion: @escaping ([RainViewerTileOverlay]) -> Void) {
-    guard let url = URL(string: rainviewerAPI) else { return }
-
-    URLSession.shared.dataTask(with: url) { data, _, _ in
-        guard let data = data,
-              let decoded = try? JSONDecoder().decode(RainViewerResponse.self, from: data),
-              let radarFrames = decoded.radar?.past else { return }
-
-        // Get only the last radar frame for simplicity (or animate multiple later)
-        // nowcast would be used for future forecast (30 min)
-        if let last = radarFrames.last {
-            let overlay = RainViewerTileOverlay(host: decoded.host, path: last.path)
-            completion([overlay])
+        // Radar
+        group.enter()
+        fetchMetadata { resp in
+            if let last = resp.radar?.past.last {
+                let overlay = RainViewerTileOverlay(
+                    host: resp.host,
+                    framePath: last.path,
+                    type: .radar,
+                    radarColorScheme: radarColorScheme
+                )
+                radarResult = [overlay]
+            }
+            group.leave()
         }
-    }.resume()
+
+        // Satellite / Infrared
+        group.enter()
+        fetchMetadata { resp in
+            if let last = resp.satellite?.infrared.last {
+                let overlay = RainViewerTileOverlay(
+                    host: resp.host,
+                    framePath: last.path,
+                    type: .satellite,
+                    radarColorScheme: radarColorScheme // ignored for satellite
+                )
+                infraredResult = [overlay]
+            }
+            group.leave()
+        }
+
+        group.notify(queue: .main) {
+            completion(radarResult, infraredResult)
+        }
+    }
+
+    // Helper to load the JSON metadata once per call
+    private func fetchMetadata(_ cb: @escaping (RainViewerResponse) -> Void) {
+        guard let url = URL(string: apiURL) else { return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard
+                let data = data,
+                let resp = try? JSONDecoder().decode(RainViewerResponse.self, from: data)
+            else { return }
+            DispatchQueue.main.async { cb(resp) }
+        }.resume()
+    }
 }
-
-

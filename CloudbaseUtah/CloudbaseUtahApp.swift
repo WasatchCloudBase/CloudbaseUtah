@@ -19,6 +19,7 @@ struct CloudbaseUtahApp: App {
     @StateObject private var weatherCodesViewModel = WeatherCodesViewModel()
     @StateObject private var sitesViewModel = SitesViewModel()
     @StateObject private var pilotsViewModel = PilotsViewModel()
+    @StateObject private var stationLatestReadingsViewModel: StationLatestReadingsViewModel
     @StateObject private var mapSettingsViewModel = MapSettingsViewModel(
         region: MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
@@ -27,9 +28,45 @@ struct CloudbaseUtahApp: App {
         selectedMapType: defaultmapType,
         pilotTrackDays: defaultPilotTrackDays,
         mapDisplayMode: defaultmapDisplayMode,
-        showSites: false,
-        showStations: true
+        showSites: defaultShowSites,
+        showStations: defaultShowStations
     )
+    
+    init() {
+        // Create each view‐model in the proper order, using locals:
+        let liftVM     = LiftParametersViewModel()
+        let sunVM      = SunriseSunsetViewModel()
+        let weatherVM  = WeatherCodesViewModel()
+        let sitesVM    = SitesViewModel()
+        let pilotsVM   = PilotsViewModel()
+        let stationsVM = StationLatestReadingsViewModel(sitesViewModel: sitesVM)
+        let mapVM      = MapSettingsViewModel(
+            region: MKCoordinateRegion(
+                center: CLLocationCoordinate2D(
+                    latitude: mapInitLatitude,
+                    longitude: mapInitLongitude
+                ),
+                span: MKCoordinateSpan(
+                    latitudeDelta: mapInitLatitudeSpan,
+                    longitudeDelta: mapInitLongitudeSpan
+                )
+            ),
+            selectedMapType: defaultmapType,
+            pilotTrackDays: defaultPilotTrackDays,
+            mapDisplayMode: defaultmapDisplayMode,
+            showSites: defaultShowSites,
+            showStations: defaultShowStations
+        )
+        
+        // Wire them up into their @StateObject wrappers:
+        _liftParametersViewModel      = StateObject(wrappedValue: liftVM)
+        _sunriseSunsetViewModel       = StateObject(wrappedValue: sunVM)
+        _weatherCodesViewModel        = StateObject(wrappedValue: weatherVM)
+        _sitesViewModel               = StateObject(wrappedValue: sitesVM)
+        _pilotsViewModel              = StateObject(wrappedValue: pilotsVM)
+        _stationLatestReadingsViewModel = StateObject(wrappedValue: stationsVM)
+        _mapSettingsViewModel         = StateObject(wrappedValue: mapVM)
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -39,6 +76,7 @@ struct CloudbaseUtahApp: App {
                 .environmentObject(sunriseSunsetViewModel)
                 .environmentObject(sitesViewModel)
                 .environmentObject(pilotsViewModel)
+                .environmentObject(stationLatestReadingsViewModel)
                 .environmentObject(mapSettingsViewModel)
                 .environment(\.colorScheme, .dark)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
@@ -58,6 +96,7 @@ struct BaseAppView: View {
     @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
     @EnvironmentObject var pilotsViewModel: PilotsViewModel
     @EnvironmentObject var sitesViewModel: SitesViewModel
+    @EnvironmentObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
 
     var body: some View {
         ZStack {
@@ -79,6 +118,7 @@ struct BaseAppView: View {
         }
         .onAppear {
             loadInitialMetadata()
+
         }
         .onChange(of: refreshMetadata) { oldValue, newValue in
             if newValue {
@@ -114,8 +154,10 @@ struct BaseAppView: View {
         }
         initializeLoggingFile()
         group.notify(queue: .main) {
-            metadataLoaded = true
-            checkIfReadyToTransition()
+            stationLatestReadingsViewModel.getLatestReadingsData(sitesOnly: true) {
+                metadataLoaded = true
+                checkIfReadyToTransition()
+            }
         }
     }
 

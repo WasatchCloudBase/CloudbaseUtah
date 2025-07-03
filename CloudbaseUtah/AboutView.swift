@@ -12,12 +12,29 @@ struct AboutView: View {
                 .foregroundColor(sectionHeaderColor)
                 .bold())
             {
-                VStack(alignment: .leading) {
                     Text("Developed by Mike Brown")
                         .font(.subheadline)
-                        .foregroundColor(rowHeaderColor)
-                    Text("cloudbaseutah@gmail.com")
+                
+                //Submit issue via email
+                Button(action: {
+                    if let url = URL(string: "mailto:\(cloudbaseUtahEmail)") {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    Text("Email feedback or issues")
                         .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
+                }
+
+                //Submit issue via Github repo
+                Button(action: {
+                    if let url = URL(string: cloudbaseUtahGitIssueLink) {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    Text("Submit issue via Github")
+                        .font(.subheadline)
+                        .foregroundColor(rowHeaderColor)
                 }
                     
                 //Github repo
@@ -26,7 +43,7 @@ struct AboutView: View {
                         UIApplication.shared.open(url)
                     }
                 }) {
-                    Text("Cloudbase Utah github repository")
+                    Text("Cloudbase Utah Github repository")
                         .font(.subheadline)
                         .foregroundColor(rowHeaderColor)
                 }

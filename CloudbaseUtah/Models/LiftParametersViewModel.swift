@@ -39,31 +39,37 @@ class LiftParametersViewModel: ObservableObject {
                 let decoder = JSONDecoder()
                 if let decodedResponse = try? decoder.decode(LiftParametersResponse.self, from: data) {
                     DispatchQueue.main.async {
-                        for row in decodedResponse.values {
-                            if row.count >= 2, let value = Double(row[1]) {
-                                switch row[0] {
-                                case "thermalLapseRate":
-                                    liftParameters.thermalLapseRate = value
-                                case "thermalVelocityConstant":
-                                    liftParameters.thermalVelocityConstant = value
-                                case "initialTriggerTempDiff":
-                                    liftParameters.initialTriggerTempDiff = value
-                                case "ongoingTriggerTempDiff":
-                                    liftParameters.ongoingTriggerTempDiff = value
-                                case "thermalRampDistance":
-                                    liftParameters.thermalRampDistance = value
-                                case "thermalRampStartPct":
-                                    liftParameters.thermalRampStartPct = value
-                                case "cloudbaseLapseRatesDiff":
-                                    liftParameters.cloudbaseLapseRatesDiff = value
-                                case "thermalGliderSinkRate":
-                                    liftParameters.thermalGliderSinkRate = value
-                                case "Parameter":
-                                    // skip heading row
-                                    _ = value
-                                default:
-                                    break
-                                }
+                        for row in decodedResponse.values.dropFirst() {
+                            guard row.count >= 2 else {
+                                print("Skipping malformed row (not enough columns): \(row)")
+                                continue
+                            }
+                            guard let value = Double(row[1]) else {
+                                print("Skipping row with non-numeric value: \(row)")
+                                continue
+                            }
+                            switch row[0] {
+                            case "thermalLapseRate":
+                                liftParameters.thermalLapseRate = value
+                            case "thermalVelocityConstant":
+                                liftParameters.thermalVelocityConstant = value
+                            case "initialTriggerTempDiff":
+                                liftParameters.initialTriggerTempDiff = value
+                            case "ongoingTriggerTempDiff":
+                                liftParameters.ongoingTriggerTempDiff = value
+                            case "thermalRampDistance":
+                                liftParameters.thermalRampDistance = value
+                            case "thermalRampStartPct":
+                                liftParameters.thermalRampStartPct = value
+                            case "cloudbaseLapseRatesDiff":
+                                liftParameters.cloudbaseLapseRatesDiff = value
+                            case "thermalGliderSinkRate":
+                                liftParameters.thermalGliderSinkRate = value
+                            case "Parameter":
+                                // skip heading row (should have been dropped above)
+                                _ = value
+                            default:
+                                break
                             }
                         }
                         self?.liftParameters = liftParameters

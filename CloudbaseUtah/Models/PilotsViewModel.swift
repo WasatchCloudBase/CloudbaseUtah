@@ -32,10 +32,19 @@ class PilotsViewModel: ObservableObject {
             .map { response in
                 response.values.dropFirst().compactMap { row -> Pilots? in
                     // Skip row if data missing
-                    guard row.count >= 2 else { return nil }
+                    guard row.count >= 2 else {
+                        print("Skipping malformed pilot row: \(row)")
+                        return nil
+                    }
                     
                     let pilotName = row[0]
                     let trackingShareURL = row[1]
+                    
+                    // Check for a valid share URL format
+                    guard trackingShareURL.contains("https://share.garmin.com/") else {
+                        print("Skipping malformed InReach share URL for row: \(row)")
+                        return nil
+                    }
                     
                     // Extract pilot name from the share URL
                     let pilotNameFromURL = trackingShareURL.components(separatedBy: "/").last ?? ""

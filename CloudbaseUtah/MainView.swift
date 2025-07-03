@@ -16,6 +16,7 @@ struct MainView: View {
     @EnvironmentObject var sitesViewModel: SitesViewModel
     @EnvironmentObject var pilotsViewModel: PilotsViewModel
     @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
+    @EnvironmentObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
 
     var body: some View {
         NavigationView {
@@ -23,8 +24,9 @@ struct MainView: View {
                 
                 // Call content based on selected navigation
                 if selectedView == .site {
-                    SiteView(sitesViewModel: sitesViewModel)
+                    SiteView()
                         .environmentObject(sitesViewModel)
+                        .environmentObject(stationLatestReadingsViewModel)
                 }
                 if selectedView == .weather {
                     WeatherView()
@@ -38,6 +40,7 @@ struct MainView: View {
                     .environmentObject(sitesViewModel)
                     .environmentObject(mapSettingsViewModel)
                     .environmentObject(pilotsViewModel)
+                    .environmentObject(stationLatestReadingsViewModel)
                 }
                 if selectedView == .webcam {
                     WeatherCamView()

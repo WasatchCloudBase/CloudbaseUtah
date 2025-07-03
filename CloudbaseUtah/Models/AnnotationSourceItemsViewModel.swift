@@ -90,7 +90,7 @@ class AnnotationSourceItemsViewModel: ObservableObject {
             // When all CUASA readings are received, update annotations
             readingsGroup.notify(queue: .main) { [self] in
                 // Create annotations for each latest reading
-                for reading in stationLatestReadingsViewModel.latestReadings {
+                for reading in stationLatestReadingsViewModel.latestAllReadings {
                     if let lat = Double(reading.stationLatitude), let lon = Double(reading.stationLongitude) {
                         let annotationSourceItem = AnnotationSourceItem(
                             annotationType: "station",

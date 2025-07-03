@@ -106,11 +106,18 @@ let pilotInEmergencyAnnotationImage: UIImage = UIImage(systemName: "exclamationm
 let pilotColorPalette: [PlatformColor] = [
     PlatformColor(.electric),
     PlatformColor(.champion),
-    PlatformColor(.bubblegum),
+    PlatformColor(.apple),
     PlatformColor(.poppy),
     PlatformColor(.periwinkle),
     PlatformColor(.orangetheme),
     PlatformColor(.magentatheme),
+    PlatformColor(.bubblegum),
     PlatformColor(.slime),
-    PlatformColor(.titanium)
+    PlatformColor(.buttercup),
+    PlatformColor(.tealtheme),
+    PlatformColor(.jolt),
+    PlatformColor(.brightlime),
+    PlatformColor(.bluesky),
+    PlatformColor(.purplerain),
+    PlatformColor(.barbi)
 ]

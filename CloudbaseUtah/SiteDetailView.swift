@@ -116,10 +116,10 @@ struct SiteDetailView: View {
                                 .font(.footnote)
                                 .foregroundColor(infoFontColor)
                             if historyIsLoading {
-                                Text ("Loading readings history...")
-                                    .padding(.top, 8)
-                                    .font(.caption)
-                                    .foregroundColor(infoFontColor)
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                    .scaleEffect(0.75)
+                                    .frame(width: 20, height: 20)
                             } else if let errorMessage = viewModel.readingsHistoryData.errorMessage {
                                 Text("Error message:")
                                     .padding(.top, 8)
@@ -256,7 +256,7 @@ struct SiteDetailView: View {
     
     // Reload readings data when page is active for a time interval
     private func startTimer() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + readingsRefreshInterval) {
             if isActive {
                 viewModel.GetReadingsHistoryData(stationID: site.readingsStation, readingsSource: site.readingsSource)
                 startTimer() // Continue the timer loop

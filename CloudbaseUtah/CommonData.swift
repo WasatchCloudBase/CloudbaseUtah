@@ -28,7 +28,7 @@ let sunriseLatitude: Double = 40.7862                   // SLC airport coordinat
 let sunriseLongitude: Double = -111.9801
 let skewTButtonWidth: CGFloat = 100
 let defaultTopOfLiftAltitude = 18000.0                  // Use in lift area graph when top of lift isn't reached in calculations
-let pageRefreshInterval: TimeInterval = 150             // Time in seconds to refresh wind readings (300 for 5 min)
+let readingsRefreshInterval: TimeInterval = 120             // Time in seconds to refresh wind readings (300 for 5 min)
 
 // Map parameters
 let mapInitLatitude: Double = 39.72                     // Center point for map on initial opening
@@ -67,9 +67,21 @@ let defaultPilotTrackDays: Double = 1.0                 // Default days of live 
 let defaultmapDisplayMode: MapDisplayMode = .tracking
 let defaultmapType: CustomMapStyle = .standard
 let defaultShowSites: Bool = false
-let defaultShowStations: Bool = false
+let defaultShowStations: Bool = true
 let defaultShowRadar: Bool = true
-let defaultShowInfrared: Bool = false
+let defaultShowInfrared: Bool = true
+let defaultRadarColorScheme: Int = 3
+    /* Rainviewer radar color scheme options are:
+    0        BW Black and White: dBZ values
+    1        Original (green -> blue)  for increasing precip)
+    2        Universal Blue (blue -> yellow -> red for increasing precip)  **
+    3        TITAN (green -> blue -> purple -> magenta -> orange -> yellow for increasing precip)  **
+    4        The Weather Channel (TWC) (green -> yellow for increasing precip) *
+    5        Meteored (blue -> green -> yellow for increasing precip) *
+    6        NEXRAD Level III (blue -> green -> yellow -> red for increasing precip) *
+    7        Rainbow @ SELEX-IS (green -> yellow -> red for increasing precip)  **
+    8        Dark Sky ((deep blue -> red -> yellow for increasing precip)  **
+    */
 
 // HTTP links and APIs
 let forecastUSMapLink: String = "https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif"
@@ -82,7 +94,9 @@ let skewTLink: String = "https://www.weather.gov/zse/ModelSounding?id=kslc&model
 // prior skewTLink: String = "https://weather.ral.ucar.edu/upper/displayUpper.php?img=KSLC.png&endDate=-1&endTime=-1&duration=0"
 let uDOTCamerasAPI: String = "https://www.udottraffic.utah.gov/api/v2/get/cameras?key=6035b1d6b660471a89c9b0c0804a584b&format=json"
 let uDOTCamerasLink: String = "https://www.udottraffic.utah.gov"
+let cloudbaseUtahEmail: String = "cloudbase@gmail.com"
 let cloudbaseUtahGitLink: String = "https://github.com/WasatchCloudBase/CloudbaseUtah"
+let cloudbaseUtahGitIssueLink: String = "https://github.com/WasatchCloudBase/CloudbaseUtah/issues"
 let cloudbaseUtahGoogleSheetLink: String = "https://docs.google.com/spreadsheets/d/1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls/edit?gid=0#gid=0"
 let ipCamLink: String = "https://apps.apple.com/us/app/ip-camera-viewer-ipcams/id1045600272"
 let UHGPGAcamsLink: String = "https://www.uhgpga.org/webcams"

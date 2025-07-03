@@ -78,7 +78,8 @@ struct MapView: UIViewRepresentable {
     @Binding var mapStyle: CustomMapStyle
     @Binding var showRadar: Bool
     @Binding var showInfrared: Bool
-    let rainviewerOverlays: [MKTileOverlay]
+    let radarOverlays: [MKTileOverlay]
+    let infraredOverlays: [MKTileOverlay]
     let pilotTracks: [PilotTracks]
     let onPilotSelected: (PilotTracks) -> Void
     @State private var lastPilotTracksHash: Int = 0     // Used to identify track changes requiring re-rendering
@@ -96,10 +97,17 @@ struct MapView: UIViewRepresentable {
         mapView.isScrollEnabled = true
         mapView.mapType = mapStyle.toMapType()
         
-        // Overlay radar/infrared satellite
+        // Display infrared satellite tiles
+        if showInfrared {
+            for tile in infraredOverlays {
+                mapView.addOverlay(tile, level: .aboveRoads)
+            }
+        }
+        
+        // Display radar tiles
         if showRadar {
-            for overlay in rainviewerOverlays {
-                mapView.addOverlay(overlay, level: .aboveLabels)
+            for tile in radarOverlays {
+                mapView.addOverlay(tile, level: .aboveRoads)
             }
         }
         
@@ -115,10 +123,17 @@ struct MapView: UIViewRepresentable {
         mapView.removeAnnotations(mapView.annotations)
         mapView.removeOverlays(mapView.overlays)
 
-        // Display radar/satellite tiles
+        // Display infrared satellite tiles
+        if showInfrared {
+            for tile in infraredOverlays {
+                mapView.addOverlay(tile, level: .aboveRoads)
+            }
+        }
+        
+        // Display radar tiles
         if showRadar {
-            for tile in rainviewerOverlays {
-                mapView.addOverlay(tile, level: .aboveLabels)
+            for tile in radarOverlays {
+                mapView.addOverlay(tile, level: .aboveRoads)
             }
         }
         
@@ -154,6 +169,7 @@ struct MapView: UIViewRepresentable {
                 let polyline = MKPolyline(coordinates: coords, count: coords.count)
                 polyline.title = pilotName
                 mapView.addOverlay(polyline)
+                
             }
             
             // — partition into emergency / message / finish / first / normal
@@ -262,7 +278,13 @@ struct MapView: UIViewRepresentable {
             
             // Tile overlays (radar / infrared satellite)
             if let tile = overlay as? MKTileOverlay {
-                return MKTileOverlayRenderer(tileOverlay: tile)
+                let renderer = MKTileOverlayRenderer(tileOverlay: tile)
+                if tile.urlTemplate?.contains("/satellite/") == true {
+                    renderer.alpha = 0.6
+                  } else if tile.urlTemplate?.contains("/radar/") == true {
+                      renderer.alpha = 1.0
+                  }
+                return renderer
             }
             
             // Pilot track lines
@@ -515,8 +537,9 @@ struct MapContainerView: View {
     @State private var annotationSourceItems: [AnnotationSourceItem] = []
     @State private var isActive = false
     @State private var refreshWorkItem: DispatchWorkItem?
-    @State var rainviewerOverlays: [MKTileOverlay] = []
-
+    @State private var radarOverlays: [MKTileOverlay] = []
+    @State private var infraredOverlays: [MKTileOverlay] = []
+    
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
         span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan))
@@ -531,7 +554,7 @@ struct MapContainerView: View {
     private var cancellables = Set<AnyCancellable>()
     
     init(pilotsViewModel: PilotsViewModel, sitesViewModel: SitesViewModel, mapSettingsViewModel: MapSettingsViewModel) {
-        let stationVM = StationLatestReadingsViewModel(viewModel: sitesViewModel)
+        let stationVM = StationLatestReadingsViewModel(sitesViewModel: sitesViewModel)
         _pilotTracksViewModel = StateObject(wrappedValue:
             PilotTracksViewModel(pilotsViewModel: pilotsViewModel))
         _stationLatestReadingsViewModel = StateObject(wrappedValue: stationVM)
@@ -567,7 +590,8 @@ struct MapContainerView: View {
                         mapStyle: $mapSettingsViewModel.selectedMapType,
                         showRadar: $mapSettingsViewModel.showRadar,
                         showInfrared: $mapSettingsViewModel.showInfrared,
-                        rainviewerOverlays: rainviewerOverlays,
+                        radarOverlays: radarOverlays,
+                        infraredOverlays: infraredOverlays,
                         pilotTracks: filteredTracks,
                         onPilotSelected: { track in
                             selectedPilotTrack = track
@@ -702,6 +726,7 @@ struct MapContainerView: View {
                                     showStations: $mapSettingsViewModel.showStations,
                                     showRadar: $mapSettingsViewModel.showRadar,
                                     showInfrared: $mapSettingsViewModel.showInfrared,
+                                    radarColorScheme: $mapSettingsViewModel.radarColorScheme,
                                     selectedPilots: $mapSettingsViewModel.selectedPilots
                                 )
                                 .interactiveDismissDisabled(true) // Disables swipe-to-dismiss (force use of back button)\
@@ -771,11 +796,22 @@ struct MapContainerView: View {
                                            showStations: mapSettingsViewModel.showStations,
                                            showRadar: mapSettingsViewModel.showRadar,
                                            showInfrared: mapSettingsViewModel.showInfrared,
+                                           radarColorScheme: mapSettingsViewModel.radarColorScheme,
                                            scenePhase: scenePhase,
                                            selectedPilots: mapSettingsViewModel.selectedPilots
                                           )) {
                 // Check all changes together to only execute updateMapAnnotations once
                 if scenePhase == .active {
+                    
+                    // Reload radar and infrared overlays
+                    let provider = RainViewerOverlayProvider()
+                    provider.getRainViewerOverlays (radarColorScheme: mapSettingsViewModel.radarColorScheme) { radar, infrared in
+                        DispatchQueue.main.async {
+                            self.radarOverlays = radar
+                            self.infraredOverlays = infrared
+                        }
+                    }
+
                     // Reload latest pilot tracks
                     if mapSettingsViewModel.isMapTrackingMode {
                         DispatchQueue.main.async {
@@ -822,6 +858,14 @@ struct MapContainerView: View {
             }
         }
        .onAppear {
+           
+           let provider = RainViewerOverlayProvider()
+           provider.getRainViewerOverlays (radarColorScheme: mapSettingsViewModel.radarColorScheme) { radar, infrared in
+               DispatchQueue.main.async {
+                   self.radarOverlays = radar
+                   self.infraredOverlays = infrared
+               }
+           }
 
            if mapSettingsViewModel.isMapTrackingMode {
                // Reload latest pilot tracks
@@ -845,13 +889,6 @@ struct MapContainerView: View {
                }
            }
            
-           // Load radar/infrared satellite overlays
-           fetchRainViewerFrames { overlays in
-               DispatchQueue.main.async {
-                   self.rainviewerOverlays = overlays
-               }
-           }
-
            startTimer() // Cancels existing timer and restarts
            isActive = true
            startMonitoringRegion()
@@ -879,6 +916,16 @@ struct MapContainerView: View {
         // Create a new work item
         let workItem = DispatchWorkItem {
             if isActive {
+                
+                // Reload radar and infrared overlays
+                let provider = RainViewerOverlayProvider()
+                provider.getRainViewerOverlays (radarColorScheme: mapSettingsViewModel.radarColorScheme) { radar, infrared in
+                    DispatchQueue.main.async {
+                        self.radarOverlays = radar
+                        self.infraredOverlays = infrared
+                    }
+                }
+
                 // Reload latest pilot tracks
                 if mapSettingsViewModel.isMapTrackingMode {
                     DispatchQueue.main.async {
@@ -906,7 +953,7 @@ struct MapContainerView: View {
         refreshWorkItem = workItem
         
         // Schedule the new timer
-        DispatchQueue.main.asyncAfter(deadline: .now() + pageRefreshInterval, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + readingsRefreshInterval, execute: workItem)
     }
     
     private func startMonitoringRegion() {

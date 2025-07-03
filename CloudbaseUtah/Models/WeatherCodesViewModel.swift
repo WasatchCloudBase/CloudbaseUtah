@@ -25,8 +25,17 @@ class WeatherCodesViewModel: ObservableObject {
         URLSession.shared.dataTaskPublisher(for: url)
             .map { $0.data }
             .decode(type: WeatherCodesResponse.self, decoder: JSONDecoder())
+        
             .map { response in
-                response.values.dropFirst().map { WeatherCodes(weatherCode: Int($0[0]) ?? 0, imageName: $0[1]) }
+                response.values.dropFirst().compactMap { row in
+                    guard row.count >= 2 else {
+                        print("Skipping malformed weather code row: \(row)")
+                        return nil
+                    }
+                    let code = Int(row[0]) ?? 0
+                    let imageName = row[1]
+                    return WeatherCodes(weatherCode: code, imageName: imageName)
+                }
             }
             .replaceError(with: [])
             .receive(on: DispatchQueue.main)

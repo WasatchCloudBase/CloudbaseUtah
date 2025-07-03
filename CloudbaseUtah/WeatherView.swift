@@ -35,6 +35,7 @@ struct WeatherView: View {
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
     @State private var showSynopsis = true
+    @State private var showDiscussion = false
     @State private var showShortTerm = false
     @State private var showLongTerm = false
     @State private var showAviation = true
@@ -109,7 +110,10 @@ struct WeatherView: View {
                 .bold())
             {
                 if TFRviewModel.isLoading {
-                    ProgressView("TFRs loading...")
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .scaleEffect(0.75)
+                        .frame(width: 20, height: 20)
                 } else if TFRviewModel.tfrs.isEmpty {
                     Text("There are no current TFRs for Utah")
                         .font(.subheadline)
@@ -141,7 +145,10 @@ struct WeatherView: View {
                 .bold())
             {
                 if isLoadingWeatherAlerts {
-                    ProgressView("Weather alerts loading...")
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .scaleEffect(0.75)
+                        .frame(width: 20, height: 20)
                 } else if noWeatherAlerts {
                     Text("There are no current weather alerts for Utah")
                         .font(.subheadline)
@@ -192,7 +199,20 @@ struct WeatherView: View {
                             }
                         )
                     }
-                    if let shortTerm = AFDdata.shortTerm {
+                    if let discussion = AFDdata.discussion, !discussion.isEmpty {
+                        DisclosureGroup(
+                            isExpanded: $showDiscussion,
+                            content: {
+                                Text(discussion)
+                                    .font(.subheadline)
+                            }, label: {
+                                Text("Discussion")
+                                    .font(.headline)
+                                    .foregroundColor(rowHeaderColor)
+                            }
+                        )
+                    }
+                    if let shortTerm = AFDdata.shortTerm, !shortTerm.isEmpty {
                         DisclosureGroup(
                             isExpanded: $showShortTerm,
                             content: {
@@ -205,7 +225,7 @@ struct WeatherView: View {
                             }
                         )
                     }
-                    if let longTerm = AFDdata.longTerm {
+                    if let longTerm = AFDdata.longTerm, !longTerm.isEmpty  {
                         DisclosureGroup(
                             isExpanded: $showLongTerm,
                             content: {
@@ -232,7 +252,10 @@ struct WeatherView: View {
                         )
                     }
                 } else {
-                    Text("Loading...")
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .scaleEffect(0.75)
+                        .frame(width: 20, height: 20)
                 }
             }
             
@@ -455,7 +478,7 @@ struct WeatherView: View {
             }
             
             // High res Skew-T from morning sounding (from Matt Hansen)
-            Section(header: Text("SLC Morning Sounding Skew-T")
+            Section(header: Text("SLC Morning Sounding")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
                 .bold()) {
@@ -466,7 +489,7 @@ struct WeatherView: View {
             }
             
             // Skew-T from latest forecast model
-            Section(header: Text("SLC Latest Forecast Skew-T")
+            Section(header: Text("SLC Latest Model Sounding")
                 .font(.headline)
                 .foregroundColor(sectionHeaderColor)
                 .bold()) {
@@ -484,6 +507,17 @@ struct WeatherView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .contentShape(Rectangle())      // Makes entire area tappable
                 .onTapGesture { if let url = URL(string: skewTLink) { openLink(url) } }
+            }
+            
+            VStack (alignment: .leading) {
+                Text("SLC Morning Sounding data served by Matt Hansen")
+                    .font(.caption)
+                    .foregroundColor(infoFontColor)
+                    .padding(.top, 2)
+                Text("https://wasatchwind.github.io/")
+                    .font(.caption)
+                    .foregroundColor(infoFontColor)
+                    .padding(.bottom, 4)
             }
             
         }

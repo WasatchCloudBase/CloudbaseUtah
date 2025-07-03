@@ -7,6 +7,12 @@ import AppKit
 import UIKit
 #endif
 
+
+struct RadarColorScheme: Identifiable {
+    let id: Int
+    let title: String
+}
+
 // This view uses temporary variables while the sheet is open, then publishes when the sheet is closed.
 // This is done to prevent lag on this sheet each time a view item is changed.
 struct MapSettingsView: View {
@@ -17,6 +23,7 @@ struct MapSettingsView: View {
     @Binding var showStations: Bool
     @Binding var showRadar: Bool
     @Binding var showInfrared: Bool
+    @Binding var radarColorScheme: Int
     @Binding var selectedPilots: [Pilots]
     @EnvironmentObject var pilotsViewModel: PilotsViewModel
     @EnvironmentObject var pilotTracksViewModel: PilotTracksViewModel
@@ -30,6 +37,7 @@ struct MapSettingsView: View {
     @State private var tempShowStations: Bool
     @State private var tempShowRadar: Bool
     @State private var tempShowInfrared: Bool
+    @State private var tempRadarColorScheme: Int
     
     // Selected pilot list variables
     @State private var selectedPilotIDs: Set<UUID> = []
@@ -46,6 +54,7 @@ struct MapSettingsView: View {
          showStations: Binding<Bool>,
          showRadar: Binding<Bool>,
          showInfrared: Binding<Bool>,
+         radarColorScheme: Binding<Int>,
          selectedPilots: Binding<[Pilots]>
     ) {
         _selectedMapType = selectedMapType
@@ -55,6 +64,7 @@ struct MapSettingsView: View {
         _showStations = showStations
         _showRadar = showRadar
         _showInfrared = showInfrared
+        _radarColorScheme = radarColorScheme
         _selectedPilots = selectedPilots
         
         // Initialize temporary states with current values
@@ -65,7 +75,21 @@ struct MapSettingsView: View {
         _tempShowStations = State(initialValue: showStations.wrappedValue)
         _tempShowRadar = State(initialValue: showRadar.wrappedValue)
         _tempShowInfrared = State(initialValue: showInfrared.wrappedValue)
+        _tempRadarColorScheme = State(initialValue: radarColorScheme.wrappedValue)
     }
+    
+    // Rainviewer color schemes for radar overlay
+    let radarColorSchemes: [RadarColorScheme] = [
+//        .init(id: 0, title: "0 – BW Black and White: dBZ values"),
+        .init(id: 1, title: "Original"),
+        .init(id: 2, title: "Universal Blue"),
+        .init(id: 3, title: "TITAN"),
+        .init(id: 4, title: "Weather Channel"),
+        .init(id: 5, title: "Meteored"),
+        .init(id: 6, title: "NEXRAD Level III"),
+        .init(id: 7, title: "Rainbow @ SELEX-IS"),
+        .init(id: 8, title: "Dark Sky")
+    ]
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -101,16 +125,6 @@ struct MapSettingsView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                 }
-                
-                /* Map mode on main map screen, so not duplicating here
-                Section(header: Text("Map mode")) {
-                    Picker("Display", selection: $tempMapDisplayMode) {
-                        Text("Weather").tag(MapDisplayMode.weather)
-                        Text("Tracking").tag(MapDisplayMode.tracking)
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                }
-                */
 
                 if $tempMapDisplayMode.wrappedValue == .weather {
                     Section(header: Text("Display layers")) {
@@ -122,8 +136,17 @@ struct MapSettingsView: View {
                 if $tempMapDisplayMode.wrappedValue == .tracking {
                     
                     Section(header: Text("Weather layers")) {
-                        Toggle("Radar", isOn: $tempShowRadar)
-//                        Toggle("Infrared", isOn: $tempShowInfrared)
+                        Toggle("Radar (precip)", isOn: $tempShowRadar)
+                        if tempShowRadar {
+                            Picker("Radar colors", selection: $tempRadarColorScheme) {
+                                ForEach(radarColorSchemes) { radarColorScheme in
+                                    Text(radarColorScheme.title)
+                                        .tag(radarColorScheme.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
+                        Toggle("Satellite (clouds)", isOn: $tempShowInfrared)
                     }
                     
                     Section(header: Text("Pilot track days")) {
@@ -219,6 +242,22 @@ struct MapSettingsView: View {
                         }
                         .padding(.vertical, 0)
                     }
+                    VStack (alignment: .leading) {
+                        Text("Readings data aggregated by Synoptic")
+                            .font(.caption)
+                            .foregroundColor(infoFontColor)
+                        Text("https://synopticdata.com")
+                            .font(.caption)
+                            .foregroundColor(infoFontColor)
+                            .padding(.bottom, 8)
+                        Text("Radar/satellite data provided by Rain Viewer")
+                            .font(.caption)
+                            .foregroundColor(infoFontColor)
+                        Text("https://www.rainviewer.com")
+                            .font(.caption)
+                            .foregroundColor(infoFontColor)
+                    }
+
                 }
             }
             .padding(.horizontal)
@@ -251,6 +290,7 @@ struct MapSettingsView: View {
             showStations = tempShowStations
             showRadar = tempShowRadar
             showInfrared = tempShowInfrared
+            radarColorScheme = tempRadarColorScheme
             selectedPilots = pilotsViewModel.pilots.filter { selectedPilotIDs.contains($0.id) }
         }
         

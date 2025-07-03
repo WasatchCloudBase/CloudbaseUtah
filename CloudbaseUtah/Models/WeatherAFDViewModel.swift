@@ -6,7 +6,8 @@ struct AFD: Identifiable {
     let id = UUID()
     let date: String
     let synopsis: String?
-    let shortTerm: String?
+    let discussion: String?     // Sometimes, AFD has a "DISCUSSION" section
+    let shortTerm: String?      // and somethines it has "SHORT TERM" and "LONG TERM" sections instead
     let longTerm: String?
     let aviation: String?
 }
@@ -34,10 +35,11 @@ class AFDViewModel: ObservableObject {
         let date = String(AFDData[dateRange])
         
         let synopsis = collapseTextLines(extractSection(from: AFDData, start: ".SYNOPSIS", end: "&&"))
+        let discussion = collapseTextLines(extractSection(from: AFDData, start: ".DISCUSSION", end: "&&"))
         let shortTerm = collapseTextLines(extractSection(from: AFDData, start: ".SHORT TERM", end: ".LONG TERM"))
         let longTerm = collapseTextLines(extractSection(from: AFDData, start: ".LONG TERM", end: "&&"))
         let aviation = collapseTextLines(extractSection(from: AFDData, start: ".AVIATION", end: "&&"))
         
-        return AFD(date: date, synopsis: synopsis, shortTerm: shortTerm, longTerm: longTerm, aviation: aviation)
+        return AFD(date: date, synopsis: synopsis, discussion: discussion, shortTerm: shortTerm, longTerm: longTerm, aviation: aviation)
     }
 }

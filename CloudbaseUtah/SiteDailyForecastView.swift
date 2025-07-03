@@ -125,7 +125,10 @@ struct SiteDailyForecastView: View {
                 }
             }
             else {
-                Text("Loading...")
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle())
+                    .scaleEffect(0.75)
+                    .frame(width: 20, height: 20)
             }
         }
         .onAppear {

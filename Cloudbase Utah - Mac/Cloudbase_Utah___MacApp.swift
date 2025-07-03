@@ -18,8 +18,8 @@ struct CloudbaseUtah: App {
         selectedMapType: defaultmapType,
         pilotTrackDays: defaultPilotTrackDays,
         mapDisplayMode: defaultmapDisplayMode,
-        showSites: false,
-        showStations: true
+        showSites: defaultShowSites,
+        showStations: defaultShowStations
     )
 
     var body: some Scene {
