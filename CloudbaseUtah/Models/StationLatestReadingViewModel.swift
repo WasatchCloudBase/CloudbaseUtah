@@ -168,9 +168,9 @@ class StationLatestReadingViewModel: ObservableObject {
         let urlString = latestReadingsAPIHeader + stationParameters + latestReadingsAPITrailer + mesowestAPIToken
         guard let url = URL(string: urlString) else { return }
         if printReadingsURL { print(url) }
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+        URLSession.shared.dataTask(with: url) { data, response, error in
             DispatchQueue.main.async {
-                guard let self = self, let data = data, error == nil else { return }
+                guard let data = data, error == nil else { return }
                 do {
                     let decodedResponse = try JSONDecoder().decode(MesonetLatestResponse.self, from: data)
                     let latestReadings: [StationLatestReading] = decodedResponse.station.compactMap { station in
@@ -229,8 +229,8 @@ class StationLatestReadingViewModel: ObservableObject {
                 continue
             }
 
-            URLSession.shared.dataTask(with: stationInfoURL) { [weak self] data, response, error in
-                guard let self = self, let data = data, error == nil else {
+            URLSession.shared.dataTask(with: stationInfoURL) { data, response, error in
+                guard let data = data, error == nil else {
                     DispatchQueue.main.async { group.leave() }
                     return
                 }

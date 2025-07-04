@@ -1,14 +1,7 @@
 import SwiftUI
 import MapKit
-
-// Use different time/date change events based on platform
-#if os(iOS)
 import UIKit
 let timeChangeNotification = UIApplication.significantTimeChangeNotification
-#elseif os(macOS)
-import AppKit
-let timeChangeNotification = NSWorkspace.dayDidChangeNotification
-#endif
 
 @main
 struct CloudbaseUtahApp: App {
@@ -104,12 +97,10 @@ struct BaseAppView: View {
             VStack {
                 if isActive && metadataLoaded {
                     MainView(refreshMetadata: $refreshMetadata)
-                        .preferredColorScheme(.dark)
                 } else {
                     SplashScreenView()
-                        .preferredColorScheme(.dark)
                         .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                                 checkIfReadyToTransition()
                             }
                         }

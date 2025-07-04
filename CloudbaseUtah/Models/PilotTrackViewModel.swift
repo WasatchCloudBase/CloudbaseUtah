@@ -74,7 +74,7 @@ class PilotTrackViewModel: ObservableObject {
         // Note that this assumes mapView will then make a call to refresh pilotTracks
         pilotViewModel.$pilots
             .sink { [weak self] newPilots in
-                guard let self = self else { return }
+                guard self != nil else { return }
             }
             .store(in: &cancellables)
     }

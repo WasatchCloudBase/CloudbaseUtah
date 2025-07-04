@@ -13,7 +13,7 @@ struct WeatherCamGoogleSheetResponse: Codable {
     let values: [[String]]
 }
 
-class WeatherCamsViewModel: ObservableObject {
+class WeatherCamViewModel: ObservableObject {
     @Published var weatherCams: [WeatherCam] = []
     @Published var groupedWeatherCams: [String: [WeatherCam]] = [:]
     @Published var isLoading: Bool = false

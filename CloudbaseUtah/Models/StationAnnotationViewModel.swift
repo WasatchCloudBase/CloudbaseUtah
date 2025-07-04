@@ -4,31 +4,36 @@ import MapKit
 
 // Full listing of station latest readings used as the source for creating map annotations
 // Created based on active layers and refreshed on app navigation or elapsed time
-struct StationAnnotation: Identifiable {
+class StationAnnotation: NSObject, MKAnnotation, Identifiable {
     let id = UUID()
     let annotationID: String
-    let annotationName: String
+    let title: String?
     let coordinate: CLLocationCoordinate2D
     let altitude: Double
     let readingsSource: String
     let windSpeed: Double?
     let windDirection: Double?
     let windGust: Double?
-}
 
-class WeatherStationAnnotation: NSObject, MKAnnotation, Identifiable {
-  let coordinate: CLLocationCoordinate2D
-  let title: String?
-  let windSpeed: Double?
-  let windDirection: Double?
-  
-  init(lat: Double, lon: Double, name: String, speed: Double?, direction: Double?) {
-    self.coordinate    = CLLocationCoordinate2D(latitude: lat,
-                                                longitude: lon)
-    self.title         = name
-    self.windSpeed     = speed
-    self.windDirection = direction
-  }
+    init(
+      annotationID: String,
+      annotationName: String,
+      coordinate: CLLocationCoordinate2D,
+      altitude: Double,
+      readingsSource: String,
+      windSpeed: Double?,
+      windDirection: Double?,
+      windGust: Double?
+    ) {
+      self.annotationID    = annotationID
+      self.title           = annotationName
+      self.coordinate      = coordinate
+      self.altitude        = altitude
+      self.readingsSource  = readingsSource
+      self.windSpeed       = windSpeed
+      self.windDirection   = windDirection
+      self.windGust        = windGust
+    }
 }
 
 class StationAnnotationViewModel: ObservableObject {

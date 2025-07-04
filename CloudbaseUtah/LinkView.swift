@@ -3,23 +3,23 @@ import Combine
 import Foundation
 
 struct LinkView: View {
-    @StateObject private var viewModel = LinkViewModel()
+    @StateObject private var linkViewModel = LinkViewModel()
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
     
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if linkViewModel.isLoading {
                 loadingView
-            } else if viewModel.groupedLinks.isEmpty {
+            } else if linkViewModel.groupedLinks.isEmpty {
                 emptyView
             } else {
                 contentView
             }
         }
         .onAppear {
-            viewModel.fetchLinks()
+            linkViewModel.fetchLinks()
         }
         // Used to open URL links as an in-app sheet using Safari
         .sheet(isPresented: $showWebView) {
@@ -39,7 +39,7 @@ struct LinkView: View {
     private var emptyView: some View {
         VStack {
             Spacer()
-            Text("No links available.")
+            Text("No links available")
                 .font(.subheadline)
                 .foregroundColor(.gray)
                 .padding()
@@ -49,13 +49,13 @@ struct LinkView: View {
     
     private var contentView: some View {
         List {
-            ForEach(viewModel.groupedLinks.keys.sorted(), id: \.self) { category in
+            ForEach(linkViewModel.groupedLinks.keys.sorted(), id: \.self) { category in
                 // Split is used to strip the order sequence number from the front of the category on display
                 Section(header: Text(category.split(separator: " ", maxSplits: 1)[1])
                     .font(.subheadline)
                     .foregroundColor(sectionHeaderColor)
                     .bold()) {
-                        ForEach(viewModel.groupedLinks[category] ?? []) { item in
+                        ForEach(linkViewModel.groupedLinks[category] ?? []) { item in
                             Button(action: {
                                 if let url = URL(string: item.link) {
                                     externalURL = url

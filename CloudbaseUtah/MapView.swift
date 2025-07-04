@@ -1,15 +1,10 @@
 import SwiftUI
 import MapKit
 import Combine
-#if os(macOS)
-import AppKit
-#elseif os(iOS)
 import UIKit
-#endif
 import CoreGraphics
 import CoreLocation
 import Foundation
-
 
 class ArrowOverlay: NSObject, MKOverlay {
     let coordinate: CLLocationCoordinate2D
@@ -83,9 +78,9 @@ struct MapView: UIViewRepresentable {
     let infraredOverlays: [MKTileOverlay]
     let pilotTracks: [PilotTrack]
     let sites: [Site]
-    let weatherAnnotations: [WeatherStationAnnotation]
+    let stationAnnotations: [StationAnnotation]
     let onPilotSelected: (PilotTrack) -> Void
-    let onStationSelected: (WeatherStationAnnotation) -> Void
+    let onStationSelected: (StationAnnotation) -> Void
     @State private var lastPilotTrackHash: Int = 0     // Used to identify track changes requiring re-rendering
     
     func makeCoordinator() -> Coordinator {
@@ -142,7 +137,7 @@ struct MapView: UIViewRepresentable {
         context.coordinator.pilotColorMap = pilotColorMap
         
         // Add wind station annotation markers
-        mapView.addAnnotations(weatherAnnotations)
+        mapView.addAnnotations(stationAnnotations)
         
         // Determine whether to show all track markers
         let showAllMarkers = zoomLevel > mapShowAllMarkersZoomLevel
@@ -253,12 +248,12 @@ struct MapView: UIViewRepresentable {
     class Coordinator: NSObject, MKMapViewDelegate {
         var parent: MapView
         let onPilotSelected: (PilotTrack) -> Void
-        let onStationSelected: (WeatherStationAnnotation) -> Void
+        let onStationSelected: (StationAnnotation) -> Void
         var pilotColorMap: [String: UIColor] = [:]
         
         init(parent: MapView,
              onPilotSelected: @escaping (PilotTrack) -> Void,
-             onStationSelected: @escaping (WeatherStationAnnotation) -> Void) {
+             onStationSelected: @escaping (StationAnnotation) -> Void) {
             self.parent = parent
             self.onPilotSelected = onPilotSelected
             self.onStationSelected = onStationSelected
@@ -311,9 +306,7 @@ struct MapView: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             
             // Pilot annotations
-            if let pilot = annotation as? PilotTrackAnnotation {
-                
-                guard let pilotAnnotation = annotation as? PilotTrackAnnotation else { return nil }
+            if let pilotAnnotation = annotation as? PilotTrackAnnotation {
                 
                 let identifier = "PilotAnnotation"
                 let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
@@ -497,8 +490,7 @@ struct MapView: UIViewRepresentable {
             }
             
             // Wind reading stations
-            if let station = annotation as? WeatherStationAnnotation {
-                
+            if let station = annotation as? StationAnnotation {
                 // Define separate IDs for each station on the map
                 let id = "WeatherStation-\(station.title ?? "")"
                 let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
@@ -521,7 +513,7 @@ struct MapView: UIViewRepresentable {
             return nil
         }
         
-        private func makeStationBadge(for station: WeatherStationAnnotation) -> UIView {
+        private func makeStationBadge(for station: StationAnnotation) -> UIView {
             let horizPadding: CGFloat = 5
             let vertPadding: CGFloat = 3
             let badge = UIView()
@@ -582,7 +574,7 @@ struct MapView: UIViewRepresentable {
                     if let track = pilot.pilotTrack {
                         self.onPilotSelected(track)
                     }
-                case let station as WeatherStationAnnotation:
+                case let station as StationAnnotation:
                     self.onStationSelected(station)
                 default:
                     break
@@ -615,7 +607,7 @@ struct MapContainerView: View {
     @StateObject private var pilotTrackViewModel: PilotTrackViewModel
     @StateObject private var stationAnnotationViewModel: StationAnnotationViewModel
 
-    @State private var selectedStation: WeatherStationAnnotation?
+    @State private var selectedStation: StationAnnotation?
     @State private var selectedPilotTrack: PilotTrack?
     @State private var isLayerSheetPresented = false
     @State private var isPlaying = false
@@ -680,39 +672,27 @@ struct MapContainerView: View {
                 }()
                 
                 // Get data for wind stations if map is in weather mode
-                let stations: [WeatherStationAnnotation] = {
-                    guard mapSettingsViewModel.isMapWeatherMode else {
-                        return []
-                    }
-                    return stationAnnotationViewModel.clusteredStationAnnotations
-                        .compactMap { item in
-                            WeatherStationAnnotation(
-                                lat:        item.coordinate.latitude,
-                                lon:        item.coordinate.longitude,
-                                name:       item.annotationName,
-                                speed:      item.windSpeed,
-                                direction:  item.windDirection
-                            )
-                        }
-                }()
-                    
-                    MapView(
-                        region:             $region,
-                        zoomLevel:          $currentZoomLevel,
-                        mapStyle:           $mapSettingsViewModel.selectedMapType,  // Standard or hybrid
-                        mapDisplayMode:     $mapSettingsViewModel.mapDisplayMode,   // Weather or track
-                        showRadar:          $mapSettingsViewModel.showRadar,
-                        showInfrared:       $mapSettingsViewModel.showInfrared,
-                        radarOverlays:      radarOverlays,
-                        infraredOverlays:   infraredOverlays,
-                        pilotTracks:        filteredTracks,
-                        sites:              siteViewModel.sites,
-                        weatherAnnotations: stations,
-                        onPilotSelected:    { track in selectedPilotTrack = track },
-                        onStationSelected:  { station in selectedStation = station }
-                    )
-                    .cornerRadius(10)
-                    .padding(.vertical, 8)
+                let stations = mapSettingsViewModel.isMapWeatherMode
+                  ? stationAnnotationViewModel.clusteredStationAnnotations
+                  : []
+
+                MapView(
+                    region:             $region,
+                    zoomLevel:          $currentZoomLevel,
+                    mapStyle:           $mapSettingsViewModel.selectedMapType,  // Standard or hybrid
+                    mapDisplayMode:     $mapSettingsViewModel.mapDisplayMode,   // Weather or track
+                    showRadar:          $mapSettingsViewModel.showRadar,
+                    showInfrared:       $mapSettingsViewModel.showInfrared,
+                    radarOverlays:      radarOverlays,
+                    infraredOverlays:   infraredOverlays,
+                    pilotTracks:        filteredTracks,
+                    sites:              siteViewModel.sites,
+                    stationAnnotations: stations,
+                    onPilotSelected:    { track in selectedPilotTrack = track },
+                    onStationSelected:  { station in selectedStation = station }
+                )
+                .cornerRadius(10)
+                .padding(.vertical, 8)
                     
                 // Floating Item Bar
                 VStack {
@@ -886,31 +866,22 @@ struct MapContainerView: View {
        }
         
        .sheet(item: $selectedStation) { station in
-           if let match = stationAnnotationViewModel
-               .clusteredStationAnnotations
-               .first(where: { $0.annotationName == station.title ?? "" })
-           {
-               let site = Site(
-                   id: UUID(),
-                   area: "",
-                   siteName: station.title ?? "",
-                   readingsNote: "",
-                   forecastNote: "",
-                   siteType: "",
-                   readingsAlt: String(match.altitude),
-                   readingsSource: match.readingsSource,
-                   readingsStation: match.annotationID,
-                   pressureZoneReadingTime: "",
-                   siteLat: "\(station.coordinate.latitude)",
-                   siteLon: "\(station.coordinate.longitude)",
-                   sheetRow: 0
-               )
-
-               SiteDetailView(site: site)
-
-           } else {
-               Text("No matching site data")
-           }
+           let site = Site(
+               id: UUID(),
+               area: "",
+               siteName: station.title ?? "",
+               readingsNote: "",
+               forecastNote: "",
+               siteType: "",
+               readingsAlt: String(station.altitude),
+               readingsSource: station.readingsSource,
+               readingsStation: station.annotationID,
+               pressureZoneReadingTime: "",
+               siteLat: "\(station.coordinate.latitude)",
+               siteLon: "\(station.coordinate.longitude)",
+               sheetRow: 0
+           )
+           SiteDetailView(site: site)
        }
         
        .sheet(item: $selectedPilotTrack) { track in

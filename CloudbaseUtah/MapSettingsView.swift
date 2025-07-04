@@ -1,12 +1,7 @@
 import SwiftUI
 import MapKit
 import Combine
-#if os(macOS)
-import AppKit
-#elseif os(iOS)
 import UIKit
-#endif
-
 
 struct RadarColorScheme: Identifiable {
     let id: Int

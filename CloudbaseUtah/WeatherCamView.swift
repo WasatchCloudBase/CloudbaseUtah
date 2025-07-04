@@ -7,16 +7,16 @@ import SDWebImageSwiftUI
 var webcamLastUpdate: Date = Date.distantPast
 
 struct WeatherCamView: View {
-    @StateObject private var viewModel = WeatherCamsViewModel()
+    @StateObject private var weatherCamViewModel = WeatherCamViewModel()
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
     @State private var externalURL: URL?    // Used to open URL links as an in-app sheet using Safari
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
     
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if weatherCamViewModel.isLoading {
                 loadingView
-            } else if viewModel.weatherCams.isEmpty {
+            } else if weatherCamViewModel.weatherCams.isEmpty {
                 emptyView
             } else {
                 contentView
@@ -29,7 +29,7 @@ struct WeatherCamView: View {
                     webcamLastUpdate = Date()
                 }
             }
-            viewModel.fetchWeatherCams()
+            weatherCamViewModel.fetchWeatherCams()
         }
         // Used to open URL links as an in-app sheet using Safari
         .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }
@@ -47,7 +47,7 @@ struct WeatherCamView: View {
     private var emptyView: some View {
         VStack {
             Spacer()
-            Text("No weather cams available.")
+            Text("No weather cams available")
                 .font(.subheadline)
                 .foregroundColor(.gray)
                 .padding()
@@ -75,13 +75,13 @@ struct WeatherCamView: View {
                         }
                     }
                 }
-            ForEach(viewModel.groupedWeatherCams.keys.sorted(), id: \.self) { category in
+            ForEach(weatherCamViewModel.groupedWeatherCams.keys.sorted(), id: \.self) { category in
                 // Split is used to strip the order sequence number from the front of the category on display
                 Section(header: Text(category.split(separator: " ", maxSplits: 1)[1])
                     .font(.subheadline)
                     .foregroundColor(sectionHeaderColor)
                     .bold()) {
-                        ForEach(viewModel.groupedWeatherCams[category] ?? [], id: \.id) { cam in
+                        ForEach(weatherCamViewModel.groupedWeatherCams[category] ?? [], id: \.id) { cam in
                             VStack {
                                 Text(cam.name)
                                     .multilineTextAlignment(.center)
