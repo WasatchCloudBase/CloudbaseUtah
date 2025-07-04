@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AboutView: View {
     @Binding var refreshMetadata: Bool
-    @EnvironmentObject var sitesViewModel: SitesViewModel
+    @EnvironmentObject var siteViewModel: SiteViewModel
     
     var body: some View {
         backgroundColor.edgesIgnoringSafeArea(.all)

@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 
 // Load weather codes
-struct WeatherCodes: Identifiable {
+struct WeatherCode: Identifiable {
     let id = UUID()
     let weatherCode: Int
     let imageName: String
@@ -10,8 +10,8 @@ struct WeatherCodes: Identifiable {
 struct WeatherCodesResponse: Codable {
     let values: [[String]]
 }
-class WeatherCodesViewModel: ObservableObject {
-    @Published var weatherCodes: [WeatherCodes] = []
+class WeatherCodeViewModel: ObservableObject {
+    @Published var weatherCodes: [WeatherCode] = []
     private var cancellables = Set<AnyCancellable>()
     let sheetName = "WeatherCodes"
     
@@ -34,7 +34,7 @@ class WeatherCodesViewModel: ObservableObject {
                     }
                     let code = Int(row[0]) ?? 0
                     let imageName = row[1]
-                    return WeatherCodes(weatherCode: code, imageName: imageName)
+                    return WeatherCode(weatherCode: code, imageName: imageName)
                 }
             }
             .replaceError(with: [])

@@ -8,8 +8,8 @@ struct CloudbaseUtah: App {
     @StateObject private var liftParametersViewModel = LiftParametersViewModel()
     @StateObject private var sunriseSunsetViewModel = SunriseSunsetViewModel()
     @StateObject private var weatherCodesViewModel = WeatherCodesViewModel()
-    @StateObject private var sitesViewModel = SitesViewModel()
-    @StateObject private var pilotsViewModel = PilotsViewModel()
+    @StateObject private var siteViewModel = SiteViewModel()
+    @StateObject private var pilotViewModel = PilotViewModel()
     @StateObject private var mapSettingsViewModel = MapSettingsViewModel(
         region: MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
@@ -28,8 +28,8 @@ struct CloudbaseUtah: App {
                 .environmentObject(liftParametersViewModel)
                 .environmentObject(weatherCodesViewModel)
                 .environmentObject(sunriseSunsetViewModel)
-                .environmentObject(sitesViewModel)
-                .environmentObject(pilotsViewModel)
+                .environmentObject(siteViewModel)
+                .environmentObject(pilotViewModel)
                 .environmentObject(mapSettingsViewModel)
                 .environment(\.colorScheme, .dark)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in

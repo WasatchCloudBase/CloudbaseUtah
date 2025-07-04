@@ -68,11 +68,11 @@ struct ReadingsHistoryBarChartView: View {
 }
 
 struct SiteDetailView: View {
-    var site: Sites  // Received from parent view
+    var site: Site  // Received from parent view
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
-    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodeViewModel
     @StateObject var viewModel = StationReadingsHistoryDataModel()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari

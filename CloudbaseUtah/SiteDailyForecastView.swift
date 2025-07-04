@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 
 struct SiteDailyForecastView: View {
-    @ObservedObject var weatherCodesViewModel: WeatherCodesViewModel
+    @ObservedObject var weatherCodesViewModel: WeatherCodeViewModel
     @StateObject private var viewModel: DailyForecastViewModel
     var siteLat: String
     var siteLon: String
@@ -10,7 +10,7 @@ struct SiteDailyForecastView: View {
     var siteName: String
     var siteType: String
     
-    init(weatherCodesViewModel: WeatherCodesViewModel, siteLat: String, siteLon: String, forecastNote: String, siteName: String, siteType: String) {
+    init(weatherCodesViewModel: WeatherCodeViewModel, siteLat: String, siteLon: String, forecastNote: String, siteName: String, siteType: String) {
         self._weatherCodesViewModel = ObservedObject(wrappedValue: weatherCodesViewModel)
         self._viewModel = StateObject(wrappedValue: DailyForecastViewModel(weatherCodesViewModel: weatherCodesViewModel))
         self.siteLat = siteLat

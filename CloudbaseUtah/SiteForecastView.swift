@@ -38,7 +38,7 @@ struct ThermalCell: View {
 struct SiteForecastView: View {
     @ObservedObject var liftParametersViewModel: LiftParametersViewModel
     @ObservedObject var sunriseSunsetViewModel: SunriseSunsetViewModel
-    @ObservedObject var weatherCodesViewModel: WeatherCodesViewModel
+    @ObservedObject var weatherCodesViewModel: WeatherCodeViewModel
     @StateObject private var viewModel: SiteForecastViewModel
     var siteLat: String
     var siteLon: String
@@ -48,7 +48,7 @@ struct SiteForecastView: View {
     
     init(liftParametersViewModel: LiftParametersViewModel,
          sunriseSunsetViewModel: SunriseSunsetViewModel,
-         weatherCodesViewModel: WeatherCodesViewModel,
+         weatherCodesViewModel: WeatherCodeViewModel,
          siteLat: String,
          siteLon: String,
          forecastNote: String,

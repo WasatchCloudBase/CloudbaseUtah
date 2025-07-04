@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-struct StationLatestReadings: Identifiable {
+struct StationLatestReading: Identifiable {
     let id = UUID()
     let stationID: String
     let stationName: String
@@ -91,22 +91,22 @@ struct CUASAReadingsData: Codable {
     var pwm: Double?
 }
 
-class StationLatestReadingsViewModel: ObservableObject {
-    @Published var latestSiteReadings: [StationLatestReadings] = []
-    @Published var latestAllReadings: [StationLatestReadings] = []
+class StationLatestReadingViewModel: ObservableObject {
+    @Published var latestSiteReadings: [StationLatestReading] = []
+    @Published var latestAllReadings: [StationLatestReading] = []
     @Published var stationParameters: String = ""
     @Published var isLoading = false
     
     private var lastSiteFetchTime: Date? = nil
     private var lastAllFetchTime: Date? = nil
 
-    let sitesViewModel: SitesViewModel
+    let siteViewModel: SiteViewModel
     
     // sites available in this view model
-    init(sitesViewModel: SitesViewModel) {
-        self.sitesViewModel = sitesViewModel
+    init(siteViewModel: SiteViewModel) {
+        self.siteViewModel = siteViewModel
         
-        let mesonetStations = sitesViewModel.sites.filter {
+        let mesonetStations = siteViewModel.sites.filter {
             $0.readingsSource == "Mesonet" && !$0.readingsStation.isEmpty
         }
         guard !mesonetStations.isEmpty else { return }
@@ -137,7 +137,7 @@ class StationLatestReadingsViewModel: ObservableObject {
         }
 
         isLoading = true
-        var combinedReadings: [StationLatestReadings] = []
+        var combinedReadings: [StationLatestReading] = []
         let group = DispatchGroup()
 
         group.enter()
@@ -164,7 +164,7 @@ class StationLatestReadingsViewModel: ObservableObject {
         }
     }
     
-    func getLatestMesonetReadings(stationParameters: String, completion: @escaping ([StationLatestReadings]) -> Void) {
+    func getLatestMesonetReadings(stationParameters: String, completion: @escaping ([StationLatestReading]) -> Void) {
         let urlString = latestReadingsAPIHeader + stationParameters + latestReadingsAPITrailer + mesowestAPIToken
         guard let url = URL(string: urlString) else { return }
         if printReadingsURL { print(url) }
@@ -173,11 +173,11 @@ class StationLatestReadingsViewModel: ObservableObject {
                 guard let self = self, let data = data, error == nil else { return }
                 do {
                     let decodedResponse = try JSONDecoder().decode(MesonetLatestResponse.self, from: data)
-                    let latestReadings: [StationLatestReadings] = decodedResponse.station.compactMap { station in
+                    let latestReadings: [StationLatestReading] = decodedResponse.station.compactMap { station in
                         guard let _ = station.observations.windSpeed?.value,
                               let _ = station.observations.windSpeed?.dateTime
                         else { return nil }
-                        return StationLatestReadings(
+                        return StationLatestReading(
                             stationID: station.stationID,
                             stationName: station.stationName,
                             readingsSource: "Mesonet",
@@ -203,9 +203,9 @@ class StationLatestReadingsViewModel: ObservableObject {
         }.resume()
     }
 
-    func getLatestCUASAReadings(completion: @escaping ([StationLatestReadings]) -> Void) {
+    func getLatestCUASAReadings(completion: @escaping ([StationLatestReading]) -> Void) {
         let CUASAStations = Array(
-            Dictionary(grouping: sitesViewModel.sites.filter { $0.readingsSource == "CUASA" }, by: { $0.readingsStation })
+            Dictionary(grouping: siteViewModel.sites.filter { $0.readingsSource == "CUASA" }, by: { $0.readingsStation })
                 .compactMap { $0.value.first }
         )
         guard !CUASAStations.isEmpty else {
@@ -214,7 +214,7 @@ class StationLatestReadingsViewModel: ObservableObject {
             return
         }
 
-        var collectedReadings: [StationLatestReadings] = []
+        var collectedReadings: [StationLatestReading] = []
         let group = DispatchGroup()
 
         let readingInterval: Double = 5 * 60
@@ -259,7 +259,7 @@ class StationLatestReadingsViewModel: ObservableObject {
                                     formatter.dateFormat = "h:mm"
                                     let formattedTime = formatter.string(from: date)
 
-                                    let newReading = StationLatestReadings(
+                                    let newReading = StationLatestReading(
                                         stationID: latestData.ID,
                                         stationName: CUASAStationInfo.name,
                                         readingsSource: "CUASA",

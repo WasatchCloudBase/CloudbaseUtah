@@ -4,11 +4,11 @@ import Combine
 struct SiteView: View {
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
-    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
-    @EnvironmentObject var sitesViewModel: SitesViewModel
-    @EnvironmentObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodeViewModel
+    @EnvironmentObject var siteViewModel: SiteViewModel
+    @EnvironmentObject var stationLatestReadingViewModel: StationLatestReadingViewModel
     @Environment(\.scenePhase) private var scenePhase
-    @State private var selectedSite: Sites?
+    @State private var selectedSite: Site?
     @State private var isActive = false
 
     var body: some View {
@@ -18,7 +18,7 @@ struct SiteView: View {
                 .foregroundColor(infoFontColor)
                 .padding(.top, 8)
             List {
-                let groupedSites = Dictionary(grouping: sitesViewModel.sites) { $0.area }
+                let groupedSites = Dictionary(grouping: siteViewModel.sites) { $0.area }
                  let sortedGroupedSites = groupedSites.sorted(by: { $0.key < $1.key })
                  
                 ForEach(sortedGroupedSites, id: \.key) { area, areaSites in
@@ -45,13 +45,13 @@ struct SiteView: View {
                                     }
                                     Spacer()
                                     
-                                    if stationLatestReadingsViewModel.isLoading {
+                                    if stationLatestReadingViewModel.isLoading {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle())
                                             .scaleEffect(0.75)
                                             .frame(width: 20, height: 20)
                                     }
-                                    else if let latestReading = stationLatestReadingsViewModel.latestSiteReadings.first (where: { $0.stationID == site.readingsStation }) {
+                                    else if let latestReading = stationLatestReadingViewModel.latestSiteReadings.first (where: { $0.stationID == site.readingsStation }) {
                                         if let windTime = latestReading.windTime {
                                             // Split keeps hh:mm and strips the trailing "  %p" the JSON parser is creating
                                             let windTimeText = windTime.split(separator: " ", maxSplits: 1)[0]
@@ -132,21 +132,21 @@ struct SiteView: View {
          }
         .onAppear {
             isActive = true
-            stationLatestReadingsViewModel.getLatestReadingsData(sitesOnly: true) {}
+            stationLatestReadingViewModel.getLatestReadingsData(sitesOnly: true) {}
             startTimer()
         }
         .onDisappear {
             isActive = false
         }
         .sheet(item: $selectedSite, onDismiss: {
-            stationLatestReadingsViewModel.getLatestReadingsData(sitesOnly: true) {}
+            stationLatestReadingViewModel.getLatestReadingsData(sitesOnly: true) {}
         }) { site in
             SiteDetailView(site: site)
         }
         .onChange(of: scenePhase) { oldValue, newValue in
             if newValue == .active {
                 isActive = true
-                stationLatestReadingsViewModel.getLatestReadingsData(sitesOnly: true) {}
+                stationLatestReadingViewModel.getLatestReadingsData(sitesOnly: true) {}
                 startTimer()
             } else {
                 isActive = false
@@ -154,14 +154,14 @@ struct SiteView: View {
         }
     }
     
-    func openSiteDetail(_ site: Sites) {
+    func openSiteDetail(_ site: Site) {
         selectedSite = site
     }
     
     private func startTimer() {
         DispatchQueue.main.asyncAfter(deadline: .now() + readingsRefreshInterval) {
             if isActive {
-                stationLatestReadingsViewModel.getLatestReadingsData(sitesOnly: true) {
+                stationLatestReadingViewModel.getLatestReadingsData(sitesOnly: true) {
                     // Once completed, restart timer
                     startTimer()
                 }

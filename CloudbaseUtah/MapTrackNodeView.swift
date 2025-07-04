@@ -22,11 +22,11 @@ struct ElevationResponse: Codable {
 }
 
 struct PilotTrackNodeView: View {
-    @EnvironmentObject var pilotsViewModel: PilotsViewModel
-    @EnvironmentObject var pilotTracksViewModel: PilotTracksViewModel
+    @EnvironmentObject var pilotViewModel: PilotViewModel
+    @EnvironmentObject var pilotTrackViewModel: PilotTrackViewModel
     @Environment(\.presentationMode) var presentationMode
 
-    let originalPilotTrack: PilotTracks
+    let originalPilotTrack: PilotTrack
     
     @State private var currentNodeGroundElevation: Int? = 0
     @State private var groundElevations: [Int] = []
@@ -44,14 +44,14 @@ struct PilotTrackNodeView: View {
         let rowVerticalPadding: CGFloat = 4
 
         let calendar = Calendar.current
-        let sameDayTracks = pilotTracksViewModel.pilotTracks
+        let sameDayTracks = pilotTrackViewModel.pilotTracks
             .filter { $0.pilotName == originalPilotTrack.pilotName && calendar.isDate($0.dateTime, inSameDayAs: originalPilotTrack.dateTime) }
             .sorted { $0.dateTime < $1.dateTime }
 
         let pilotTrack = sameDayTracks[safe: currentTrackIndex] ?? originalPilotTrack
 
         let (flightStartDateTime, flightLatestDateTime, formattedFlightDuration, startToEndDistance, maxAltitude, totalDistance) = getPilotTrackInfo(pilotTrack: pilotTrack)
-        var trackingShareURL: String { pilotsViewModel.trackingShareURL(for: pilotTrack.pilotName) ?? "" }
+        var trackingShareURL: String { pilotViewModel.trackingShareURL(for: pilotTrack.pilotName) ?? "" }
 
         var formattedNodeDate: String {
             let formatter = DateFormatter()
@@ -446,7 +446,7 @@ struct PilotTrackNodeView: View {
             }
             // Update all ground elevations when the view model publishes a new track array
             // (also executes when sheet is opened)
-            .onReceive(pilotTracksViewModel.$pilotTracks) { fullArray in
+            .onReceive(pilotTrackViewModel.$pilotTracks) { fullArray in
                 // re‐build the same‐day subset and re‐call the batch fetch
                 let updatedSameDay = fullArray
                     .filter { $0.pilotName == originalPilotTrack.pilotName
@@ -481,7 +481,7 @@ struct PilotTrackNodeView: View {
     }
     
     // fetch elevations for array of points in one request
-    private func fetchAllGroundElevations(for tracks: [PilotTracks]) {
+    private func fetchAllGroundElevations(for tracks: [PilotTrack]) {
         struct MultiElevationResponse: Codable {
             let elevation: [Double]
         }
@@ -519,11 +519,11 @@ struct PilotTrackNodeView: View {
             .store(in: &cancellables)
     }
     
-    private func getPilotTrackInfo(pilotTrack: PilotTracks) -> (flightStartDateTime: Date, flightLatestDateTime: Date, formattedFlightDuration: String, startToEndDistance: CLLocationDistance, maxAltitude: Double, totalDistance: CLLocationDistance) {
+    private func getPilotTrackInfo(pilotTrack: PilotTrack) -> (flightStartDateTime: Date, flightLatestDateTime: Date, formattedFlightDuration: String, startToEndDistance: CLLocationDistance, maxAltitude: Double, totalDistance: CLLocationDistance) {
         // Get the oldest and newest tracks for the same pilot and the same date
         let calendar = Calendar.current
         let targetDate = pilotTrack.dateTime
-        let sameDayTracks = pilotTracksViewModel.pilotTracks
+        let sameDayTracks = pilotTrackViewModel.pilotTracks
             .filter { $0.pilotName == pilotTrack.pilotName && calendar.isDate($0.dateTime, inSameDayAs: targetDate) }
 
         guard let oldestTrack = sameDayTracks.min(by: { $0.dateTime < $1.dateTime }) else {
@@ -577,7 +577,7 @@ struct PilotTrackNodeView: View {
 }
 
 struct ElevationChartView: View {
-    let tracks: [PilotTracks]         // time‐sorted same-day tracks
+    let tracks: [PilotTrack]         // time‐sorted same-day tracks
     let groundElevations: [Int]       // parallels `tracks`
     let selectedTime: Date
     

@@ -3,7 +3,7 @@ import Combine
 import MapKit
 
 // Pilot live tracking structure
-struct PilotTracks: Identifiable, Equatable, Hashable {
+struct PilotTrack: Identifiable, Equatable, Hashable {
     let id: UUID = UUID()
     let pilotName: String
     let dateTime: Date
@@ -29,7 +29,7 @@ class PilotTrackAnnotation: NSObject, MKAnnotation {
     let title: String?
     let subtitle: String?
     let annotationType: String
-    let pilotTrack: PilotTracks?
+    let pilotTrack: PilotTrack?
 
     let pilotName: String
     let isFirst: Bool
@@ -41,7 +41,7 @@ class PilotTrackAnnotation: NSObject, MKAnnotation {
          title: String?,
          subtitle: String?,
          annotationType: String,
-         pilotTrack: PilotTracks?,
+         pilotTrack: PilotTrack?,
          pilotName: String,
          isFirst: Bool,
          isLast: Bool,
@@ -61,18 +61,18 @@ class PilotTrackAnnotation: NSObject, MKAnnotation {
     }
 }
 
-class PilotTracksViewModel: ObservableObject {
-    @Published private(set) var pilotTracks: [PilotTracks] = []
+class PilotTrackViewModel: ObservableObject {
+    @Published private(set) var pilotTracks: [PilotTrack] = []
 
-    private let pilotsViewModel: PilotsViewModel
+    private let pilotViewModel: PilotViewModel
     private var cancellables = Set<AnyCancellable>()
 
-    init(pilotsViewModel: PilotsViewModel) {
-        self.pilotsViewModel = pilotsViewModel
+    init(pilotViewModel: PilotViewModel) {
+        self.pilotViewModel = pilotViewModel
         
         // Subscribe to any changes in the pilots array
         // Note that this assumes mapView will then make a call to refresh pilotTracks
-        pilotsViewModel.$pilots
+        pilotViewModel.$pilots
             .sink { [weak self] newPilots in
                 guard let self = self else { return }
             }
@@ -84,9 +84,9 @@ class PilotTracksViewModel: ObservableObject {
         completion: @escaping () -> Void
     ) {
         let group = DispatchGroup()
-        var allResults = [PilotTracks]()
+        var allResults = [PilotTrack]()
 
-        for pilot in pilotsViewModel.pilots {
+        for pilot in pilotViewModel.pilots {
             group.enter()
             fetchTracksForPilot(for: pilot, days: days) { results in
                 allResults.append(contentsOf: results)
@@ -110,9 +110,9 @@ class PilotTracksViewModel: ObservableObject {
     }
 
     private func fetchTracksForPilot (
-        for pilot: Pilots,
+        for pilot: Pilot,
         days: Double,
-        completion: @escaping ([PilotTracks]) -> Void
+        completion: @escaping ([PilotTrack]) -> Void
     ) {
         guard let url = constructURL(trackingURL: pilot.trackingFeedURL,
                                      days: days) else {
@@ -162,7 +162,7 @@ class PilotTracksViewModel: ObservableObject {
         return URL(string: finalURLString)
     }
 
-    private func parseKML(pilotName: String, data: Data) -> [PilotTracks] {
+    private func parseKML(pilotName: String, data: Data) -> [PilotTrack] {
         guard let xmlString = String(data: data, encoding: .utf8) else {
             print("Invalid XML coding for track log")
             return []
@@ -178,7 +178,7 @@ class PilotTracksViewModel: ObservableObject {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(abbreviation: "UTC")      // All live track date/time are in UTC
 
-        var pilotTracks: [PilotTracks] = []
+        var pilotTracks: [PilotTrack] = []
         for placemarkString in placemarkStrings {
             guard var trackPilotName = extractValue(from: placemarkString, using: "<Data name=\"Name\">", endTag: "</Data>"),
                   let dateTimeString = extractValue(from: placemarkString, using: "<Data name=\"Time UTC\">", endTag: "</Data>"),
@@ -209,7 +209,7 @@ class PilotTracksViewModel: ObservableObject {
             let inEmergencyString = extractValue(from: placemarkString, using: "<Data name=\"In Emergency\">", endTag: "</Data>")?.lowercased()
             let inEmergency = Bool(inEmergencyString ?? "false") ?? false
             let message = extractValue(from: placemarkString, using: "<Data name=\"Text\">", endTag: "</Data>") ?? ""
-            let trackPoint = PilotTracks(
+            let trackPoint = PilotTrack(
                 pilotName: pilotName,
                 dateTime: dateTime,
                 latitude: latitude,

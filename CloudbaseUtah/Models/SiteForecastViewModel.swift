@@ -102,14 +102,14 @@ class SiteForecastViewModel: ObservableObject {
     @Published var forecastData: ForecastData?
     private var liftParametersViewModel: LiftParametersViewModel
     private var sunriseSunsetViewModel: SunriseSunsetViewModel
-    private var weatherCodesViewModel: WeatherCodesViewModel
+    private var weatherCodesViewModel: WeatherCodeViewModel
     @Published var weatherCodes: [String: String] = [:]
     @Published var maxPressureReading: Int = 1000       // Pressure to start displaying winds aloft (1000 hpa is sea level)
     
     // Make thermal lift parameters, weather code images, and sunrise/sunset times available in this view model
     init(liftParametersViewModel: LiftParametersViewModel,
          sunriseSunsetViewModel: SunriseSunsetViewModel,
-         weatherCodesViewModel: WeatherCodesViewModel) {
+         weatherCodesViewModel: WeatherCodeViewModel) {
         self.liftParametersViewModel = liftParametersViewModel
         self.sunriseSunsetViewModel = sunriseSunsetViewModel
         self.weatherCodesViewModel = weatherCodesViewModel

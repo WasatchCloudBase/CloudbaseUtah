@@ -4,8 +4,8 @@ import Foundation
 import CoreLocation
 
 struct DevSiteCoordView: View {
-    @EnvironmentObject var sitesViewModel: SitesViewModel
-    @State private var selectedSite: Sites?
+    @EnvironmentObject var siteViewModel: SiteViewModel
+    @State private var selectedSite: Site?
     @State private var showMapSheet = false
     @State private var coordinateRegion: MKCoordinateRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0),
@@ -14,7 +14,7 @@ struct DevSiteCoordView: View {
 
     var body: some View {
         NavigationView {
-            List(sitesViewModel.sites) { site in
+            List(siteViewModel.sites) { site in
                 Button(action: {
                     let latitude = Double(site.siteLat) ?? 0.0
                     let longitude = Double(site.siteLon) ?? 0.0
@@ -103,13 +103,13 @@ struct SiteCoordMapViewRepresentable: UIViewRepresentable {
 }
 
 struct SiteMapView: View {
-    var site: Sites
+    var site: Site
     @Binding var coordinateRegion: MKCoordinateRegion
     @State private var markerCoordinate: CLLocationCoordinate2D?
-    @EnvironmentObject var sitesViewModel: SitesViewModel
+    @EnvironmentObject var siteViewModel: SiteViewModel
     @Environment(\.presentationMode) var presentationMode
 
-    init(site: Sites, coordinateRegion: Binding<MKCoordinateRegion>) {
+    init(site: Site, coordinateRegion: Binding<MKCoordinateRegion>) {
         self.site = site
         _coordinateRegion = coordinateRegion
         _markerCoordinate = State(initialValue: coordinateRegion.wrappedValue.center) // Initialize marker at center

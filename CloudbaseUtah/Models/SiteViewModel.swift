@@ -1,8 +1,7 @@
 import SwiftUI
 import Combine
 
-// Get sites metadata
-struct Sites: Codable, Identifiable, Equatable, Hashable {
+struct Site: Codable, Identifiable, Equatable, Hashable {
     var id = UUID()
     var area: String
     var siteName: String
@@ -22,8 +21,8 @@ struct SitesResponse: Codable {
     let values: [[String]]
 }
 
-class SitesViewModel: ObservableObject {
-    @Published var sites: [Sites] = []
+class SiteViewModel: ObservableObject {
+    @Published var sites: [Site] = []
     private var cancellables = Set<AnyCancellable>()
     
     func getSites(completion: @escaping () -> Void) {
@@ -39,7 +38,7 @@ class SitesViewModel: ObservableObject {
             .map { $0.data }
             .decode(type: SitesResponse.self, decoder: JSONDecoder())
             .map { response in
-                response.values.enumerated().compactMap { index, row -> Sites? in
+                response.values.enumerated().compactMap { index, row -> Site? in
                     
                     // Skip the header row
                     guard index > 0 else { return nil }
@@ -58,7 +57,7 @@ class SitesViewModel: ObservableObject {
                         return nil
                     }
                     
-                    return Sites(
+                    return Site(
                         area: row[1],
                         siteName: row[2],
                         readingsNote: row[3],

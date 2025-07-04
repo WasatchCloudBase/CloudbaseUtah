@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftJWT
 
 struct PilotAppendView: View {
-    @EnvironmentObject var pilotsViewModel: PilotsViewModel
+    @EnvironmentObject var pilotViewModel: PilotViewModel
     @State private var pilotName = ""
     @State private var inreachURL: String = "https://share.garmin.com/" // Prefilled with default URL prefix
     @State private var statusMessage = ""
@@ -100,11 +100,11 @@ struct PilotAppendView: View {
                             }
                             
                             // Check for duplicates
-                            if pilotsViewModel.pilots.contains(where: { $0.pilotName.caseInsensitiveCompare(trimmedName) == .orderedSame }) {
+                            if pilotViewModel.pilots.contains(where: { $0.pilotName.caseInsensitiveCompare(trimmedName) == .orderedSame }) {
                                 duplicatePilotError = true
                             }
                             
-                            if pilotsViewModel.pilots.contains(where: { $0.trackingShareURL.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(trimmedURL) == .orderedSame }) {
+                            if pilotViewModel.pilots.contains(where: { $0.trackingShareURL.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(trimmedURL) == .orderedSame }) {
                                 duplicateShareURLError = true
                             }
                             
@@ -187,7 +187,7 @@ struct PilotAppendView: View {
                     inreachURL = "https://share.garmin.com/"
                     
                     // Force refresh of PilotsView
-                    pilotsViewModel.getPilots() {}
+                    pilotViewModel.getPilots() {}
                 } else {
                     statusMessage = "Failed to add pilot"
                 }

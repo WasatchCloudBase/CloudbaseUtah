@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 
 // Get pilots for live tracking
-struct Pilots: Codable, Identifiable, Equatable {
+struct Pilot: Codable, Identifiable, Equatable {
     var id = UUID()
     var pilotName: String
     var trackingShareURL: String
@@ -13,8 +13,8 @@ struct PilotsResponse: Codable {
     let values: [[String]]
 }
 
-class PilotsViewModel: ObservableObject {
-    @Published var pilots: [Pilots] = []
+class PilotViewModel: ObservableObject {
+    @Published var pilots: [Pilot] = []
     private var cancellables = Set<AnyCancellable>()
     
     func getPilots(completion: @escaping () -> Void) {
@@ -30,7 +30,7 @@ class PilotsViewModel: ObservableObject {
             .map { $0.data }
             .decode(type: PilotsResponse.self, decoder: JSONDecoder())
             .map { response in
-                response.values.dropFirst().compactMap { row -> Pilots? in
+                response.values.dropFirst().compactMap { row -> Pilot? in
                     // Skip row if data missing
                     guard row.count >= 2 else {
                         print("Skipping malformed pilot row: \(row)")
@@ -50,7 +50,7 @@ class PilotsViewModel: ObservableObject {
                     let pilotNameFromURL = trackingShareURL.components(separatedBy: "/").last ?? ""
                     let trackingFeedURL = "https://share.garmin.com/Feed/Share/\(pilotNameFromURL)"
                     
-                    return Pilots(
+                    return Pilot(
                         pilotName: pilotName,
                         trackingShareURL: trackingShareURL,
                         trackingFeedURL: trackingFeedURL

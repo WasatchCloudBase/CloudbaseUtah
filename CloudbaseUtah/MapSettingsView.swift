@@ -24,9 +24,9 @@ struct MapSettingsView: View {
     @Binding var showRadar: Bool
     @Binding var showInfrared: Bool
     @Binding var radarColorScheme: Int
-    @Binding var selectedPilots: [Pilots]
-    @EnvironmentObject var pilotsViewModel: PilotsViewModel
-    @EnvironmentObject var pilotTracksViewModel: PilotTracksViewModel
+    @Binding var selectedPilots: [Pilot]
+    @EnvironmentObject var pilotViewModel: PilotViewModel
+    @EnvironmentObject var pilotTrackViewModel: PilotTrackViewModel
     @Environment(\.presentationMode) var presentationMode
 
     // Temporary state variables
@@ -55,7 +55,7 @@ struct MapSettingsView: View {
          showRadar: Binding<Bool>,
          showInfrared: Binding<Bool>,
          radarColorScheme: Binding<Int>,
-         selectedPilots: Binding<[Pilots]>
+         selectedPilots: Binding<[Pilot]>
     ) {
         _selectedMapType = selectedMapType
         _pilotTrackDays = pilotTrackDays
@@ -154,7 +154,7 @@ struct MapSettingsView: View {
                             Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
                                 .onChange(of: tempPilotTrackDays) { oldDays, newDays in
                                     // Refresh tracks for each pilot with the updated days
-                                    pilotTracksViewModel.getAllPilotTracks(days: newDays) {}
+                                    pilotTrackViewModel.getAllPilotTracks(days: newDays) {}
                                 }
                             HStack {
                                 Text("Today")
@@ -194,7 +194,7 @@ struct MapSettingsView: View {
                             // All / None Buttons
                             HStack {
                                 Button(action: {
-                                    selectedPilotIDs = Set(pilotsViewModel.pilots.map(\.id))
+                                    selectedPilotIDs = Set(pilotViewModel.pilots.map(\.id))
                                 }) {
                                     Text("All")
                                         .frame(maxWidth: .infinity)
@@ -213,10 +213,10 @@ struct MapSettingsView: View {
                             }
 
                             // Pilot checkboxes
-                            ForEach(pilotsViewModel.pilots.sorted { $0.pilotName.localizedCaseInsensitiveCompare($1.pilotName) == .orderedAscending }) { pilot in
+                            ForEach(pilotViewModel.pilots.sorted { $0.pilotName.localizedCaseInsensitiveCompare($1.pilotName) == .orderedAscending }) { pilot in
                                 
                                 // determine if this pilot has any tracks
-                                let hasTrack = pilotTracksViewModel.pilotTracks.contains { $0.pilotName == pilot.pilotName }
+                                let hasTrack = pilotTrackViewModel.pilotTracks.contains { $0.pilotName == pilot.pilotName }
                                                   
                                 Button(action: {
                                     if selectedPilotIDs.contains(pilot.id) {
@@ -266,7 +266,7 @@ struct MapSettingsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         
-        .onReceive(pilotsViewModel.$pilots) { pilots in
+        .onReceive(pilotViewModel.$pilots) { pilots in
             // Only seed once, and only when there's at least one pilot
             guard !didSeed, !pilots.isEmpty else { return }
             
@@ -291,11 +291,11 @@ struct MapSettingsView: View {
             showRadar = tempShowRadar
             showInfrared = tempShowInfrared
             radarColorScheme = tempRadarColorScheme
-            selectedPilots = pilotsViewModel.pilots.filter { selectedPilotIDs.contains($0.id) }
+            selectedPilots = pilotViewModel.pilots.filter { selectedPilotIDs.contains($0.id) }
         }
         
         .sheet(isPresented: $addPilot, onDismiss: {
-            pilotsViewModel.getPilots() {}
+            pilotViewModel.getPilots() {}
         }) {
             PilotAppendView()
                 .interactiveDismissDisabled(true) // ← disables swipe-to-dismiss

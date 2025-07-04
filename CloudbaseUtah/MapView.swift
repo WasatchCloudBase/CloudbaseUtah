@@ -95,12 +95,12 @@ struct MapView: UIViewRepresentable {
     @Binding var showInfrared: Bool
     let radarOverlays: [MKTileOverlay]
     let infraredOverlays: [MKTileOverlay]
-    let pilotTracks: [PilotTracks]
-    let allSites: [Sites]
+    let pilotTracks: [PilotTrack]
+    let sites: [Site]
     let weatherAnnotations: [WeatherStationAnnotation]
-    let onPilotSelected: (PilotTracks) -> Void
+    let onPilotSelected: (PilotTrack) -> Void
     let onStationSelected: (WeatherStationAnnotation) -> Void
-    @State private var lastPilotTracksHash: Int = 0     // Used to identify track changes requiring re-rendering
+    @State private var lastPilotTrackHash: Int = 0     // Used to identify track changes requiring re-rendering
     
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self,
@@ -201,11 +201,11 @@ struct MapView: UIViewRepresentable {
             }
             
             // — partition into emergency / message / finish / first / normal
-            var emergencyTracks: [PilotTracks] = []
-            var messageTracks:   [PilotTracks] = []
-            var finishTracks:    [PilotTracks] = []
-            var firstTracks:     [PilotTracks] = []
-            var normalTracks:    [PilotTracks] = []
+            var emergencyTracks: [PilotTrack] = []
+            var messageTracks:   [PilotTrack] = []
+            var finishTracks:    [PilotTrack] = []
+            var firstTracks:     [PilotTrack] = []
+            var normalTracks:    [PilotTrack] = []
             
             for (i, track) in tracksForPilot.enumerated() {
                 let isFirst   = (i == 0)
@@ -284,12 +284,12 @@ struct MapView: UIViewRepresentable {
     
     class Coordinator: NSObject, MKMapViewDelegate {
         var parent: MapView
-        let onPilotSelected: (PilotTracks) -> Void
+        let onPilotSelected: (PilotTrack) -> Void
         let onStationSelected: (WeatherStationAnnotation) -> Void
         var pilotColorMap: [String: UIColor] = [:]
         
         init(parent: MapView,
-             onPilotSelected: @escaping (PilotTracks) -> Void,
+             onPilotSelected: @escaping (PilotTrack) -> Void,
              onStationSelected: @escaping (WeatherStationAnnotation) -> Void) {
             self.parent = parent
             self.onPilotSelected = onPilotSelected
@@ -638,18 +638,18 @@ func getPilotLabelHeightFromMapSpan(span: MKCoordinateSpan) -> CGFloat {
 struct MapContainerView: View {
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
-    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
-    @EnvironmentObject var sitesViewModel: SitesViewModel
-    @EnvironmentObject var pilotsViewModel: PilotsViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodeViewModel
+    @EnvironmentObject var siteViewModel: SiteViewModel
+    @EnvironmentObject var pilotViewModel: PilotViewModel
     @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
     @Environment(\.scenePhase) private var scenePhase
 
-    @StateObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
-    @StateObject private var pilotTracksViewModel: PilotTracksViewModel
-    @StateObject private var readingsMapAnnotations: ReadingsMapAnnotationsViewModel
+    @StateObject var stationLatestReadingViewModel: StationLatestReadingViewModel
+    @StateObject private var pilotTrackViewModel: PilotTrackViewModel
+    @StateObject private var stationAnnotationViewModel: StationAnnotationViewModel
 
     @State private var selectedStation: WeatherStationAnnotation?
-    @State private var selectedPilotTrack: PilotTracks?
+    @State private var selectedPilotTrack: PilotTrack?
     @State private var isLayerSheetPresented = false
     @State private var isPlaying = false
     @State private var animationProgress: Double = 0.0
@@ -672,16 +672,16 @@ struct MapContainerView: View {
 
     private var cancellables = Set<AnyCancellable>()
     
-    init(pilotsViewModel: PilotsViewModel, sitesViewModel: SitesViewModel, mapSettingsViewModel: MapSettingsViewModel) {
-        let stationVM = StationLatestReadingsViewModel(sitesViewModel: sitesViewModel)
-        _pilotTracksViewModel = StateObject(wrappedValue:
-            PilotTracksViewModel(pilotsViewModel: pilotsViewModel))
-        _stationLatestReadingsViewModel = StateObject(wrappedValue: stationVM)
-        _readingsMapAnnotations = StateObject(wrappedValue:
-            ReadingsMapAnnotationsViewModel(
+    init(pilotViewModel: PilotViewModel, siteViewModel: SiteViewModel, mapSettingsViewModel: MapSettingsViewModel) {
+        let stationVM = StationLatestReadingViewModel(siteViewModel: siteViewModel)
+        _pilotTrackViewModel = StateObject(wrappedValue:
+            PilotTrackViewModel(pilotViewModel: pilotViewModel))
+        _stationLatestReadingViewModel = StateObject(wrappedValue: stationVM)
+        _stationAnnotationViewModel = StateObject(wrappedValue:
+            StationAnnotationViewModel(
                 mapSettingsViewModel: mapSettingsViewModel,
-                sitesViewModel: sitesViewModel,
-                stationLatestReadingsViewModel: stationVM))
+                siteViewModel: siteViewModel,
+                stationLatestReadingViewModel: stationVM))
     }
     
     var body: some View {
@@ -689,7 +689,7 @@ struct MapContainerView: View {
             ZStack {
                 
                 // Validate annotation coordinates
-                let _ = readingsMapAnnotations.clusteredReadingsMapAnnotations.forEach { annotation in
+                let _ = stationAnnotationViewModel.clusteredStationAnnotations.forEach { annotation in
                     assert(annotation.coordinates.latitude >= -90 && annotation.coordinates.latitude <= 90, "Invalid latitude: \(annotation.coordinates.latitude)")
                     assert(annotation.coordinates.longitude >= -180 && annotation.coordinates.longitude <= 180, "Invalid longitude: \(annotation.coordinates.longitude)")
                 }
@@ -701,15 +701,15 @@ struct MapContainerView: View {
                                           .map(\.pilotName))
 
                 // Get filteredTracks only if map is in tracking mode
-                let filteredTracks: [PilotTracks] = {
+                let filteredTracks: [PilotTrack] = {
                   guard mapSettingsViewModel.isMapTrackingMode else {
                     return []
                   }
                   // if no one is explicitly selected, show all pilots,
                   // otherwise only the selected ones:
                   return selectedNames.isEmpty
-                    ? pilotTracksViewModel.pilotTracks
-                    : pilotTracksViewModel.pilotTracks.filter { selectedNames.contains($0.pilotName) }
+                    ? pilotTrackViewModel.pilotTracks
+                    : pilotTrackViewModel.pilotTracks.filter { selectedNames.contains($0.pilotName) }
                 }()
                 
                 // Get data for wind stations on if map is in weather mode
@@ -717,8 +717,7 @@ struct MapContainerView: View {
                     guard mapSettingsViewModel.isMapWeatherMode else {
                         return []
                     }
-                    return readingsMapAnnotations.clusteredReadingsMapAnnotations
-                        .filter { $0.annotationType == "station" }
+                    return stationAnnotationViewModel.clusteredStationAnnotations
                         .compactMap { item in
                             WeatherStationAnnotation(
                                 lat:        item.coordinates.latitude,
@@ -739,7 +738,7 @@ struct MapContainerView: View {
                         radarOverlays:      radarOverlays,
                         infraredOverlays:   infraredOverlays,
                         pilotTracks:        filteredTracks,
-                        allSites:           sitesViewModel.sites,
+                        sites:           siteViewModel.sites,
                         weatherAnnotations: stations,
                         onPilotSelected:    { track in selectedPilotTrack = track },
                         onStationSelected:     { station in selectedStation = station }
@@ -776,8 +775,8 @@ struct MapContainerView: View {
                                     selectedPilots:     $mapSettingsViewModel.selectedPilots
                                 )
                                 .interactiveDismissDisabled(true) // Disables swipe-to-dismiss (force use of back button)\
-                                .environmentObject(pilotsViewModel)
-                                .environmentObject(pilotTracksViewModel)
+                                .environmentObject(pilotViewModel)
+                                .environmentObject(pilotTrackViewModel)
                                 
                             }
                         }
@@ -834,7 +833,7 @@ struct MapContainerView: View {
                     // Reload latest pilot tracks
                     if mapSettingsViewModel.isMapTrackingMode {
                         DispatchQueue.main.async {
-                            pilotTracksViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
+                            pilotTrackViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
                         }
                     }
                     
@@ -842,14 +841,14 @@ struct MapContainerView: View {
                     else {
                         // Reload weather readings
                         DispatchQueue.main.async {
-                            readingsMapAnnotations.mapSettingsViewModel = mapSettingsViewModel
-                            readingsMapAnnotations.sitesViewModel = sitesViewModel
+                            stationAnnotationViewModel.mapSettingsViewModel = mapSettingsViewModel
+                            stationAnnotationViewModel.siteViewModel = siteViewModel
                         }
                         DispatchQueue.main.async {
-                            stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
-                                readingsMapAnnotations.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-                                readingsMapAnnotations.updateReadingsMapAnnotations {
-                                    readingsMapAnnotations.clusterReadingsMapAnnotations(regionSpan: region.span)
+                            stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
+                                stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
+                                stationAnnotationViewModel.updateStationAnnotations {
+                                    stationAnnotationViewModel.clusterStationAnnotations(regionSpan: region.span)
                                 }
                             }
                         }
@@ -866,9 +865,9 @@ struct MapContainerView: View {
                 
                 // Pilot track listing
                 NavigationLink(destination:
-                                PilotTracksView()
-                    .environmentObject(pilotsViewModel)
-                    .environmentObject(pilotTracksViewModel)) {
+                                PilotTrackView()
+                    .environmentObject(pilotViewModel)
+                    .environmentObject(pilotTrackViewModel)) {
                         Text("Pilot track list")
                             .font(.subheadline)
                             .foregroundColor(rowHeaderColor)
@@ -890,20 +889,20 @@ struct MapContainerView: View {
            if mapSettingsViewModel.isMapTrackingMode {
                // Reload latest pilot tracks
                DispatchQueue.main.async {
-                   pilotTracksViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
+                   pilotTrackViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
                }
            }
            else {
                // Reload weather readings
                DispatchQueue.main.async {
-                   readingsMapAnnotations.mapSettingsViewModel = mapSettingsViewModel
-                   readingsMapAnnotations.sitesViewModel = sitesViewModel
+                   stationAnnotationViewModel.mapSettingsViewModel = mapSettingsViewModel
+                   stationAnnotationViewModel.siteViewModel = siteViewModel
                }
                DispatchQueue.main.async {
-                   stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
-                       readingsMapAnnotations.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-                       readingsMapAnnotations.updateReadingsMapAnnotations {
-                           readingsMapAnnotations.clusterReadingsMapAnnotations(regionSpan: region.span)
+                   stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
+                       stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
+                       stationAnnotationViewModel.updateStationAnnotations {
+                           stationAnnotationViewModel.clusterStationAnnotations(regionSpan: region.span)
                        }
                    }
                }
@@ -919,11 +918,11 @@ struct MapContainerView: View {
        }
         
        .sheet(item: $selectedStation) { station in
-           if let match = readingsMapAnnotations
-               .clusteredReadingsMapAnnotations
+           if let match = stationAnnotationViewModel
+               .clusteredStationAnnotations
                .first(where: { $0.annotationName == station.title ?? "" })
            {
-               let site = Sites(
+               let site = Site(
                    id: UUID(),
                    area: "",
                    siteName: station.title ?? "",
@@ -951,7 +950,7 @@ struct MapContainerView: View {
        }
         
         // Make sure pilot live track view model is published
-       .environmentObject(pilotTracksViewModel)
+       .environmentObject(pilotTrackViewModel)
     }
     
     // Timer to reload annotations if page stays active
@@ -975,21 +974,21 @@ struct MapContainerView: View {
                 // Reload latest pilot tracks
                 if mapSettingsViewModel.isMapTrackingMode {
                     DispatchQueue.main.async {
-                        pilotTracksViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
+                        pilotTrackViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
                     }
                 }
                 // Reload weather readings
                 else {
                     // Reload weather readings
                     DispatchQueue.main.async {
-                        readingsMapAnnotations.mapSettingsViewModel = mapSettingsViewModel
-                        readingsMapAnnotations.sitesViewModel = sitesViewModel
+                        stationAnnotationViewModel.mapSettingsViewModel = mapSettingsViewModel
+                        stationAnnotationViewModel.siteViewModel = siteViewModel
                     }
                     DispatchQueue.main.async {
-                        stationLatestReadingsViewModel.getLatestReadingsData (sitesOnly: false) {
-                            readingsMapAnnotations.stationLatestReadingsViewModel = stationLatestReadingsViewModel
-                            readingsMapAnnotations.updateReadingsMapAnnotations {
-                                readingsMapAnnotations.clusterReadingsMapAnnotations(regionSpan: region.span)
+                        stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
+                            stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
+                            stationAnnotationViewModel.updateStationAnnotations {
+                                stationAnnotationViewModel.clusterStationAnnotations(regionSpan: region.span)
                             }
                         }
                     }
@@ -1010,7 +1009,7 @@ struct MapContainerView: View {
                 let currentSpan = region.span
                 if hasRegionSpanChanged(from: lastRegionSpan, to: currentSpan) {
                     lastRegionSpan = currentSpan
-                    readingsMapAnnotations.clusterReadingsMapAnnotations(regionSpan: currentSpan)
+                    stationAnnotationViewModel.clusterStationAnnotations(regionSpan: currentSpan)
                 }
             }
         }

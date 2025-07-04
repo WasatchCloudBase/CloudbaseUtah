@@ -11,12 +11,12 @@ struct MainView: View {
     @State var linkViewActive = false
     @State var devViewActive = false
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
-    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodeViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
-    @EnvironmentObject var sitesViewModel: SitesViewModel
-    @EnvironmentObject var pilotsViewModel: PilotsViewModel
+    @EnvironmentObject var siteViewModel: SiteViewModel
+    @EnvironmentObject var pilotViewModel: PilotViewModel
     @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
-    @EnvironmentObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
+    @EnvironmentObject var stationLatestReadingViewModel: StationLatestReadingViewModel
 
     var body: some View {
         NavigationView {
@@ -25,22 +25,22 @@ struct MainView: View {
                 // Call content based on selected navigation
                 if selectedView == .site {
                     SiteView()
-                        .environmentObject(sitesViewModel)
-                        .environmentObject(stationLatestReadingsViewModel)
+                        .environmentObject(siteViewModel)
+                        .environmentObject(stationLatestReadingViewModel)
                 }
                 if selectedView == .weather {
                     WeatherView()
                 }
                 if selectedView == .map {
                     MapContainerView(
-                        pilotsViewModel: pilotsViewModel,
-                        sitesViewModel: sitesViewModel,
+                        pilotViewModel: pilotViewModel,
+                        siteViewModel: siteViewModel,
                         mapSettingsViewModel: mapSettingsViewModel
                     )
-                    .environmentObject(sitesViewModel)
+                    .environmentObject(siteViewModel)
                     .environmentObject(mapSettingsViewModel)
-                    .environmentObject(pilotsViewModel)
-                    .environmentObject(stationLatestReadingsViewModel)
+                    .environmentObject(pilotViewModel)
+                    .environmentObject(stationLatestReadingViewModel)
                 }
                 if selectedView == .webcam {
                     WeatherCamView()

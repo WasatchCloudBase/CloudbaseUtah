@@ -42,7 +42,7 @@ class MapSettingsViewModel: ObservableObject {
     @Published var showRadar: Bool
     @Published var showInfrared: Bool
     @Published var radarColorScheme: Int
-    @Published var selectedPilots: [Pilots]
+    @Published var selectedPilots: [Pilot]
         
     init(region: MKCoordinateRegion,
          selectedMapType: CustomMapStyle = defaultmapType,
@@ -53,7 +53,7 @@ class MapSettingsViewModel: ObservableObject {
          showRadar: Bool = defaultShowRadar,
          showInfrared: Bool = defaultShowInfrared,
          radarColorSchme: Int = defaultRadarColorScheme,
-         selectedPilots: [Pilots] = []
+         selectedPilots: [Pilot] = []
     ) {
         self.region = region
         self.selectedMapType = selectedMapType
@@ -84,5 +84,5 @@ struct MapSettingsState: Equatable {
     let showInfrared: Bool
     let radarColorScheme: Int
     let scenePhase: ScenePhase
-    let selectedPilots: [Pilots]
+    let selectedPilots: [Pilot]
 }

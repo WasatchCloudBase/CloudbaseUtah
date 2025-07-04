@@ -16,10 +16,10 @@ struct CloudbaseUtahApp: App {
     @State private var refreshMetadata: Bool = false
     @StateObject private var liftParametersViewModel = LiftParametersViewModel()
     @StateObject private var sunriseSunsetViewModel = SunriseSunsetViewModel()
-    @StateObject private var weatherCodesViewModel = WeatherCodesViewModel()
-    @StateObject private var sitesViewModel = SitesViewModel()
-    @StateObject private var pilotsViewModel = PilotsViewModel()
-    @StateObject private var stationLatestReadingsViewModel: StationLatestReadingsViewModel
+    @StateObject private var weatherCodesViewModel = WeatherCodeViewModel()
+    @StateObject private var siteViewModel = SiteViewModel()
+    @StateObject private var pilotViewModel = PilotViewModel()
+    @StateObject private var stationLatestReadingViewModel: StationLatestReadingViewModel
     @StateObject private var mapSettingsViewModel = MapSettingsViewModel(
         region: MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
@@ -36,10 +36,10 @@ struct CloudbaseUtahApp: App {
         // Create each view‐model in the proper order, using locals:
         let liftVM     = LiftParametersViewModel()
         let sunVM      = SunriseSunsetViewModel()
-        let weatherVM  = WeatherCodesViewModel()
-        let sitesVM    = SitesViewModel()
-        let pilotsVM   = PilotsViewModel()
-        let stationsVM = StationLatestReadingsViewModel(sitesViewModel: sitesVM)
+        let weatherVM  = WeatherCodeViewModel()
+        let sitesVM    = SiteViewModel()
+        let pilotsVM   = PilotViewModel()
+        let stationsVM = StationLatestReadingViewModel(siteViewModel: sitesVM)
         let mapVM      = MapSettingsViewModel(
             region: MKCoordinateRegion(
                 center: CLLocationCoordinate2D(
@@ -62,9 +62,9 @@ struct CloudbaseUtahApp: App {
         _liftParametersViewModel      = StateObject(wrappedValue: liftVM)
         _sunriseSunsetViewModel       = StateObject(wrappedValue: sunVM)
         _weatherCodesViewModel        = StateObject(wrappedValue: weatherVM)
-        _sitesViewModel               = StateObject(wrappedValue: sitesVM)
-        _pilotsViewModel              = StateObject(wrappedValue: pilotsVM)
-        _stationLatestReadingsViewModel = StateObject(wrappedValue: stationsVM)
+        _siteViewModel               = StateObject(wrappedValue: sitesVM)
+        _pilotViewModel              = StateObject(wrappedValue: pilotsVM)
+        _stationLatestReadingViewModel = StateObject(wrappedValue: stationsVM)
         _mapSettingsViewModel         = StateObject(wrappedValue: mapVM)
     }
 
@@ -74,9 +74,9 @@ struct CloudbaseUtahApp: App {
                 .environmentObject(liftParametersViewModel)
                 .environmentObject(weatherCodesViewModel)
                 .environmentObject(sunriseSunsetViewModel)
-                .environmentObject(sitesViewModel)
-                .environmentObject(pilotsViewModel)
-                .environmentObject(stationLatestReadingsViewModel)
+                .environmentObject(siteViewModel)
+                .environmentObject(pilotViewModel)
+                .environmentObject(stationLatestReadingViewModel)
                 .environmentObject(mapSettingsViewModel)
                 .environment(\.colorScheme, .dark)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
@@ -93,10 +93,10 @@ struct BaseAppView: View {
     @State private var metadataLoaded = false
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
-    @EnvironmentObject var weatherCodesViewModel: WeatherCodesViewModel
-    @EnvironmentObject var pilotsViewModel: PilotsViewModel
-    @EnvironmentObject var sitesViewModel: SitesViewModel
-    @EnvironmentObject var stationLatestReadingsViewModel: StationLatestReadingsViewModel
+    @EnvironmentObject var weatherCodesViewModel: WeatherCodeViewModel
+    @EnvironmentObject var pilotViewModel: PilotViewModel
+    @EnvironmentObject var siteViewModel: SiteViewModel
+    @EnvironmentObject var stationLatestReadingViewModel: StationLatestReadingViewModel
 
     var body: some View {
         ZStack {
@@ -145,16 +145,16 @@ struct BaseAppView: View {
             group.leave()
         }
         group.enter()
-        sitesViewModel.getSites {
+        siteViewModel.getSites {
             group.leave()
         }
         group.enter()
-        pilotsViewModel.getPilots {
+        pilotViewModel.getPilots {
             group.leave()
         }
         initializeLoggingFile()
         group.notify(queue: .main) {
-            stationLatestReadingsViewModel.getLatestReadingsData(sitesOnly: true) {
+            stationLatestReadingViewModel.getLatestReadingsData(sitesOnly: true) {
                 metadataLoaded = true
                 checkIfReadyToTransition()
             }

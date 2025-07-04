@@ -2,12 +2,12 @@ import SwiftUI
 import Foundation
 
 // Developer view to check on pilot live tracks being created
-struct PilotTracksView: View {
-    @EnvironmentObject var pilotsViewModel: PilotsViewModel
-    @EnvironmentObject var pilotTracksViewModel: PilotTracksViewModel
+struct PilotTrackView: View {
+    @EnvironmentObject var pilotViewModel: PilotViewModel
+    @EnvironmentObject var pilotTrackViewModel: PilotTrackViewModel
     
     // for driving the sheet
-    @State private var selectedPilotTrack: PilotTracks?
+    @State private var selectedPilotTrack: PilotTrack?
 
     // formatters
     private let dayFormatter: DateFormatter = {
@@ -27,10 +27,10 @@ struct PilotTracksView: View {
         NavigationView {
             List {
 
-                ForEach(pilotsViewModel.pilots) { pilot in
+                ForEach(pilotViewModel.pilots) { pilot in
                     
                     // Filter tracks by pilot
-                    let tracksForPilot = pilotTracksViewModel.pilotTracks
+                    let tracksForPilot = pilotTrackViewModel.pilotTracks
                         .filter { $0.pilotName == pilot.pilotName }
                     
                     // Group tracks by date
