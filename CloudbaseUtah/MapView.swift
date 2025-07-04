@@ -74,6 +74,7 @@ struct MapView: UIViewRepresentable {
     @Binding var mapDisplayMode: MapDisplayMode
     @Binding var showRadar: Bool
     @Binding var showInfrared: Bool
+    @Binding var showSites: Bool
     let radarOverlays: [MKTileOverlay]
     let infraredOverlays: [MKTileOverlay]
     let pilotTracks: [PilotTrack]
@@ -81,12 +82,14 @@ struct MapView: UIViewRepresentable {
     let stationAnnotations: [StationAnnotation]
     let onPilotSelected: (PilotTrack) -> Void
     let onStationSelected: (StationAnnotation) -> Void
+    let onSiteSelected: (Site) -> Void
     @State private var lastPilotTrackHash: Int = 0     // Used to identify track changes requiring re-rendering
     
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self,
                     onPilotSelected: onPilotSelected,
-                    onStationSelected: onStationSelected)
+                    onStationSelected: onStationSelected,
+                    onSiteSelected: onSiteSelected)
     }
     
     func makeUIView(context: Context) -> MKMapView {
@@ -107,7 +110,7 @@ struct MapView: UIViewRepresentable {
         // Update map type
         mapView.mapType = mapStyle.toMapType()
         
-        // Clear out old overlays & annotations
+        // Clear out old overlays and annotations
         mapView.removeAnnotations(mapView.annotations)
         mapView.removeOverlays(mapView.overlays)
 
@@ -124,7 +127,25 @@ struct MapView: UIViewRepresentable {
                 mapView.addOverlay(tile, level: .aboveRoads)
             }
         }
+        
+        // Add sites if enabled
+        if mapDisplayMode == .weather && showSites {
+            let allowedTypes: Set<String> = ["Mountain", "Soaring"]
+            let filteredSites = sites
+                .filter { allowedTypes.contains($0.siteType) }
 
+            let siteAnnotations = filteredSites.map { site -> MKPointAnnotation in
+                let ann = MKPointAnnotation()
+                ann.coordinate = CLLocationCoordinate2D(
+                    latitude: Double(site.siteLat)!,
+                    longitude: Double(site.siteLon)!
+                )
+                ann.title = site.siteName
+                return ann
+            }
+            mapView.addAnnotations(siteAnnotations)
+        }
+        
         // Build a stable, ordered list of pilots → color map
         let uniquePilots = Array(Set(pilotTracks.map { $0.pilotName }))
             .sorted()
@@ -249,14 +270,17 @@ struct MapView: UIViewRepresentable {
         var parent: MapView
         let onPilotSelected: (PilotTrack) -> Void
         let onStationSelected: (StationAnnotation) -> Void
+        let onSiteSelected: (Site) -> Void
         var pilotColorMap: [String: UIColor] = [:]
         
         init(parent: MapView,
              onPilotSelected: @escaping (PilotTrack) -> Void,
-             onStationSelected: @escaping (StationAnnotation) -> Void) {
+             onStationSelected: @escaping (StationAnnotation) -> Void,
+             onSiteSelected: @escaping (Site) -> Void) {
             self.parent = parent
             self.onPilotSelected = onPilotSelected
             self.onStationSelected = onStationSelected
+            self.onSiteSelected = onSiteSelected
         }
         
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
@@ -489,10 +513,10 @@ struct MapView: UIViewRepresentable {
                 return view
             }
             
-            // Wind reading stations
+            // Stations
             if let station = annotation as? StationAnnotation {
                 // Define separate IDs for each station on the map
-                let id = "WeatherStation-\(station.title ?? "")"
+                let id = "Station-\(station.title ?? "")"
                 let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
                   ?? MKAnnotationView(annotation: station, reuseIdentifier: id)
                 view.annotation = station
@@ -506,6 +530,72 @@ struct MapView: UIViewRepresentable {
                 view.addSubview(badge)
                 view.canShowCallout = false
                 
+                return view
+            }
+            
+            // Sites
+            if let siteAnnotation = annotation as? MKPointAnnotation,
+               let title = siteAnnotation.title
+            {
+                let id = "Site-\(title)"
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+                         ?? MKAnnotationView(annotation: siteAnnotation, reuseIdentifier: id)
+
+                // Reset site annotations
+                view.annotation = siteAnnotation
+                view.subviews.forEach { $0.removeFromSuperview() }
+
+                // Set constants
+                let imageSize: CGFloat = 40
+                let verticalPadding: CGFloat = -6
+
+                // Create imageView
+                let imageView = UIImageView(image: siteAnnotationImage)
+                imageView.contentMode = .scaleAspectFit
+                imageView.frame = CGRect(origin: .zero,
+                                         size: CGSize(width: imageSize, height: imageSize))
+
+                // Create label
+                let label = UILabel()
+                label.text = title
+                label.font = UIFont.systemFont(ofSize: 11)
+                label.textColor = .white
+                label.sizeToFit()   // now label.frame.size is its intrinsic size
+
+                // Set container size: width = max(imageWidth, labelWidth)
+                let containerWidth = max(imageSize, label.frame.width)
+                let containerHeight = imageSize + verticalPadding + label.frame.height
+
+                // Position subviews in container
+                let container = UIView(frame: CGRect(x: 0, y: 0,
+                                                     width: containerWidth,
+                                                     height: containerHeight))
+                container.backgroundColor = .clear
+
+                // Center image horizontally at top
+                imageView.frame.origin = CGPoint(
+                    x: (containerWidth - imageSize) / 2,
+                    y: 0
+                )
+
+                // Place label centered below image
+                label.frame.origin = CGPoint(
+                    x: (containerWidth - label.frame.width) / 2,
+                    y: imageSize + verticalPadding
+                )
+
+                // Assemble
+                container.addSubview(imageView)
+                container.addSubview(label)
+                view.addSubview(container)
+
+                // Size the annotation view and offset so pin tip is anchored
+                view.frame = container.frame
+                view.centerOffset = CGPoint(x: 0, y: -containerHeight/2)
+
+                view.canShowCallout = false
+                view.clusteringIdentifier = nil
+
                 return view
             }
             
@@ -576,6 +666,11 @@ struct MapView: UIViewRepresentable {
                     }
                 case let station as StationAnnotation:
                     self.onStationSelected(station)
+                case let pin as MKPointAnnotation:
+                    // look up the Site by title (or store a map from pin → Site)
+                    if let site = self.parent.sites.first(where: { $0.siteName == pin.title }) {
+                        self.onSiteSelected(site)
+                    }
                 default:
                     break
                 }
@@ -609,6 +704,7 @@ struct MapContainerView: View {
 
     @State private var selectedStation: StationAnnotation?
     @State private var selectedPilotTrack: PilotTrack?
+    @State private var selectedSite: Site?
     @State private var isLayerSheetPresented = false
     @State private var isPlaying = false
     @State private var animationProgress: Double = 0.0
@@ -683,20 +779,25 @@ struct MapContainerView: View {
                     mapDisplayMode:     $mapSettingsViewModel.mapDisplayMode,   // Weather or track
                     showRadar:          $mapSettingsViewModel.showRadar,
                     showInfrared:       $mapSettingsViewModel.showInfrared,
+                    showSites:          $mapSettingsViewModel.showSites,
                     radarOverlays:      radarOverlays,
                     infraredOverlays:   infraredOverlays,
                     pilotTracks:        filteredTracks,
                     sites:              siteViewModel.sites,
                     stationAnnotations: stations,
                     onPilotSelected:    { track in selectedPilotTrack = track },
-                    onStationSelected:  { station in selectedStation = station }
+                    onStationSelected:  { station in selectedStation = station },
+                    onSiteSelected:     { site in selectedSite = site }
                 )
                 .cornerRadius(10)
                 .padding(.vertical, 8)
                     
-                // Floating Item Bar
+                // Floating Item Bar and loading status indicators
                 VStack {
                     Spacer()
+                    Text ("Hello World")
+                        .font(.caption)
+                        .foregroundColor(layersFontColor)
                     HStack(alignment: .bottom) {
                         VStack(alignment: .leading) {
                             Button(action: { isLayerSheetPresented.toggle() }) {
@@ -886,6 +987,10 @@ struct MapContainerView: View {
         
        .sheet(item: $selectedPilotTrack) { track in
            PilotTrackNodeView(originalPilotTrack: track)
+       }
+        
+       .sheet(item: $selectedSite) { site in
+           SiteDetailView(site: site)
        }
         
         // Make sure pilot live track view model is published
