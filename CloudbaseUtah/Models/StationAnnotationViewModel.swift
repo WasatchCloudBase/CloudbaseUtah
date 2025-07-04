@@ -8,12 +8,27 @@ struct StationAnnotation: Identifiable {
     let id = UUID()
     let annotationID: String
     let annotationName: String
-    let coordinates: CLLocationCoordinate2D
+    let coordinate: CLLocationCoordinate2D
     let altitude: Double
     let readingsSource: String
     let windSpeed: Double?
     let windDirection: Double?
     let windGust: Double?
+}
+
+class WeatherStationAnnotation: NSObject, MKAnnotation, Identifiable {
+  let coordinate: CLLocationCoordinate2D
+  let title: String?
+  let windSpeed: Double?
+  let windDirection: Double?
+  
+  init(lat: Double, lon: Double, name: String, speed: Double?, direction: Double?) {
+    self.coordinate    = CLLocationCoordinate2D(latitude: lat,
+                                                longitude: lon)
+    self.title         = name
+    self.windSpeed     = speed
+    self.windDirection = direction
+  }
 }
 
 class StationAnnotationViewModel: ObservableObject {
@@ -63,7 +78,7 @@ class StationAnnotationViewModel: ObservableObject {
                         let stationAnnotation = StationAnnotation(
                             annotationID: reading.stationID,
                             annotationName: reading.stationName,
-                            coordinates: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                            coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
                             altitude: Double((reading.stationElevation.replacingOccurrences(of: ",", with: ""))) ?? 0.0,
                             readingsSource: reading.readingsSource,
                             windSpeed: reading.windSpeed,
@@ -103,8 +118,8 @@ class StationAnnotationViewModel: ObservableObject {
         for station in orderedStations {
             // only compare against already‐accepted (clustered) stations
             let isFarEnough = clusteredStationAnnotations.allSatisfy { existing in
-                let dLat = existing.coordinates.latitude  - station.coordinates.latitude
-                let dLon = existing.coordinates.longitude - station.coordinates.longitude
+                let dLat = existing.coordinate.latitude  - station.coordinate.latitude
+                let dLon = existing.coordinate.longitude - station.coordinate.longitude
                 let distance = sqrt(dLat * dLat + dLon * dLon)
                 return distance > threshold
             }

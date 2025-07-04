@@ -23,7 +23,7 @@ struct PilotTrackKey: Hashable {
     let date: Date
 }
 
-// Separate annotation for pilot tracks to allow polylines as an overlay on map
+// Annotation for pilot tracks to allow polylines as an overlay on map
 class PilotTrackAnnotation: NSObject, MKAnnotation {
     let coordinate: CLLocationCoordinate2D
     let title: String?

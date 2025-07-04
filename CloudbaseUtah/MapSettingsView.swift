@@ -130,24 +130,25 @@ struct MapSettingsView: View {
                     Section(header: Text("Display layers")) {
                         Toggle("Sites", isOn: $tempShowSites)
                         Toggle("Stations", isOn: $tempShowStations)
-                    }
-                }
-                
-                if $tempMapDisplayMode.wrappedValue == .tracking {
-                    
-                    Section(header: Text("Weather layers")) {
                         Toggle("Radar (precip)", isOn: $tempShowRadar)
-                        if tempShowRadar {
+                        Toggle("Satellite (clouds)", isOn: $tempShowInfrared)
+                    }
+                    
+                    if tempShowRadar {
+                        Section(header: Text("Radar Color Scheme")) {
                             Picker("Radar colors", selection: $tempRadarColorScheme) {
                                 ForEach(radarColorSchemes) { radarColorScheme in
                                     Text(radarColorScheme.title)
                                         .tag(radarColorScheme.id)
                                 }
                             }
-                            .pickerStyle(.menu)
+                            .pickerStyle(.inline)
                         }
-                        Toggle("Satellite (clouds)", isOn: $tempShowInfrared)
                     }
+
+                }
+                
+                if $tempMapDisplayMode.wrappedValue == .tracking {
                     
                     Section(header: Text("Pilot track days")) {
                         VStack(alignment: .trailing) {

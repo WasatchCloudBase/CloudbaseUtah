@@ -72,25 +72,11 @@ class ArrowOverlayRenderer: MKOverlayRenderer {
     }
 }
 
-class WeatherStationAnnotation: NSObject, MKAnnotation, Identifiable {
-  let coordinate: CLLocationCoordinate2D
-  let title: String?
-  let windSpeed: Double?
-  let windDirection: Double?
-  
-  init(lat: Double, lon: Double, name: String, speed: Double?, direction: Double?) {
-    self.coordinate    = CLLocationCoordinate2D(latitude: lat,
-                                                longitude: lon)
-    self.title         = name
-    self.windSpeed     = speed
-    self.windDirection = direction
-  }
-}
-
 struct MapView: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
     @Binding var zoomLevel: Double
     @Binding var mapStyle: CustomMapStyle
+    @Binding var mapDisplayMode: MapDisplayMode
     @Binding var showRadar: Bool
     @Binding var showInfrared: Bool
     let radarOverlays: [MKTileOverlay]
@@ -118,24 +104,6 @@ struct MapView: UIViewRepresentable {
         mapView.isRotateEnabled  = mapEnableRotate
         mapView.isPitchEnabled   = mapEnablePitch
         mapView.mapType = mapStyle.toMapType()
-        
-        // Display infrared satellite tiles
-        if showInfrared {
-            for tile in infraredOverlays {
-                mapView.addOverlay(tile, level: .aboveRoads)
-            }
-        }
-        
-        // Display radar tiles
-        if showRadar {
-            for tile in radarOverlays {
-                mapView.addOverlay(tile, level: .aboveRoads)
-            }
-        }
-        
-        // add station annotations:
-        mapView.addAnnotations(weatherAnnotations)
-        
         return mapView
     }
     
@@ -147,21 +115,21 @@ struct MapView: UIViewRepresentable {
         // Clear out old overlays & annotations
         mapView.removeAnnotations(mapView.annotations)
         mapView.removeOverlays(mapView.overlays)
-        
+
         // Display infrared satellite tiles
-        if showInfrared {
+        if mapDisplayMode == .weather && showInfrared {
             for tile in infraredOverlays {
                 mapView.addOverlay(tile, level: .aboveRoads)
             }
         }
         
         // Display radar tiles
-        if showRadar {
+        if mapDisplayMode == .weather && showRadar {
             for tile in radarOverlays {
                 mapView.addOverlay(tile, level: .aboveRoads)
             }
         }
-        
+
         // Build a stable, ordered list of pilots → color map
         let uniquePilots = Array(Set(pilotTracks.map { $0.pilotName }))
             .sorted()
@@ -301,7 +269,7 @@ struct MapView: UIViewRepresentable {
             DispatchQueue.main.async {
                 self.parent.zoomLevel = newZoom
                 
-                // Set region to retain region when user switches map modes
+                // Set region to retain setting when user switches map modes
                 self.parent.region = mapView.region
             }
         }
@@ -529,7 +497,6 @@ struct MapView: UIViewRepresentable {
             }
             
             // Wind reading stations
-            
             if let station = annotation as? WeatherStationAnnotation {
                 
                 // Define separate IDs for each station on the map
@@ -562,7 +529,7 @@ struct MapView: UIViewRepresentable {
             badge.layer.cornerRadius = 6
             badge.clipsToBounds      = false  // so rotated arrow can draw past its bounds if needed
             
-            // 1) Speed label
+            // Wind speed label
             let speed = Int(station.windSpeed?.rounded() ?? 0)
             let label = UILabel()
             label.text      = "\(speed)"
@@ -570,38 +537,38 @@ struct MapView: UIViewRepresentable {
             label.textColor = UIColor(windSpeedColor(windSpeed: speed, siteType: ""))
             label.sizeToFit()
             
-            // 2) Arrow container
+            // Arrow container
             let arrowSize = CGSize(width: 11, height: 11)
             let arrow = UIImageView(image: UIImage(systemName: "arrow.up"))
             arrow.tintColor   = .white
             arrow.contentMode = .scaleAspectFit
             
-            // FIX: set the *bounds* to keep the logical size constant
+            // Set bounds to keep the logical size constant
             arrow.bounds = CGRect(origin: .zero, size: arrowSize)
-            // reset any old transform before rotating
+            // Reset any old transform before rotating
             arrow.transform = .identity
             if let dir = station.windDirection {
                 arrow.transform = CGAffineTransform(rotationAngle: CGFloat((dir - 180) * .pi/180))
             }
             
-            // 3) Position both subviews
+            // Position both subviews
             label.frame.origin = CGPoint(x: horizPadding, y: vertPadding)
             
-            // place the arrow by center so its bounds don’t change size
+            // Place the arrow by center so its bounds don’t change size
             let arrowCenter = CGPoint(
                 x: label.frame.maxX + horizPadding + ( arrowSize.width / 2 ),
                 y: vertPadding + ( label.frame.height / 2 )
             )
             arrow.center = arrowCenter
             
-            // 4) compute badge’s size based on unrotated extents
+            // Compute badge size based on unrotated extents
             let badgeWidth  = arrowCenter.x + ( arrowSize.width / 2 ) + horizPadding
             let badgeHeight = max(label.frame.height, arrowSize.height) + ( 2 * vertPadding )
             badge.frame = CGRect(origin: .zero,
                                  size: CGSize(width: badgeWidth,
                                               height: badgeHeight))
             
-            // 5) assemble
+            // Assemble
             badge.addSubview(label)
             badge.addSubview(arrow)
             return badge
@@ -690,8 +657,8 @@ struct MapContainerView: View {
                 
                 // Validate annotation coordinates
                 let _ = stationAnnotationViewModel.clusteredStationAnnotations.forEach { annotation in
-                    assert(annotation.coordinates.latitude >= -90 && annotation.coordinates.latitude <= 90, "Invalid latitude: \(annotation.coordinates.latitude)")
-                    assert(annotation.coordinates.longitude >= -180 && annotation.coordinates.longitude <= 180, "Invalid longitude: \(annotation.coordinates.longitude)")
+                    assert(annotation.coordinate.latitude >= -90 && annotation.coordinate.latitude <= 90, "Invalid latitude: \(annotation.coordinate.latitude)")
+                    assert(annotation.coordinate.longitude >= -180 && annotation.coordinate.longitude <= 180, "Invalid longitude: \(annotation.coordinate.longitude)")
                 }
                 
                 
@@ -712,7 +679,7 @@ struct MapContainerView: View {
                     : pilotTrackViewModel.pilotTracks.filter { selectedNames.contains($0.pilotName) }
                 }()
                 
-                // Get data for wind stations on if map is in weather mode
+                // Get data for wind stations if map is in weather mode
                 let stations: [WeatherStationAnnotation] = {
                     guard mapSettingsViewModel.isMapWeatherMode else {
                         return []
@@ -720,8 +687,8 @@ struct MapContainerView: View {
                     return stationAnnotationViewModel.clusteredStationAnnotations
                         .compactMap { item in
                             WeatherStationAnnotation(
-                                lat:        item.coordinates.latitude,
-                                lon:        item.coordinates.longitude,
+                                lat:        item.coordinate.latitude,
+                                lon:        item.coordinate.longitude,
                                 name:       item.annotationName,
                                 speed:      item.windSpeed,
                                 direction:  item.windDirection
@@ -732,16 +699,17 @@ struct MapContainerView: View {
                     MapView(
                         region:             $region,
                         zoomLevel:          $currentZoomLevel,
-                        mapStyle:           $mapSettingsViewModel.selectedMapType,
+                        mapStyle:           $mapSettingsViewModel.selectedMapType,  // Standard or hybrid
+                        mapDisplayMode:     $mapSettingsViewModel.mapDisplayMode,   // Weather or track
                         showRadar:          $mapSettingsViewModel.showRadar,
                         showInfrared:       $mapSettingsViewModel.showInfrared,
                         radarOverlays:      radarOverlays,
                         infraredOverlays:   infraredOverlays,
                         pilotTracks:        filteredTracks,
-                        sites:           siteViewModel.sites,
+                        sites:              siteViewModel.sites,
                         weatherAnnotations: stations,
                         onPilotSelected:    { track in selectedPilotTrack = track },
-                        onStationSelected:     { station in selectedStation = station }
+                        onStationSelected:  { station in selectedStation = station }
                     )
                     .cornerRadius(10)
                     .padding(.vertical, 8)
@@ -788,7 +756,7 @@ struct MapContainerView: View {
                         
                         VStack (alignment: .center) {
                             Picker("Display", selection: $mapSettingsViewModel.mapDisplayMode) {
-                                Text("Stations").tag(MapDisplayMode.weather)
+                                Text("Weather").tag(MapDisplayMode.weather)
                                 Text("Tracking").tag(MapDisplayMode.tracking)
                             }
                             .pickerStyle(SegmentedPickerStyle())

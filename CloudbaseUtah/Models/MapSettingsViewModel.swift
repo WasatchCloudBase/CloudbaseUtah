@@ -71,6 +71,8 @@ class MapSettingsViewModel: ObservableObject {
     var isMapTrackingMode: Bool { mapDisplayMode == .tracking }
     var isMapDisplayingSites: Bool { mapDisplayMode == .weather && showSites }
     var isMapDisplayingStations: Bool { mapDisplayMode == .weather && showStations }
+    var isMapDisplayingRadar: Bool { mapDisplayMode == .weather && showRadar }
+    var isMapDisplayingInfrared: Bool { mapDisplayMode == .weather && showInfrared }
 }
 
 // Composite structure to check for all map settings and view changes together
