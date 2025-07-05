@@ -63,15 +63,19 @@ class PilotTrackAnnotation: NSObject, MKAnnotation {
 
 class PilotTrackViewModel: ObservableObject {
     @Published private(set) var pilotTracks: [PilotTrack] = []
+    @Published var isLoading = false
 
     private let pilotViewModel: PilotViewModel
     private var cancellables = Set<AnyCancellable>()
+    
+    private var lastFetchTime: Date? = nil
+    private var lastSelectedPilotsFetched: [Pilot]? = nil
+    private var lastDaysFetched: Double = 0
 
     init(pilotViewModel: PilotViewModel) {
         self.pilotViewModel = pilotViewModel
         
         // Subscribe to any changes in the pilots array
-        // Note that this assumes mapView will then make a call to refresh pilotTracks
         pilotViewModel.$pilots
             .sink { [weak self] newPilots in
                 guard self != nil else { return }
@@ -79,37 +83,59 @@ class PilotTrackViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func getAllPilotTracks(
+    func getPilotTracks(
         days: Double,
+        selectedPilots: [Pilot],   // Only get selected pilots if user has selected in map settings view
         completion: @escaping () -> Void
     ) {
+        // Determine which pilots to fetch
+        let pilotsToFetch: [Pilot]
+        if selectedPilots.isEmpty {
+            pilotsToFetch = pilotViewModel.pilots
+        } else {
+            pilotsToFetch = selectedPilots
+        }
+
+        // Check last time pilot tracks were fetched;
+        // If pilot list hasn't changed, don't re-fetch until interval has passed
+        let now = Date()
+        if let last = lastFetchTime,
+           now.timeIntervalSince(last) < readingsRefreshInterval,
+           lastSelectedPilotsFetched == pilotsToFetch,
+           lastDaysFetched == days {
+            completion()
+            return
+        }
+        lastFetchTime = now
+        lastSelectedPilotsFetched = pilotsToFetch
+        lastDaysFetched = days
+
+        
+        DispatchQueue.main.async {
+            self.isLoading = true
+        }
+
         let group = DispatchGroup()
         var allResults = [PilotTrack]()
 
-        for pilot in pilotViewModel.pilots {
+        for pilot in pilotsToFetch {
             group.enter()
-            fetchTracksForPilot(for: pilot, days: days) { results in
+            getTracksForPilot(for: pilot, days: days) { results in
                 allResults.append(contentsOf: results)
                 group.leave()
             }
         }
 
         group.notify(queue: .main) {
-            // 1) Optionally filter-out old tracks if you want a full rebuild:
-            //    let filtered = allResults
-
-            // 2) Or if you want to preserve some existing but update others:
-            //    merge with self.pilotTracks, drop stale entries, etc.
-
-            // Here, we’ll do a straight rebuild:
+            // sort & publish
             self.pilotTracks = allResults
                 .sorted { $0.dateTime < $1.dateTime }
-
+            self.isLoading = false
             completion()
         }
     }
 
-    private func fetchTracksForPilot (
+    private func getTracksForPilot (
         for pilot: Pilot,
         days: Double,
         completion: @escaping ([PilotTrack]) -> Void
@@ -137,9 +163,9 @@ class PilotTrackViewModel: ObservableObject {
         request.setValue("?0", forHTTPHeaderField: "sec-ch-ua-mobile")
         request.setValue("\"macOS\"", forHTTPHeaderField: "sec-ch-ua-platform")
         
-        
         URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
             guard let data = data, error == nil else {
+                print("Error in pilot track call for: \(url)")
                 print(error as Any)
                 completion([])
                 return
@@ -147,7 +173,6 @@ class PilotTrackViewModel: ObservableObject {
 
             let parsed = self?.parseKML(pilotName: pilot.pilotName,
                                         data: data) ?? []
-            // dedupe within this pilot’s own data if you like…
             completion(parsed)
         }
         .resume()

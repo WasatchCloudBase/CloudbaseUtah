@@ -442,7 +442,7 @@ struct MapView: UIViewRepresentable {
                 let labelContainer = UIView()
                 var labelTopMargin: CGFloat = 2.0
                 if span.latitudeDelta < pilotNodeLabelThreeRowSpan {
-                    labelContainer.backgroundColor = UIColor(pilotLabelBackgroundColor).withAlphaComponent(0.7)
+                    labelContainer.backgroundColor = UIColor.black.withAlphaComponent(0.7)
                     labelContainer.layer.borderColor = pilotTrackColor.cgColor
                     labelContainer.layer.borderWidth = 0.5
                     labelContainer.layer.cornerRadius = 5
@@ -701,6 +701,7 @@ struct MapContainerView: View {
     @StateObject var stationLatestReadingViewModel: StationLatestReadingViewModel
     @StateObject private var pilotTrackViewModel: PilotTrackViewModel
     @StateObject private var stationAnnotationViewModel: StationAnnotationViewModel
+    @StateObject private var rainViewerOverlayViewModel = RainViewerOverlayViewModel()
 
     @State private var selectedStation: StationAnnotation?
     @State private var selectedPilotTrack: PilotTrack?
@@ -711,8 +712,6 @@ struct MapContainerView: View {
     @State private var currentTime: String = "00:00"
     @State private var isActive = false
     @State private var refreshWorkItem: DispatchWorkItem?
-    @State private var radarOverlays: [MKTileOverlay] = []
-    @State private var infraredOverlays: [MKTileOverlay] = []
     
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
@@ -780,8 +779,8 @@ struct MapContainerView: View {
                     showRadar:          $mapSettingsViewModel.showRadar,
                     showInfrared:       $mapSettingsViewModel.showInfrared,
                     showSites:          $mapSettingsViewModel.showSites,
-                    radarOverlays:      radarOverlays,
-                    infraredOverlays:   infraredOverlays,
+                    radarOverlays:      rainViewerOverlayViewModel.radarOverlays,
+                    infraredOverlays:   rainViewerOverlayViewModel.infraredOverlays,
                     pilotTracks:        filteredTracks,
                     sites:              siteViewModel.sites,
                     stationAnnotations: stations,
@@ -795,9 +794,55 @@ struct MapContainerView: View {
                 // Floating Item Bar and loading status indicators
                 VStack {
                     Spacer()
-                    Text ("Hello World")
-                        .font(.caption)
-                        .foregroundColor(layersFontColor)
+                    VStack() {
+                        
+                        if pilotTrackViewModel.isLoading {
+                            HStack(spacing: 8) {
+                                Spacer()
+                                Text("Loading pilot tracks")
+                                    .font(.subheadline)
+                                    .foregroundStyle(loadingBarTextColor)
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                    .scaleEffect(0.75)
+                                    .padding(.horizontal, 8)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        
+                        if stationLatestReadingViewModel.isLoading {
+                            HStack(spacing: 8) {
+                                Spacer()
+                                Text("Loading station latest readings")
+                                    .font(.subheadline)
+                                    .foregroundStyle(loadingBarTextColor)
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                    .scaleEffect(0.75)
+                                    .padding(.horizontal, 8)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        
+                        if rainViewerOverlayViewModel.isLoading {
+                            HStack(spacing: 8) {
+                                Spacer()
+                                Text("Loading radar / satellite data")
+                                    .font(.subheadline)
+                                    .foregroundStyle(loadingBarTextColor)
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                    .scaleEffect(0.75)
+                                    .padding(.horizontal, 8)
+                            }
+                            .padding(.vertical, 4)
+                        }
+
+                    }
+                    .background(loadingBarBackgroundColor.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 8)
+
                     HStack(alignment: .bottom) {
                         VStack(alignment: .leading) {
                             Button(action: { isLayerSheetPresented.toggle() }) {
@@ -808,7 +853,7 @@ struct MapContainerView: View {
                                         .padding(.bottom, 6)
                                     Text("Settings")
                                         .font(.caption)
-                                        .foregroundColor(layersFontColor)
+                                        .foregroundColor(layersTextColor)
                                 }
                             }
                             .sheet(isPresented: $isLayerSheetPresented) {
@@ -844,7 +889,7 @@ struct MapContainerView: View {
                             .padding(.bottom, 6)
                             Text ("Map Type")
                                 .font(.caption)
-                                .foregroundColor(layersFontColor)
+                                .foregroundColor(layersTextColor)
                         }
                         .padding(.top, 15)
                         .padding(.trailing, 16)
@@ -870,38 +915,8 @@ struct MapContainerView: View {
                 // Check all changes together to only execute updateMapAnnotations once
                 if scenePhase == .active {
                     
-                    // Reload radar and infrared overlays
-                    let provider = RainViewerOverlayProvider()
-                    provider.getRainViewerOverlays (radarColorScheme: mapSettingsViewModel.radarColorScheme) { radar, infrared in
-                        DispatchQueue.main.async {
-                            self.radarOverlays = radar
-                            self.infraredOverlays = infrared
-                        }
-                    }
-
-                    // Reload latest pilot tracks
-                    if mapSettingsViewModel.isMapTrackingMode {
-                        DispatchQueue.main.async {
-                            pilotTrackViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
-                        }
-                    }
+                    reloadMapLayers()
                     
-                    // Reload weather readings
-                    else {
-                        // Reload weather readings
-                        DispatchQueue.main.async {
-                            stationAnnotationViewModel.mapSettingsViewModel = mapSettingsViewModel
-                            stationAnnotationViewModel.siteViewModel = siteViewModel
-                        }
-                        DispatchQueue.main.async {
-                            stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
-                                stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
-                                stationAnnotationViewModel.updateStationAnnotations {
-                                    stationAnnotationViewModel.clusterStationAnnotations(regionSpan: region.span)
-                                }
-                            }
-                        }
-                    }
                     startTimer() // Cancels existing timer and restarts
                     isActive = true
                     startMonitoringRegion()
@@ -927,35 +942,7 @@ struct MapContainerView: View {
         
        .onAppear {
            
-           let provider = RainViewerOverlayProvider()
-           provider.getRainViewerOverlays (radarColorScheme: mapSettingsViewModel.radarColorScheme) { radar, infrared in
-               DispatchQueue.main.async {
-                   self.radarOverlays = radar
-                   self.infraredOverlays = infrared
-               }
-           }
-
-           if mapSettingsViewModel.isMapTrackingMode {
-               // Reload latest pilot tracks
-               DispatchQueue.main.async {
-                   pilotTrackViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
-               }
-           }
-           else {
-               // Reload weather readings
-               DispatchQueue.main.async {
-                   stationAnnotationViewModel.mapSettingsViewModel = mapSettingsViewModel
-                   stationAnnotationViewModel.siteViewModel = siteViewModel
-               }
-               DispatchQueue.main.async {
-                   stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
-                       stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
-                       stationAnnotationViewModel.updateStationAnnotations {
-                           stationAnnotationViewModel.clusterStationAnnotations(regionSpan: region.span)
-                       }
-                   }
-               }
-           }
+           reloadMapLayers()
            
            startTimer() // Cancels existing timer and restarts
            isActive = true
@@ -1005,38 +992,7 @@ struct MapContainerView: View {
         // Create a new work item
         let workItem = DispatchWorkItem {
             if isActive {
-                
-                // Reload radar and infrared overlays
-                let provider = RainViewerOverlayProvider()
-                provider.getRainViewerOverlays (radarColorScheme: mapSettingsViewModel.radarColorScheme) { radar, infrared in
-                    DispatchQueue.main.async {
-                        self.radarOverlays = radar
-                        self.infraredOverlays = infrared
-                    }
-                }
-
-                // Reload latest pilot tracks
-                if mapSettingsViewModel.isMapTrackingMode {
-                    DispatchQueue.main.async {
-                        pilotTrackViewModel.getAllPilotTracks(days: mapSettingsViewModel.pilotTrackDays) {}
-                    }
-                }
-                // Reload weather readings
-                else {
-                    // Reload weather readings
-                    DispatchQueue.main.async {
-                        stationAnnotationViewModel.mapSettingsViewModel = mapSettingsViewModel
-                        stationAnnotationViewModel.siteViewModel = siteViewModel
-                    }
-                    DispatchQueue.main.async {
-                        stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
-                            stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
-                            stationAnnotationViewModel.updateStationAnnotations {
-                                stationAnnotationViewModel.clusterStationAnnotations(regionSpan: region.span)
-                            }
-                        }
-                    }
-                }
+                reloadMapLayers()
             }
         }
         refreshWorkItem = workItem
@@ -1064,4 +1020,37 @@ struct MapContainerView: View {
         abs(oldSpan.longitudeDelta - newSpan.longitudeDelta) > mapScaleChangeTolerance
     }
     
+    private func reloadMapLayers() {
+
+        if mapSettingsViewModel.isMapTrackingMode {
+            
+            // Reload latest pilot tracks
+            DispatchQueue.main.async {
+                pilotTrackViewModel.getPilotTracks(days: mapSettingsViewModel.pilotTrackDays,
+                                                   selectedPilots: mapSettingsViewModel.selectedPilots) {}
+            }
+        }
+
+        else {
+            
+            // Reload radar and infrared overlays
+            if mapSettingsViewModel.showRadar || mapSettingsViewModel.showInfrared {
+                rainViewerOverlayViewModel.loadOverlays(radarColorScheme: mapSettingsViewModel.radarColorScheme)
+            }
+            
+            // Reload weather readings
+            DispatchQueue.main.async {
+                stationAnnotationViewModel.mapSettingsViewModel = mapSettingsViewModel
+                stationAnnotationViewModel.siteViewModel = siteViewModel
+            }
+            DispatchQueue.main.async {
+                stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
+                    stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
+                    stationAnnotationViewModel.updateStationAnnotations {
+                        stationAnnotationViewModel.clusterStationAnnotations(regionSpan: region.span)
+                    }
+                }
+            }
+        }
+    }
 }

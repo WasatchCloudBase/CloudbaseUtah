@@ -121,9 +121,9 @@ class StationLatestReadingViewModel: ObservableObject {
     // or all stations in Utah (MapView)
     // These are published as separate structures with separate refresh timers
     func getLatestReadingsData(sitesOnly: Bool, completion: @escaping () -> Void) {
-        let now = Date()
         
         // Pick the correct last fetch timestamp
+        let now = Date()
         let lastFetchTime = sitesOnly ? lastSiteFetchTime : lastAllFetchTime
         if let last = lastFetchTime, now.timeIntervalSince(last) < readingsRefreshInterval {
             completion()

@@ -58,16 +58,15 @@ let repeatDateTimeColor: Color = .titanium
 
 // Map page colors
 let layersIconColor: Color = .sky
-let layersFontColor: Color = .sky
+let layersTextColor: Color = .sky
 let layersIconBackgroundColor: Color = .black
+let loadingBarBackgroundColor: Color = .gunmetal
+let loadingBarTextColor: Color = .titanium
 let cameraAnnotationColor: Color = .white
 let cameraAnnotationTextColor: Color = cameraAnnotationColor
 //  siteAnnotationColor not defined here; it is established by the image
-let siteAnnotationTextColor: Color = .white
-let stationAnnotationColor: Color = .gunmetal
-let stationAnnotationTextColor: Color = .gunmetal
-let pilotNodeAnnotationColor: Color = .white
-let pilotLabelBackgroundColor: Color = .black //.withAlphaComponent(0.2)
+let siteAnnotationTextColor: UIColor = UIColor(.white)
+//  pilotNodeAnnotationColor not defined here; it is established by pilot track colors
 let pilotLabelNameTextColor: Color = .white
 let pilotLabelDateTextColor: Color = .titanium
 let pilotLabelAltTextColor: Color = .sky

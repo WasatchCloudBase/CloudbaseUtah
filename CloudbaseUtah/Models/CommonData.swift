@@ -65,7 +65,7 @@ let pilotNodeLabelThreeRowSpan: CGFloat = 0.2           // Map scale that determ
 
 // Map default settings
 let defaultPilotTrackDays: Double = 1.0                 // Default days of live tracking to display
-let defaultmapDisplayMode: MapDisplayMode = .tracking
+let defaultmapDisplayMode: MapDisplayMode = .weather
 let defaultmapType: CustomMapStyle = .standard
 let defaultShowSites: Bool = false
 let defaultShowStations: Bool = true

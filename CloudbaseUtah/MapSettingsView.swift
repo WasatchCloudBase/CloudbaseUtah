@@ -146,23 +146,31 @@ struct MapSettingsView: View {
                 if $tempMapDisplayMode.wrappedValue == .tracking {
                     
                     Section(header: Text("Pilot track days")) {
-                        VStack(alignment: .trailing) {
-                            Slider(value: $tempPilotTrackDays, in: 1.0...3.0, step: 1.0)
-                                .onChange(of: tempPilotTrackDays) { oldDays, newDays in
-                                    // Refresh tracks for each pilot with the updated days
-                                    pilotTrackViewModel.getAllPilotTracks(days: newDays) {}
+                        HStack {
+                            Text("Days:")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Picker("Days", selection: $tempPilotTrackDays) {
+                                ForEach(1...3, id: \.self) { day in
+                                    Text("\(day)")
+                                        .tag(Double(day))
                                 }
-                            HStack {
-                                Text("Today")
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                Text("+ Yesterday")
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                Text("+ Prior Day")
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
                             }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .disabled(pilotTrackViewModel.isLoading)              // block while loading
+                            .opacity(pilotTrackViewModel.isLoading ? 0.5 : 1)     // grey‐out
+                        }
+                        .padding(.vertical, 8)
+                        .onChange(of: tempPilotTrackDays) { oldDays, newDays in
+                            // Build an array of the currently‐selected Pilot objects
+                            let selected = pilotViewModel.pilots
+                                .filter { selectedPilotIDs.contains($0.id) }
+                            
+                            // Fire off the reload
+                            pilotTrackViewModel.getPilotTracks(
+                                days: newDays,
+                                selectedPilots: selected
+                            ) {}
                         }
                     }
                     
@@ -275,6 +283,14 @@ struct MapSettingsView: View {
             }
             
             didSeed = true
+        }
+        
+        .onAppear() {
+            // Reload pilot list with all available tracks (in case user had previously selected pilots,
+            // which would have created a filtered list)
+            pilotTrackViewModel.getPilotTracks(days: pilotTrackDays,
+                                               selectedPilots: []) {}
+
         }
         
         .onDisappear {
