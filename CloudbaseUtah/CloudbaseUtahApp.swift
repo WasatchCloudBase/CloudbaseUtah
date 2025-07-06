@@ -13,7 +13,7 @@ struct CloudbaseUtahApp: App {
     @StateObject private var siteViewModel = SiteViewModel()
     @StateObject private var pilotViewModel = PilotViewModel()
     @StateObject private var stationLatestReadingViewModel: StationLatestReadingViewModel
-    @StateObject private var mapSettingsViewModel = MapSettingsViewModel(
+    @StateObject private var userSettingsViewModel = UserSettingsViewModel(
         region: MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
             span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
@@ -27,13 +27,13 @@ struct CloudbaseUtahApp: App {
     
     init() {
         // Create each view‐model in the proper order, using locals:
-        let liftVM     = LiftParametersViewModel()
-        let sunVM      = SunriseSunsetViewModel()
-        let weatherVM  = WeatherCodeViewModel()
-        let sitesVM    = SiteViewModel()
-        let pilotsVM   = PilotViewModel()
-        let stationsVM = StationLatestReadingViewModel(siteViewModel: sitesVM)
-        let mapVM      = MapSettingsViewModel(
+        let liftVM              = LiftParametersViewModel()
+        let sunVM               = SunriseSunsetViewModel()
+        let weatherVM           = WeatherCodeViewModel()
+        let sitesVM             = SiteViewModel()
+        let pilotsVM            = PilotViewModel()
+        let stationsVM          = StationLatestReadingViewModel(siteViewModel: sitesVM)
+        let userSettingsVM      = UserSettingsViewModel(
             region: MKCoordinateRegion(
                 center: CLLocationCoordinate2D(
                     latitude: mapInitLatitude,
@@ -58,7 +58,7 @@ struct CloudbaseUtahApp: App {
         _siteViewModel               = StateObject(wrappedValue: sitesVM)
         _pilotViewModel              = StateObject(wrappedValue: pilotsVM)
         _stationLatestReadingViewModel = StateObject(wrappedValue: stationsVM)
-        _mapSettingsViewModel         = StateObject(wrappedValue: mapVM)
+        _userSettingsViewModel         = StateObject(wrappedValue: userSettingsVM)
     }
 
     var body: some Scene {
@@ -70,7 +70,7 @@ struct CloudbaseUtahApp: App {
                 .environmentObject(siteViewModel)
                 .environmentObject(pilotViewModel)
                 .environmentObject(stationLatestReadingViewModel)
-                .environmentObject(mapSettingsViewModel)
+                .environmentObject(userSettingsViewModel)
                 .environment(\.colorScheme, .dark)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
                     refreshMetadata = true

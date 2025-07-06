@@ -41,16 +41,16 @@ class StationAnnotationViewModel: ObservableObject {
     @Published var clusteredStationAnnotations: [StationAnnotation] = []
     private var cancellables = Set<AnyCancellable>()
     
-    var mapSettingsViewModel: MapSettingsViewModel
+    var userSettingsViewModel: UserSettingsViewModel
     var siteViewModel: SiteViewModel
     var stationLatestReadingViewModel: StationLatestReadingViewModel
 
     init(
-        mapSettingsViewModel: MapSettingsViewModel,
+        userSettingsViewModel: UserSettingsViewModel,
         siteViewModel: SiteViewModel,
         stationLatestReadingViewModel: StationLatestReadingViewModel
     ) {
-        self.mapSettingsViewModel = mapSettingsViewModel
+        self.userSettingsViewModel = userSettingsViewModel
         self.siteViewModel = siteViewModel
         self.stationLatestReadingViewModel = stationLatestReadingViewModel
     }
@@ -65,7 +65,7 @@ class StationAnnotationViewModel: ObservableObject {
         // Define dispatch group for async/parallel processing, and will be used later to ensure all have completed
         let stationAnnotationsGroup = DispatchGroup()
         
-        if mapSettingsViewModel.isMapDisplayingStations {
+        if userSettingsViewModel.isMapDisplayingStations {
             stationAnnotationsGroup.enter()
             
             // Define another dispatch group for to ensure station annotations aren't added until prior calls complete
@@ -97,7 +97,7 @@ class StationAnnotationViewModel: ObservableObject {
             }
         }
         
-        if mapSettingsViewModel.isMapTrackingMode {
+        if userSettingsViewModel.isMapTrackingMode {
             // Do nothing; pilot tracks handled separately
         }
         

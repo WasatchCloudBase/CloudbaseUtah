@@ -73,6 +73,7 @@ struct SiteDetailView: View {
     @EnvironmentObject var liftParametersViewModel: LiftParametersViewModel
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @EnvironmentObject var weatherCodesViewModel: WeatherCodeViewModel
+    @EnvironmentObject var userSettingsViewModel: UserSettingsViewModel
     @StateObject var viewModel = StationReadingsHistoryDataModel()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) var openURL     // Used to open URL links as an in-app sheet using Safari
@@ -80,6 +81,7 @@ struct SiteDetailView: View {
     @State private var showWebView = false  // Used to open URL links as an in-app sheet using Safari
     @State private var isActive = false
     @State private var historyIsLoading = true
+    @State private var isFavorite: Bool = false
         
     var body: some View {
         VStack(alignment: .leading) {
@@ -92,15 +94,45 @@ struct SiteDetailView: View {
                             .foregroundColor(toolbarActiveImageColor)
                         Text("Back")
                             .foregroundColor(toolbarActiveFontColor)
-                        Spacer()
-                        Text(site.siteName)
-                            .foregroundColor(sectionHeaderColor)
-                            .bold()
                     }
                 }
-                .padding()
                 Spacer()
+                Text(site.siteName)
+                    .foregroundColor(sectionHeaderColor)
+                    .bold()
+                Button(action: {
+                    if !isFavorite {
+                        do {
+                            try userSettingsViewModel.addFavorite(
+                                favoriteType:   getFavoriteType(siteType: site.siteType),
+                                favoriteID:     site.siteName,
+                                favoriteName:   site.siteName,
+                                readingsSource: site.readingsSource,
+                                stationID:      site.readingsStation,
+                                readingsAlt:    site.readingsAlt,
+                                siteLat:        site.siteLat,
+                                siteLon:        site.siteLon,
+                            )
+                        } catch {
+                            print("Failed to add favorite: \(error.localizedDescription)")
+                        }
+                    } else {
+                        do {
+                            try userSettingsViewModel.removeFavorite(
+                                favoriteType: getFavoriteType(siteType: site.siteType),
+                                favoriteID: site.siteName
+                            )
+                        } catch {
+                            print("Failed to remove favorite: \(error.localizedDescription)")
+                        }
+                    }
+                }) {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.title3)
+                        .foregroundColor(isFavorite ? .yellow : .gray)
+                }
             }
+            .padding()
             .background(toolbarBackgroundColor)
             
             List {
@@ -230,6 +262,7 @@ struct SiteDetailView: View {
             Spacer() // Push the content to the top of the sheet
         }
         .onAppear {
+            updateIsFavorite()
             viewModel.GetReadingsHistoryData(stationID: site.readingsStation, readingsSource: site.readingsSource)
             isActive = true
             historyIsLoading = true
@@ -248,6 +281,9 @@ struct SiteDetailView: View {
                 isActive = false
             }
         }
+        .onChange(of: userSettingsViewModel.userFavoriteSites) {
+            updateIsFavorite()
+        }
         .sheet(isPresented: $showWebView) { if let url = externalURL { SafariView(url: url) } }
     }
 
@@ -263,4 +299,21 @@ struct SiteDetailView: View {
             }
         }
     }
+    
+    // Check if site is in favorites
+    private func updateIsFavorite() {
+        isFavorite = userSettingsViewModel.userFavoriteSites.contains {
+            $0.favoriteType == getFavoriteType(siteType: site.siteType) &&
+            $0.favoriteID == site.siteName
+        }
+    }
+    
+    private func getFavoriteType (siteType: String) -> String {
+        var favoriteType: String = "Site"
+        if siteType == "Station" {
+            favoriteType = "Station"
+        }
+        return favoriteType
+    }
+
 }

@@ -695,7 +695,7 @@ struct MapContainerView: View {
     @EnvironmentObject var weatherCodesViewModel: WeatherCodeViewModel
     @EnvironmentObject var siteViewModel: SiteViewModel
     @EnvironmentObject var pilotViewModel: PilotViewModel
-    @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
+    @EnvironmentObject var userSettingsViewModel: UserSettingsViewModel
     @Environment(\.scenePhase) private var scenePhase
 
     @StateObject var stationLatestReadingViewModel: StationLatestReadingViewModel
@@ -726,14 +726,14 @@ struct MapContainerView: View {
 
     private var cancellables = Set<AnyCancellable>()
     
-    init(pilotViewModel: PilotViewModel, siteViewModel: SiteViewModel, mapSettingsViewModel: MapSettingsViewModel) {
+    init(pilotViewModel: PilotViewModel, siteViewModel: SiteViewModel, userSettingsViewModel: UserSettingsViewModel) {
         let stationVM = StationLatestReadingViewModel(siteViewModel: siteViewModel)
         _pilotTrackViewModel = StateObject(wrappedValue:
             PilotTrackViewModel(pilotViewModel: pilotViewModel))
         _stationLatestReadingViewModel = StateObject(wrappedValue: stationVM)
         _stationAnnotationViewModel = StateObject(wrappedValue:
             StationAnnotationViewModel(
-                mapSettingsViewModel: mapSettingsViewModel,
+                userSettingsViewModel: userSettingsViewModel,
                 siteViewModel: siteViewModel,
                 stationLatestReadingViewModel: stationVM))
     }
@@ -748,15 +748,14 @@ struct MapContainerView: View {
                     assert(annotation.coordinate.longitude >= -180 && annotation.coordinate.longitude <= 180, "Invalid longitude: \(annotation.coordinate.longitude)")
                 }
                 
-                
                 // Get selected pilots (if specified by user)
-                let selectedNames = Set(mapSettingsViewModel
+                let selectedNames = Set(userSettingsViewModel
                                           .selectedPilots
                                           .map(\.pilotName))
 
                 // Get filteredTracks only if map is in tracking mode
                 let filteredTracks: [PilotTrack] = {
-                  guard mapSettingsViewModel.isMapTrackingMode else {
+                  guard userSettingsViewModel.isMapTrackingMode else {
                     return []
                   }
                   // if no one is explicitly selected, show all pilots,
@@ -767,18 +766,18 @@ struct MapContainerView: View {
                 }()
                 
                 // Get data for wind stations if map is in weather mode
-                let stations = mapSettingsViewModel.isMapWeatherMode
+                let stations = userSettingsViewModel.isMapWeatherMode
                   ? stationAnnotationViewModel.clusteredStationAnnotations
                   : []
 
                 MapView(
                     region:             $region,
                     zoomLevel:          $currentZoomLevel,
-                    mapStyle:           $mapSettingsViewModel.selectedMapType,  // Standard or hybrid
-                    mapDisplayMode:     $mapSettingsViewModel.mapDisplayMode,   // Weather or track
-                    showRadar:          $mapSettingsViewModel.showRadar,
-                    showInfrared:       $mapSettingsViewModel.showInfrared,
-                    showSites:          $mapSettingsViewModel.showSites,
+                    mapStyle:           $userSettingsViewModel.selectedMapType,  // Standard or hybrid
+                    mapDisplayMode:     $userSettingsViewModel.mapDisplayMode,   // Weather or track
+                    showRadar:          $userSettingsViewModel.showRadar,
+                    showInfrared:       $userSettingsViewModel.showInfrared,
+                    showSites:          $userSettingsViewModel.showSites,
                     radarOverlays:      rainViewerOverlayViewModel.radarOverlays,
                     infraredOverlays:   rainViewerOverlayViewModel.infraredOverlays,
                     pilotTracks:        filteredTracks,
@@ -858,15 +857,15 @@ struct MapContainerView: View {
                             }
                             .sheet(isPresented: $isLayerSheetPresented) {
                                 MapSettingsView(
-                                    selectedMapType:    $mapSettingsViewModel.selectedMapType,
-                                    pilotTrackDays:     $mapSettingsViewModel.pilotTrackDays,
-                                    mapDisplayMode:     $mapSettingsViewModel.mapDisplayMode,
-                                    showSites:          $mapSettingsViewModel.showSites,
-                                    showStations:       $mapSettingsViewModel.showStations,
-                                    showRadar:          $mapSettingsViewModel.showRadar,
-                                    showInfrared:       $mapSettingsViewModel.showInfrared,
-                                    radarColorScheme:   $mapSettingsViewModel.radarColorScheme,
-                                    selectedPilots:     $mapSettingsViewModel.selectedPilots
+                                    selectedMapType:    $userSettingsViewModel.selectedMapType,
+                                    pilotTrackDays:     $userSettingsViewModel.pilotTrackDays,
+                                    mapDisplayMode:     $userSettingsViewModel.mapDisplayMode,
+                                    showSites:          $userSettingsViewModel.showSites,
+                                    showStations:       $userSettingsViewModel.showStations,
+                                    showRadar:          $userSettingsViewModel.showRadar,
+                                    showInfrared:       $userSettingsViewModel.showInfrared,
+                                    radarColorScheme:   $userSettingsViewModel.radarColorScheme,
+                                    selectedPilots:     $userSettingsViewModel.selectedPilots
                                 )
                                 .interactiveDismissDisabled(true) // Disables swipe-to-dismiss (force use of back button)\
                                 .environmentObject(pilotViewModel)
@@ -881,7 +880,7 @@ struct MapContainerView: View {
                         Spacer()
                         
                         VStack (alignment: .center) {
-                            Picker("Display", selection: $mapSettingsViewModel.mapDisplayMode) {
+                            Picker("Display", selection: $userSettingsViewModel.mapDisplayMode) {
                                 Text("Weather").tag(MapDisplayMode.weather)
                                 Text("Tracking").tag(MapDisplayMode.tracking)
                             }
@@ -902,15 +901,15 @@ struct MapContainerView: View {
                     .padding(.bottom, 16)
                 }
             }
-            .onChange(of: MapSettingsState(pilotTrackDays:      mapSettingsViewModel.pilotTrackDays,
-                                           mapDisplayMode:      mapSettingsViewModel.mapDisplayMode,
-                                           showSites:           mapSettingsViewModel.showSites,
-                                           showStations:        mapSettingsViewModel.showStations,
-                                           showRadar:           mapSettingsViewModel.showRadar,
-                                           showInfrared:        mapSettingsViewModel.showInfrared,
-                                           radarColorScheme:    mapSettingsViewModel.radarColorScheme,
+            .onChange(of: MapSettingsState(pilotTrackDays:      userSettingsViewModel.pilotTrackDays,
+                                           mapDisplayMode:      userSettingsViewModel.mapDisplayMode,
+                                           showSites:           userSettingsViewModel.showSites,
+                                           showStations:        userSettingsViewModel.showStations,
+                                           showRadar:           userSettingsViewModel.showRadar,
+                                           showInfrared:        userSettingsViewModel.showInfrared,
+                                           radarColorScheme:    userSettingsViewModel.radarColorScheme,
                                            scenePhase:          scenePhase,
-                                           selectedPilots:      mapSettingsViewModel.selectedPilots
+                                           selectedPilots:      userSettingsViewModel.selectedPilots
                                           )) {
                 // Check all changes together to only execute updateMapAnnotations once
                 if scenePhase == .active {
@@ -960,8 +959,8 @@ struct MapContainerView: View {
                siteName: station.title ?? "",
                readingsNote: "",
                forecastNote: "",
-               siteType: "",
-               readingsAlt: String(station.altitude),
+               siteType: "Station",
+               readingsAlt: String(Int(station.altitude)),
                readingsSource: station.readingsSource,
                readingsStation: station.annotationID,
                pressureZoneReadingTime: "",
@@ -1002,7 +1001,7 @@ struct MapContainerView: View {
     }
     
     private func startMonitoringRegion() {
-        if mapSettingsViewModel.isMapTrackingMode {
+        if userSettingsViewModel.isMapTrackingMode {
             // Do nothing; pilot map changes handled elsewhere
         } else {
             Timer.scheduledTimer(withTimeInterval: mapBatchProcessingInterval, repeats: true) { _ in
@@ -1022,25 +1021,25 @@ struct MapContainerView: View {
     
     private func reloadMapLayers() {
 
-        if mapSettingsViewModel.isMapTrackingMode {
+        if userSettingsViewModel.isMapTrackingMode {
             
             // Reload latest pilot tracks
             DispatchQueue.main.async {
-                pilotTrackViewModel.getPilotTracks(days: mapSettingsViewModel.pilotTrackDays,
-                                                   selectedPilots: mapSettingsViewModel.selectedPilots) {}
+                pilotTrackViewModel.getPilotTracks(days: userSettingsViewModel.pilotTrackDays,
+                                                   selectedPilots: userSettingsViewModel.selectedPilots) {}
             }
         }
 
         else {
             
             // Reload radar and infrared overlays
-            if mapSettingsViewModel.showRadar || mapSettingsViewModel.showInfrared {
-                rainViewerOverlayViewModel.loadOverlays(radarColorScheme: mapSettingsViewModel.radarColorScheme)
+            if userSettingsViewModel.showRadar || userSettingsViewModel.showInfrared {
+                rainViewerOverlayViewModel.loadOverlays(radarColorScheme: userSettingsViewModel.radarColorScheme)
             }
             
             // Reload weather readings
             DispatchQueue.main.async {
-                stationAnnotationViewModel.mapSettingsViewModel = mapSettingsViewModel
+                stationAnnotationViewModel.userSettingsViewModel = userSettingsViewModel
                 stationAnnotationViewModel.siteViewModel = siteViewModel
             }
             DispatchQueue.main.async {

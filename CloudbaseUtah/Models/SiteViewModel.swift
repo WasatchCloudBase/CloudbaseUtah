@@ -7,7 +7,9 @@ struct Site: Codable, Identifiable, Equatable, Hashable {
     var siteName: String
     var readingsNote: String
     var forecastNote: String
-    var siteType: String
+    var siteType: String        // sites have types of Soaring, Mountain, Airport, or blank
+                                // Detailed forecast uses type of Aloft
+                                // Map view and favorites also use type of Station
     var readingsAlt: String
     var readingsSource: String
     var readingsStation: String

@@ -15,7 +15,7 @@ struct MainView: View {
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @EnvironmentObject var siteViewModel: SiteViewModel
     @EnvironmentObject var pilotViewModel: PilotViewModel
-    @EnvironmentObject var mapSettingsViewModel: MapSettingsViewModel
+    @EnvironmentObject var userSettingsViewModel: UserSettingsViewModel
     @EnvironmentObject var stationLatestReadingViewModel: StationLatestReadingViewModel
 
     var body: some View {
@@ -35,10 +35,10 @@ struct MainView: View {
                     MapContainerView(
                         pilotViewModel: pilotViewModel,
                         siteViewModel: siteViewModel,
-                        mapSettingsViewModel: mapSettingsViewModel
+                        userSettingsViewModel: userSettingsViewModel
                     )
                     .environmentObject(siteViewModel)
-                    .environmentObject(mapSettingsViewModel)
+                    .environmentObject(userSettingsViewModel)
                     .environmentObject(pilotViewModel)
                     .environmentObject(stationLatestReadingViewModel)
                 }
