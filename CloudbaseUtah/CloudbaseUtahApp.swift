@@ -50,6 +50,9 @@ struct CloudbaseUtahApp: App {
             showSites: defaultShowSites,
             showStations: defaultShowStations
         )
+        userSettingsVM.loadFromStorage()
+          _userSettingsViewModel = StateObject(wrappedValue: userSettingsVM)
+
         
         // Wire them up into their @StateObject wrappers:
         _liftParametersViewModel      = StateObject(wrappedValue: liftVM)
@@ -74,6 +77,14 @@ struct CloudbaseUtahApp: App {
                 .environment(\.colorScheme, .dark)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
                     refreshMetadata = true
+                }
+                .onChange(of: scenePhase) { oldPhase, newPhase in
+                    switch newPhase {
+                    case .background, .inactive:
+                        userSettingsViewModel.saveToStorage()
+                    default:
+                        break
+                    }
                 }
         }
     }

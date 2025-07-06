@@ -712,17 +712,10 @@ struct MapContainerView: View {
     @State private var currentTime: String = "00:00"
     @State private var isActive = false
     @State private var refreshWorkItem: DispatchWorkItem?
-    
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
-        span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan))
-
     @State private var position = MapCameraPosition.region(MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
         span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)))
-
     @State private var lastRegionSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0)
-    @State private var currentZoomLevel: Double = defaultMapZoomLevel
 
     private var cancellables = Set<AnyCancellable>()
     
@@ -771,8 +764,8 @@ struct MapContainerView: View {
                   : []
 
                 MapView(
-                    region:             $region,
-                    zoomLevel:          $currentZoomLevel,
+                    region:             $userSettingsViewModel.region,
+                    zoomLevel:          $userSettingsViewModel.zoomLevel,
                     mapStyle:           $userSettingsViewModel.selectedMapType,  // Standard or hybrid
                     mapDisplayMode:     $userSettingsViewModel.mapDisplayMode,   // Weather or track
                     showRadar:          $userSettingsViewModel.showRadar,
@@ -1005,7 +998,7 @@ struct MapContainerView: View {
             // Do nothing; pilot map changes handled elsewhere
         } else {
             Timer.scheduledTimer(withTimeInterval: mapBatchProcessingInterval, repeats: true) { _ in
-                let currentSpan = region.span
+                let currentSpan = userSettingsViewModel.region.span
                 if hasRegionSpanChanged(from: lastRegionSpan, to: currentSpan) {
                     lastRegionSpan = currentSpan
                     stationAnnotationViewModel.clusterStationAnnotations(regionSpan: currentSpan)
@@ -1046,7 +1039,7 @@ struct MapContainerView: View {
                 stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
                     stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
                     stationAnnotationViewModel.updateStationAnnotations {
-                        stationAnnotationViewModel.clusterStationAnnotations(regionSpan: region.span)
+                        stationAnnotationViewModel.clusterStationAnnotations(regionSpan: userSettingsViewModel.region.span)
                     }
                 }
             }

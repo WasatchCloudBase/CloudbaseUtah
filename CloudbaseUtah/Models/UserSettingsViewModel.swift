@@ -2,13 +2,13 @@ import SwiftUI
 import Combine
 import MapKit
 
-enum MapDisplayMode {
+enum MapDisplayMode: String, Codable {
     case weather
     case tracking
 }
 
 // Custom Map Style
-enum CustomMapStyle: String, CaseIterable {
+enum CustomMapStyle: String, Codable, CaseIterable {
     case standard, hybrid
 
     // Conversion to Maptype (for MKMapView)
@@ -22,21 +22,22 @@ enum CustomMapStyle: String, CaseIterable {
     }
 }
 
-struct UserFavoriteSite: Identifiable, Equatable {
-    let id = UUID()
+struct UserFavoriteSite: Identifiable, Codable, Equatable {
+    var id = UUID()
     let favoriteType: String    // Station or Site
     let favoriteID: String      // site name or station name
-    let favoriteName: String    // User specified
+    var favoriteName: String    // User specified
     let readingsSource: String  // for stations only (used to build mock site for favorites)
     let stationID: String       // for stations only
     let readingsAlt: String     // for stations only
-    var siteLat: String         // for stations only
-    var siteLon: String         // for stations only
-    let sortSequence: Int       // allows user to re-sort favorites
+    let siteLat: String         // for stations only
+    let siteLon: String         // for stations only
+    var sortSequence: Int       // allows user to re-sort favorites
 }
 
 class UserSettingsViewModel: ObservableObject {
     @Published var region: MKCoordinateRegion
+    @Published var zoomLevel: Double
     @Published var selectedMapType: CustomMapStyle
     @Published var pilotTrackDays: Double
     @Published var mapDisplayMode: MapDisplayMode
@@ -49,18 +50,20 @@ class UserSettingsViewModel: ObservableObject {
     @Published var userFavoriteSites: [UserFavoriteSite]
     
     init(region: MKCoordinateRegion,
-         selectedMapType: CustomMapStyle = defaultmapType,
-         pilotTrackDays: Double = defaultPilotTrackDays,
-         mapDisplayMode: MapDisplayMode = defaultmapDisplayMode,
-         showSites: Bool = defaultShowSites,
-         showStations: Bool = defaultShowStations,
-         showRadar: Bool = defaultShowRadar,
-         showInfrared: Bool = defaultShowInfrared,
-         radarColorSchme: Int = defaultRadarColorScheme,
-         selectedPilots: [Pilot] = [],
+         zoomLevel:            Double = defaultMapZoomLevel,
+         selectedMapType:   CustomMapStyle = defaultmapType,
+         pilotTrackDays:    Double = defaultPilotTrackDays,
+         mapDisplayMode:    MapDisplayMode = defaultmapDisplayMode,
+         showSites:         Bool = defaultShowSites,
+         showStations:      Bool = defaultShowStations,
+         showRadar:         Bool = defaultShowRadar,
+         showInfrared:      Bool = defaultShowInfrared,
+         radarColorSchme:   Int = defaultRadarColorScheme,
+         selectedPilots:    [Pilot] = [],
          userFavoriteSites: [UserFavoriteSite] = []
     ) {
         self.region = region
+        self.zoomLevel = zoomLevel
         self.selectedMapType = selectedMapType
         self.pilotTrackDays = pilotTrackDays
         self.mapDisplayMode = mapDisplayMode
@@ -73,15 +76,34 @@ class UserSettingsViewModel: ObservableObject {
         self.userFavoriteSites = userFavoriteSites
     }
     
-    var isMapWeatherMode: Bool { mapDisplayMode == .weather }
-    var isMapTrackingMode: Bool { mapDisplayMode == .tracking }
-    var isMapDisplayingSites: Bool { mapDisplayMode == .weather && showSites }
-    var isMapDisplayingStations: Bool { mapDisplayMode == .weather && showStations }
-    var isMapDisplayingRadar: Bool { mapDisplayMode == .weather && showRadar }
-    var isMapDisplayingInfrared: Bool { mapDisplayMode == .weather && showInfrared }
+    var isMapWeatherMode:           Bool { mapDisplayMode == .weather }
+    var isMapTrackingMode:          Bool { mapDisplayMode == .tracking }
+    var isMapDisplayingSites:       Bool { mapDisplayMode == .weather && showSites }
+    var isMapDisplayingStations:    Bool { mapDisplayMode == .weather && showStations }
+    var isMapDisplayingRadar:       Bool { mapDisplayMode == .weather && showRadar }
+    var isMapDisplayingInfrared:    Bool { mapDisplayMode == .weather && showInfrared }
+    
+    // Persistent storage
+    private let storageKey = "UserSettings"
+    private struct PersistedSettings: Codable {
+        let centerLatitude:     Double
+        let centerLongitude:    Double
+        let spanLatitude:       Double
+        let spanLongitude:      Double
+        let zoomLevel:          Double
+        let selectedMapType:    CustomMapStyle.RawValue
+        let pilotTrackDays:     Double
+        let mapDisplayMode:     MapDisplayMode.RawValue
+        let showSites:          Bool
+        let showStations:       Bool
+        let showRadar:          Bool
+        let showInfrared:       Bool
+        let radarColorScheme:   Int
+        let selectedPilots:     [Pilot]
+        let userFavoriteSites:  [UserFavoriteSite]
+    }
     
     // Functions to manage favorites
-    
     enum FavoriteSiteError: Error, LocalizedError {
         case alreadyExists
         case notFound
@@ -212,4 +234,66 @@ struct MapSettingsState: Equatable {
     let radarColorScheme: Int
     let scenePhase: ScenePhase
     let selectedPilots: [Pilot]
+}
+
+// Functions to handle persistent storage
+extension UserSettingsViewModel {
+    // Call this once on launch
+    func loadFromStorage() {
+        let defaults = UserDefaults.standard
+        guard
+            let data = defaults.data(forKey: storageKey),
+            let stored = try? JSONDecoder().decode(PersistedSettings.self, from: data)
+        else {
+            return
+        }
+        
+        // Apply loaded values back into @Published properties
+        region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: stored.centerLatitude,
+                longitude: stored.centerLongitude
+            ),
+            span: MKCoordinateSpan(
+                latitudeDelta: stored.spanLatitude,
+                longitudeDelta: stored.spanLongitude
+            )
+        )
+        zoomLevel          = stored.zoomLevel
+        selectedMapType    = CustomMapStyle(rawValue: stored.selectedMapType) ?? selectedMapType
+        pilotTrackDays     = stored.pilotTrackDays
+        mapDisplayMode     = MapDisplayMode(rawValue: stored.mapDisplayMode) ?? mapDisplayMode
+        showSites          = stored.showSites
+        showStations       = stored.showStations
+        showRadar          = stored.showRadar
+        showInfrared       = stored.showInfrared
+        radarColorScheme   = stored.radarColorScheme
+        selectedPilots     = stored.selectedPilots
+        userFavoriteSites  = stored.userFavoriteSites
+    }
+    
+    // Call this to store persistence (e.g. on background/inactive)
+    func saveToStorage() {
+        let settings = PersistedSettings(
+            centerLatitude:    region.center.latitude,
+            centerLongitude:   region.center.longitude,
+            spanLatitude:      region.span.latitudeDelta,
+            spanLongitude:     region.span.longitudeDelta,
+            zoomLevel:         zoomLevel,
+            selectedMapType:   selectedMapType.rawValue,
+            pilotTrackDays:    pilotTrackDays,
+            mapDisplayMode:    mapDisplayMode.rawValue,
+            showSites:         showSites,
+            showStations:      showStations,
+            showRadar:         showRadar,
+            showInfrared:      showInfrared,
+            radarColorScheme:  radarColorScheme,
+            selectedPilots:    selectedPilots,
+            userFavoriteSites: userFavoriteSites
+        )
+        
+        if let data = try? JSONEncoder().encode(settings) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
+    }
 }
