@@ -172,6 +172,22 @@ struct MapSettingsView: View {
                                 selectedPilots: selected
                             ) {}
                         }
+                        if pilotTrackViewModel.isLoading {
+                            HStack(spacing: 8) {
+                                Spacer()
+                                Text("Updating pilot track data")
+                                    .font(.subheadline)
+                                    .foregroundStyle(loadingBarTextColor)
+
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                    .scaleEffect(0.75)
+                                    .padding(.horizontal, 8)
+                                    // force a fresh ProgressView each time `isLoading` toggles:
+                                    .id(UUID())
+                            }
+                            .padding(.vertical, 4)
+                        }
                     }
                     
                     Section(header: Text("Pilots to display")) {
@@ -286,11 +302,13 @@ struct MapSettingsView: View {
         }
         
         .onAppear() {
-            // Reload pilot list with all available tracks (in case user had previously selected pilots,
-            // which would have created a filtered list)
-            pilotTrackViewModel.getPilotTracks(days: pilotTrackDays,
-                                               selectedPilots: []) {}
-
+            
+            if $tempMapDisplayMode.wrappedValue == .tracking {
+                // Reload pilot list with all available tracks (in case user had previously selected pilots,
+                // which would have created a filtered list)
+                pilotTrackViewModel.getPilotTracks(days: pilotTrackDays,
+                                                   selectedPilots: []) {}
+            }
         }
         
         .onDisappear {
@@ -304,6 +322,7 @@ struct MapSettingsView: View {
             showInfrared = tempShowInfrared
             radarColorScheme = tempRadarColorScheme
             selectedPilots = pilotViewModel.pilots.filter { selectedPilotIDs.contains($0.id) }
+            
         }
         
         .sheet(isPresented: $addPilot, onDismiss: {

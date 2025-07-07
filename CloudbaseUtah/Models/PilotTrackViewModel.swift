@@ -61,96 +61,165 @@ class PilotTrackAnnotation: NSObject, MKAnnotation {
     }
 }
 
+@MainActor
 class PilotTrackViewModel: ObservableObject {
     @Published private(set) var pilotTracks: [PilotTrack] = []
     @Published var isLoading = false
 
     private let pilotViewModel: PilotViewModel
     private var cancellables = Set<AnyCancellable>()
-    
-    private var lastFetchTime: Date? = nil
-    private var lastSelectedPilotsFetched: [Pilot]? = nil
-    private var lastDaysFetched: Double = 0
+    private let session: URLSession
+
+    private let maxConcurrentRequests = 8
+    private let maxConnectionsPerHost = 12
+
+    // Midnight-of-last-cache build. When the date rolls past this, clear everything.
+    private var cacheDate: Date = Calendar.current.startOfDay(for: Date())
+
+    // Per-pilot cache entry
+    private struct CacheEntry {
+        var lastFetch: Date
+        var lastDays: Double
+        var tracks: [PilotTrack]
+    }
+
+    // Map from pilotName to cache entry
+    private var cache: [String: CacheEntry] = [:]
 
     init(pilotViewModel: PilotViewModel) {
         self.pilotViewModel = pilotViewModel
-        
-        // Subscribe to any changes in the pilots array
+
+        // Tune URLSession
+        let cfg = URLSessionConfiguration.default
+        cfg.httpMaximumConnectionsPerHost = maxConnectionsPerHost
+        self.session = URLSession(configuration: cfg)
+
         pilotViewModel.$pilots
-            .sink { [weak self] newPilots in
-                guard self != nil else { return }
-            }
+            .sink { _ in /* no-op: fetch is triggered by view logic */ }
             .store(in: &cancellables)
     }
-    
+
+    // Fetch tracks for the selected pilots, but only refetch what's stale or new.
     func getPilotTracks(
         days: Double,
-        selectedPilots: [Pilot],   // Only get selected pilots if user has selected in map settings view
+        selectedPilots: [Pilot],
         completion: @escaping () -> Void
     ) {
-        // Determine which pilots to fetch
-        let pilotsToFetch: [Pilot]
-        if selectedPilots.isEmpty {
-            pilotsToFetch = pilotViewModel.pilots
-        } else {
-            pilotsToFetch = selectedPilots
+        // If the calendar date rolled over, clear entire cache
+        let today = Calendar.current.startOfDay(for: Date())
+        if today > cacheDate {
+            cache.removeAll()
+            cacheDate = today
         }
 
-        // Check last time pilot tracks were fetched;
-        // If pilot list hasn't changed, don't re-fetch until interval has passed
+        // Determine which pilots to consider
+        let pilotsToConsider = selectedPilots.isEmpty
+            ? pilotViewModel.pilots
+            : selectedPilots
+
+        // Partition into “reuse” vs “to fetch”
+        var reuseTracks: [PilotTrack] = []
+        var toFetch: [Pilot] = []
         let now = Date()
-        if let last = lastFetchTime,
-           now.timeIntervalSince(last) < readingsRefreshInterval,
-           lastSelectedPilotsFetched == pilotsToFetch,
-           lastDaysFetched == days {
-            completion()
-            return
-        }
-        lastFetchTime = now
-        lastSelectedPilotsFetched = pilotsToFetch
-        lastDaysFetched = days
 
-        
-        DispatchQueue.main.async {
-            self.isLoading = true
-        }
-
-        let group = DispatchGroup()
-        var allResults = [PilotTrack]()
-
-        for pilot in pilotsToFetch {
-            group.enter()
-            getTracksForPilot(for: pilot, days: days) { results in
-                allResults.append(contentsOf: results)
-                group.leave()
+        for pilot in pilotsToConsider {
+            if let entry = cache[pilot.pilotName],
+               entry.lastDays == days,
+               now.timeIntervalSince(entry.lastFetch) < readingsRefreshInterval
+            {
+                // still fresh—reuse cached tracks
+                reuseTracks.append(contentsOf: entry.tracks)
+            } else {
+                // new pilot, days changed, or stale
+                toFetch.append(pilot)
             }
         }
 
-        group.notify(queue: .main) {
-            // sort & publish
-            self.pilotTracks = allResults
-                .sorted { $0.dateTime < $1.dateTime }
+        // Flip loading state
+        isLoading = true
+
+        // Kick off async work
+        Task { [weak self] in
+            guard let self = self else { return }
+
+            // Fetch fresh tracks only for the pilots that need it
+            let freshTracks = await self.fetchAllTracks(
+                pilots: toFetch,
+                days: days
+            )
+
+            // Update cache entries for those pilots
+            let grouped = Dictionary(
+                grouping: freshTracks,
+                by: \.pilotName
+            )
+            for (pilotName, tracks) in grouped {
+                self.cache[pilotName] = CacheEntry(
+                    lastFetch: Date(),
+                    lastDays: days,
+                    tracks: tracks
+                )
+            }
+
+            // Merge reused + fresh, sort, and publish
+            let all = reuseTracks + freshTracks
+            let sorted = all.sorted { $0.dateTime < $1.dateTime }
+
+            self.pilotTracks = sorted
             self.isLoading = false
             completion()
         }
     }
 
-    private func getTracksForPilot (
+    // Throttled parallel fetch of multiple pilots
+    private func fetchAllTracks(
+        pilots: [Pilot],
+        days: Double
+    ) async -> [PilotTrack] {
+        let semaphore = AsyncSemaphore(value: maxConcurrentRequests)
+
+        return await withTaskGroup(of: [PilotTrack].self) { group in
+            for pilot in pilots {
+                group.addTask {
+                    await semaphore.wait()
+                    defer { Task { await semaphore.signal() } }
+                    return await self.fetchTracks(for: pilot, days: days)
+                }
+            }
+
+            var combined: [PilotTrack] = []
+            for await chunk in group {
+                combined.append(contentsOf: chunk)
+            }
+            return combined
+        }
+    }
+
+    // Single-pilot fetch
+    private func fetchTracks(
         for pilot: Pilot,
-        days: Double,
-        completion: @escaping ([PilotTrack]) -> Void
-    ) {
-        guard let url = constructURL(trackingURL: pilot.trackingFeedURL,
-                                     days: days) else {
-            completion([])
-            return
+        days: Double
+    ) async -> [PilotTrack] {
+        guard let url = constructURL(
+            trackingURL: pilot.trackingFeedURL,
+            days: days
+        ) else {
+            return []
         }
 
         var request = URLRequest(url: url)
-
-        // Set headers to handle InReach requirements and redirect to data file location
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
-        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7", forHTTPHeaderField: "Accept")
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+            "AppleWebKit/537.36 (KHTML, like Gecko) " +
+            "Chrome/136.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+        request.setValue(
+            "text/html,application/xhtml+xml,application/xml;" +
+            "q=0.9,image/avif,image/webp,image/apng,*/*;" +
+            "q=0.8,application/signed-exchange;v=b3;q=0.7",
+            forHTTPHeaderField: "Accept"
+        )
         request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
         request.setValue("keep-alive", forHTTPHeaderField: "Connection")
         request.setValue("1", forHTTPHeaderField: "DNT")
@@ -159,130 +228,197 @@ class PilotTrackViewModel: ObservableObject {
         request.setValue("none", forHTTPHeaderField: "Sec-Fetch-Site")
         request.setValue("?1", forHTTPHeaderField: "Sec-Fetch-User")
         request.setValue("1", forHTTPHeaderField: "Upgrade-Insecure-Requests")
-        request.setValue("\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"", forHTTPHeaderField: "sec-ch-ua")
+        request.setValue(
+            "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", " +
+            "\"Not.A/Brand\";v=\"99\"",
+            forHTTPHeaderField: "sec-ch-ua"
+        )
         request.setValue("?0", forHTTPHeaderField: "sec-ch-ua-mobile")
         request.setValue("\"macOS\"", forHTTPHeaderField: "sec-ch-ua-platform")
-        
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
-            guard let data = data, error == nil else {
-                print("Error in pilot track call for: \(url)")
-                print(error as Any)
-                completion([])
-                return
-            }
 
-            let parsed = self?.parseKML(pilotName: pilot.pilotName,
-                                        data: data) ?? []
-            completion(parsed)
-        }
-        .resume()
-    }
-
-    private func constructURL(trackingURL: String, days: Double) -> URL? {
-        let targetDate = getDateForDays(days: days)
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime]
-        let dateString = dateFormatter.string(from: targetDate)
-        let finalURLString = "\(trackingURL)?d1=\(dateString)"
-        return URL(string: finalURLString)
-    }
-
-    private func parseKML(pilotName: String, data: Data) -> [PilotTrack] {
-        guard let xmlString = String(data: data, encoding: .utf8) else {
-            print("Invalid XML coding for track log")
+        do {
+            let (data, _) = try await session.data(for: request)
+            return parseKML(pilotName: pilot.pilotName, data: data)
+        } catch {
+            print("Error fetching tracks for \(pilot.pilotName): \(error)")
             return []
         }
+    }
 
-        let placemarkStrings = extractAllValues(from: xmlString, using: "<Placemark>", endTag: "</Placemark>")
-        guard !placemarkStrings.isEmpty else {
+    private func constructURL(
+        trackingURL: String,
+        days: Double
+    ) -> URL? {
+        let date = getDateForDays(days: days)
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let dateString = iso.string(from: date)
+        return URL(string: "\(trackingURL)?d1=\(dateString)")
+    }
+
+    private func parseKML(
+        pilotName: String,
+        data: Data
+    ) -> [PilotTrack] {
+        guard let xml = String(data: data, encoding: .utf8) else {
             return []
         }
-        
+        let placemarks = extractAllValues(
+            from: xml,
+            using: "<Placemark>",
+            endTag: "</Placemark>"
+        )
+        guard !placemarks.isEmpty else { return [] }
+
         let formatter = DateFormatter()
         formatter.dateFormat = "M/d/yyyy h:mm:ss a"
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(abbreviation: "UTC")      // All live track date/time are in UTC
+        formatter.timeZone = TimeZone(abbreviation: "UTC")
 
-        var pilotTracks: [PilotTrack] = []
-        for placemarkString in placemarkStrings {
-            guard var trackPilotName = extractValue(from: placemarkString, using: "<Data name=\"Name\">", endTag: "</Data>"),
-                  let dateTimeString = extractValue(from: placemarkString, using: "<Data name=\"Time UTC\">", endTag: "</Data>"),
-                  let latitudeString = extractValue(from: placemarkString, using: "<Data name=\"Latitude\">", endTag: "</Data>"),
-                  let longitudeString = extractValue(from: placemarkString, using: "<Data name=\"Longitude\">", endTag: "</Data>")
+        return placemarks.compactMap { pm in
+            guard
+                var name = extractValue(
+                    from: pm,
+                    using: "<Data name=\"Name\">",
+                    endTag: "</Data>"
+                ),
+                let timeStr = extractValue(
+                    from: pm,
+                    using: "<Data name=\"Time UTC\">",
+                    endTag: "</Data>"
+                ),
+                let latStr = extractValue(
+                    from: pm,
+                    using: "<Data name=\"Latitude\">",
+                    endTag: "</Data>"
+                ),
+                let lonStr = extractValue(
+                    from: pm,
+                    using: "<Data name=\"Longitude\">",
+                    endTag: "</Data>"
+                )
             else {
-                // ignore placemark entries that failed parsing (likely did not have a valid dateTime)
-                continue
+                return nil
             }
 
-            // Update name if track uses a different name
-            if trackPilotName.lowercased() != pilotName.lowercased() {
-                trackPilotName = "\(trackPilotName) (\(pilotName))"
+            if name.lowercased() != pilotName.lowercased() {
+                name = "\(name) (\(pilotName))"
             }
-                
-            // Format data for track point
-            let dateTime = formatter.date(from: dateTimeString) ?? Date()
-            let speedString = extractValue(from: placemarkString, using: "<Data name=\"Velocity\">", endTag: "</Data>") ?? ""
-            let speed = extractNumber(from: speedString) ?? 0.0
-            let speedMph = convertKMToMiles(speed).rounded()
-            let altitudeString = extractValue(from: placemarkString, using: "<Data name=\"Elevation\">", endTag: "</Data>") ?? ""
-            let altitude = extractNumber(from: altitudeString) ?? 0.0
-            let altitudeFeet = Double(convertMetersToFeet(altitude))
-            let latitude = Double(latitudeString) ?? 0.0
-            let longitude = Double(longitudeString) ?? 0.0
-            let courseString = extractValue(from: placemarkString, using: "<Data name=\"Course\">", endTag: "</Data>") ?? ""
-            let course = extractNumber(from: courseString) ?? 0.0
-            let inEmergencyString = extractValue(from: placemarkString, using: "<Data name=\"In Emergency\">", endTag: "</Data>")?.lowercased()
-            let inEmergency = Bool(inEmergencyString ?? "false") ?? false
-            let message = extractValue(from: placemarkString, using: "<Data name=\"Text\">", endTag: "</Data>") ?? ""
-            let trackPoint = PilotTrack(
-                pilotName: pilotName,
+            let dateTime = formatter.date(from: timeStr) ?? Date()
+            let speedKM = extractNumber(
+                from: extractValue(
+                    from: pm,
+                    using: "<Data name=\"Velocity\">",
+                    endTag: "</Data>"
+                ) ?? ""
+            ) ?? 0
+            let speed = convertKMToMiles(speedKM).rounded()
+            let altM = extractNumber(
+                from: extractValue(
+                    from: pm,
+                    using: "<Data name=\"Elevation\">",
+                    endTag: "</Data>"
+                ) ?? ""
+            ) ?? 0
+            let altitude = Double(convertMetersToFeet(altM))
+            let course = extractNumber(
+                from: extractValue(
+                    from: pm,
+                    using: "<Data name=\"Course\">",
+                    endTag: "</Data>"
+                ) ?? ""
+            ) ?? 0
+            let inEmg = Bool(
+                extractValue(
+                    from: pm,
+                    using: "<Data name=\"In Emergency\">",
+                    endTag: "</Data>"
+                )?.lowercased() ?? "false"
+            ) ?? false
+            let message = extractValue(
+                from: pm,
+                using: "<Data name=\"Text\">",
+                endTag: "</Data>"
+            )
+
+            return PilotTrack(
+                pilotName: name,
                 dateTime: dateTime,
-                latitude: latitude,
-                longitude: longitude,
-                speed: speedMph,
-                altitude: altitudeFeet,
+                latitude: Double(latStr) ?? 0,
+                longitude: Double(lonStr) ?? 0,
+                speed: speed,
+                altitude: altitude,
                 heading: course,
-                inEmergency: inEmergency,
+                inEmergency: inEmg,
                 message: message
             )
-            pilotTracks.append(trackPoint)
         }
-        return pilotTracks
-    }
-    
-    private func extractAllValues(from text: String, using startTag: String, endTag: String) -> [String] {
-        var values: [String] = []
-        var searchRange: Range<String.Index>?
-        while let startRange = text.range(of: startTag, options: [], range: searchRange),
-              let endRange = text.range(of: endTag, options: [], range: startRange.upperBound..<text.endIndex) {
-            let value = String(text[startRange.upperBound..<endRange.lowerBound])
-            values.append(value)
-            searchRange = endRange.upperBound..<text.endIndex
-        }
-        return values
-    }
-    
-    private func extractValue(from text: String, using startTag: String, endTag: String) -> String? {
-        
-        // Get string within tag
-        guard let startRange = text.range(of: startTag),
-              let endRange = text.range(of: endTag, options: [], range: startRange.upperBound..<text.endIndex) else {
-            //print("range lookup failed for startTag: \(startTag), endTag: \(endTag)")
-            return nil
-        }
-        let tagString = String(text[startRange.upperBound..<endRange.lowerBound])
-
-        // The string is in the format <value>xxx</value>
-        // Only return the section between the value tags
-        guard let startRange = tagString.range(of: "<value>"),
-              let endRange = tagString.range(of: "</value>", options: [], range: startRange.upperBound..<tagString.endIndex) else {
-            //print("value range lookup failed for startTag: \(startTag), endTag: \(endTag)")
-            return nil
-        }
-        let valueString = String(tagString[startRange.upperBound..<endRange.lowerBound])
-        
-        return valueString
     }
 
+    private func extractAllValues(
+        from text: String,
+        using startTag: String,
+        endTag: String
+    ) -> [String] {
+        var results: [String] = []
+        var searchRange: Range<String.Index>? = text.startIndex..<text.endIndex
+        while let start = text.range(of: startTag, range: searchRange),
+              let end = text.range(of: endTag, range: start.upperBound..<text.endIndex)
+        {
+            let snippet = String(text[start.upperBound..<end.lowerBound])
+            results.append(snippet)
+            searchRange = end.upperBound..<text.endIndex
+        }
+        return results
+    }
+
+    private func extractValue(
+        from text: String,
+        using startTag: String,
+        endTag: String
+    ) -> String? {
+        guard
+            let start = text.range(of: startTag),
+            let end = text.range(of: endTag, range: start.upperBound..<text.endIndex)
+        else {
+            return nil
+        }
+        let tagContents = String(text[start.upperBound..<end.lowerBound])
+        guard
+            let vStart = tagContents.range(of: "<value>"),
+            let vEnd = tagContents.range(of: "</value>", range: vStart.upperBound..<tagContents.endIndex)
+        else {
+            return nil
+        }
+        return String(tagContents[vStart.upperBound..<vEnd.lowerBound])
+    }
+
+    // Async semaphore that suspends rather than blocks threads.
+    actor AsyncSemaphore {
+        private var available: Int
+        private var waiters: [CheckedContinuation<Void, Never>] = []
+
+        init(value: Int) {
+            self.available = value
+        }
+
+        func wait() async {
+            if available > 0 {
+                available -= 1
+            } else {
+                await withCheckedContinuation { cont in
+                    waiters.append(cont)
+                }
+            }
+        }
+
+        func signal() {
+            if let cont = waiters.first {
+                waiters.removeFirst()
+                cont.resume()
+            } else {
+                available += 1
+            }
+        }
+    }
 }
-

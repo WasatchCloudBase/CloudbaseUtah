@@ -894,6 +894,48 @@ struct MapContainerView: View {
                     .padding(.bottom, 16)
                 }
             }
+            
+            .onAppear {
+                isActive = true
+                startTimer()
+                startMonitoringRegion()
+                
+                if userSettingsViewModel.isMapTrackingMode {
+                    // Reload latest pilot tracks
+                    DispatchQueue.main.async {
+                        pilotTrackViewModel.getPilotTracks(days: userSettingsViewModel.pilotTrackDays,
+                                                           selectedPilots: userSettingsViewModel.selectedPilots) {}
+                    }
+                }
+                else if userSettingsViewModel.isMapWeatherMode {
+                    // Reload radar overlay
+                    if userSettingsViewModel.showRadar {
+                        DispatchQueue.main.async {
+                            rainViewerOverlayViewModel.loadOverlays(radarColorScheme: userSettingsViewModel.radarColorScheme)
+                        }
+                    }
+                    // Reload infrared overlay
+                    if userSettingsViewModel.showInfrared {
+                        DispatchQueue.main.async {
+                            rainViewerOverlayViewModel.loadOverlays(radarColorScheme: userSettingsViewModel.radarColorScheme)
+                        }
+                    }
+                    // Reload weather readings
+                    DispatchQueue.main.async {
+                        stationAnnotationViewModel.userSettingsViewModel = userSettingsViewModel
+                        stationAnnotationViewModel.siteViewModel = siteViewModel
+                    }
+                    DispatchQueue.main.async {
+                        stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
+                            stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
+                            stationAnnotationViewModel.updateStationAnnotations {
+                                stationAnnotationViewModel.clusterStationAnnotations(regionSpan: userSettingsViewModel.region.span)
+                            }
+                        }
+                    }
+                }
+            }
+            
             .onChange(of: MapSettingsState(pilotTrackDays:      userSettingsViewModel.pilotTrackDays,
                                            mapDisplayMode:      userSettingsViewModel.mapDisplayMode,
                                            showSites:           userSettingsViewModel.showSites,
@@ -904,14 +946,48 @@ struct MapContainerView: View {
                                            scenePhase:          scenePhase,
                                            selectedPilots:      userSettingsViewModel.selectedPilots
                                           )) {
+
                 // Check all changes together to only execute updateMapAnnotations once
                 if scenePhase == .active {
-                    
-                    reloadMapLayers()
                     
                     startTimer() // Cancels existing timer and restarts
                     isActive = true
                     startMonitoringRegion()
+                    
+                    if userSettingsViewModel.isMapTrackingMode {
+                        // Reload latest pilot tracks
+                        DispatchQueue.main.async {
+                            pilotTrackViewModel.getPilotTracks(days: userSettingsViewModel.pilotTrackDays,
+                                                               selectedPilots: userSettingsViewModel.selectedPilots) {}
+                        }
+                    }
+                    else if userSettingsViewModel.isMapWeatherMode {
+                        // Reload radar overlay
+                        if userSettingsViewModel.showRadar {
+                            DispatchQueue.main.async {
+                                rainViewerOverlayViewModel.loadOverlays(radarColorScheme: userSettingsViewModel.radarColorScheme)
+                            }
+                        }
+                        // Reload infrared overlay
+                        if userSettingsViewModel.showInfrared {
+                            DispatchQueue.main.async {
+                                rainViewerOverlayViewModel.loadOverlays(radarColorScheme: userSettingsViewModel.radarColorScheme)
+                            }
+                        }
+                        // Reload weather readings
+                        DispatchQueue.main.async {
+                            stationAnnotationViewModel.userSettingsViewModel = userSettingsViewModel
+                            stationAnnotationViewModel.siteViewModel = siteViewModel
+                        }
+                        DispatchQueue.main.async {
+                            stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
+                                stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
+                                stationAnnotationViewModel.updateStationAnnotations {
+                                    stationAnnotationViewModel.clusterStationAnnotations(regionSpan: userSettingsViewModel.region.span)
+                                }
+                            }
+                        }
+                    }
                 } else {
                     isActive = false
                 }
@@ -931,15 +1007,6 @@ struct MapContainerView: View {
                     .padding(.bottom)
             }
         }
-        
-       .onAppear {
-           
-           reloadMapLayers()
-           
-           startTimer() // Cancels existing timer and restarts
-           isActive = true
-           startMonitoringRegion()
-       }
         
        .onDisappear {
            isActive = false
@@ -984,7 +1051,41 @@ struct MapContainerView: View {
         // Create a new work item
         let workItem = DispatchWorkItem {
             if isActive {
-                reloadMapLayers()
+                if userSettingsViewModel.isMapTrackingMode {
+                    
+                    // Reload latest pilot tracks
+                    DispatchQueue.main.async {
+                        pilotTrackViewModel.getPilotTracks(days: userSettingsViewModel.pilotTrackDays,
+                                                           selectedPilots: userSettingsViewModel.selectedPilots) {}
+                    }
+                }
+                else if userSettingsViewModel.isMapWeatherMode {
+                    // Reload radar overlay
+                    if userSettingsViewModel.showRadar {
+                        DispatchQueue.main.async {
+                            rainViewerOverlayViewModel.loadOverlays(radarColorScheme: userSettingsViewModel.radarColorScheme)
+                        }
+                    }
+                    // Reload infrared overlay
+                    if userSettingsViewModel.showInfrared {
+                        DispatchQueue.main.async {
+                            rainViewerOverlayViewModel.loadOverlays(radarColorScheme: userSettingsViewModel.radarColorScheme)
+                        }
+                    }
+                    // Reload weather readings
+                    DispatchQueue.main.async {
+                        stationAnnotationViewModel.userSettingsViewModel = userSettingsViewModel
+                        stationAnnotationViewModel.siteViewModel = siteViewModel
+                    }
+                    DispatchQueue.main.async {
+                        stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
+                            stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
+                            stationAnnotationViewModel.updateStationAnnotations {
+                                stationAnnotationViewModel.clusterStationAnnotations(regionSpan: userSettingsViewModel.region.span)
+                            }
+                        }
+                    }
+                }
             }
         }
         refreshWorkItem = workItem
@@ -1010,39 +1111,5 @@ struct MapContainerView: View {
     private func hasRegionSpanChanged(from oldSpan: MKCoordinateSpan, to newSpan: MKCoordinateSpan) -> Bool {
         return abs(oldSpan.latitudeDelta - newSpan.latitudeDelta) > mapScaleChangeTolerance ||
         abs(oldSpan.longitudeDelta - newSpan.longitudeDelta) > mapScaleChangeTolerance
-    }
-    
-    private func reloadMapLayers() {
-
-        if userSettingsViewModel.isMapTrackingMode {
-            
-            // Reload latest pilot tracks
-            DispatchQueue.main.async {
-                pilotTrackViewModel.getPilotTracks(days: userSettingsViewModel.pilotTrackDays,
-                                                   selectedPilots: userSettingsViewModel.selectedPilots) {}
-            }
-        }
-
-        else {
-            
-            // Reload radar and infrared overlays
-            if userSettingsViewModel.showRadar || userSettingsViewModel.showInfrared {
-                rainViewerOverlayViewModel.loadOverlays(radarColorScheme: userSettingsViewModel.radarColorScheme)
-            }
-            
-            // Reload weather readings
-            DispatchQueue.main.async {
-                stationAnnotationViewModel.userSettingsViewModel = userSettingsViewModel
-                stationAnnotationViewModel.siteViewModel = siteViewModel
-            }
-            DispatchQueue.main.async {
-                stationLatestReadingViewModel.getLatestReadingsData (sitesOnly: false) {
-                    stationAnnotationViewModel.stationLatestReadingViewModel = stationLatestReadingViewModel
-                    stationAnnotationViewModel.updateStationAnnotations {
-                        stationAnnotationViewModel.clusterStationAnnotations(regionSpan: userSettingsViewModel.region.span)
-                    }
-                }
-            }
-        }
     }
 }
