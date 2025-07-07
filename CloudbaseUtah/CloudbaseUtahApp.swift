@@ -7,13 +7,14 @@ let timeChangeNotification = UIApplication.significantTimeChangeNotification
 struct CloudbaseUtahApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var refreshMetadata: Bool = false
-    @StateObject private var liftParametersViewModel = LiftParametersViewModel()
-    @StateObject private var sunriseSunsetViewModel = SunriseSunsetViewModel()
-    @StateObject private var weatherCodesViewModel = WeatherCodeViewModel()
-    @StateObject private var siteViewModel = SiteViewModel()
-    @StateObject private var pilotViewModel = PilotViewModel()
-    @StateObject private var stationLatestReadingViewModel: StationLatestReadingViewModel
-    @StateObject private var userSettingsViewModel = UserSettingsViewModel(
+    @StateObject private var liftParametersViewModel        = LiftParametersViewModel()
+    @StateObject private var sunriseSunsetViewModel         = SunriseSunsetViewModel()
+    @StateObject private var weatherCodesViewModel          = WeatherCodeViewModel()
+    @StateObject private var siteViewModel                  = SiteViewModel()
+    @StateObject private var pilotViewModel                 = PilotViewModel()
+    @StateObject private var pilotTrackViewModel:             PilotTrackViewModel
+    @StateObject private var stationLatestReadingViewModel:   StationLatestReadingViewModel
+    @StateObject private var userSettingsViewModel          = UserSettingsViewModel(
         region: MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: mapInitLatitude, longitude: mapInitLongitude),
             span: MKCoordinateSpan(latitudeDelta: mapInitLatitudeSpan, longitudeDelta: mapInitLongitudeSpan)
@@ -26,13 +27,14 @@ struct CloudbaseUtahApp: App {
     )
     
     init() {
-        // Create each view‐model in the proper order, using locals:
+        // Create each view‐model in the proper order, using locals
+        // pilotTrackViewModel isn't created here; waiting for mapView to be accessed before creating
         let liftVM              = LiftParametersViewModel()
         let sunVM               = SunriseSunsetViewModel()
         let weatherVM           = WeatherCodeViewModel()
-        let sitesVM             = SiteViewModel()
-        let pilotsVM            = PilotViewModel()
-        let stationsVM          = StationLatestReadingViewModel(siteViewModel: sitesVM)
+        let siteVM              = SiteViewModel()
+        let pilotVM             = PilotViewModel()
+        let stationVM           = StationLatestReadingViewModel(siteViewModel: siteVM)
         let userSettingsVM      = UserSettingsViewModel(
             region: MKCoordinateRegion(
                 center: CLLocationCoordinate2D(
@@ -52,16 +54,16 @@ struct CloudbaseUtahApp: App {
         )
         userSettingsVM.loadFromStorage()
           _userSettingsViewModel = StateObject(wrappedValue: userSettingsVM)
-
         
         // Wire them up into their @StateObject wrappers:
-        _liftParametersViewModel      = StateObject(wrappedValue: liftVM)
-        _sunriseSunsetViewModel       = StateObject(wrappedValue: sunVM)
-        _weatherCodesViewModel        = StateObject(wrappedValue: weatherVM)
-        _siteViewModel               = StateObject(wrappedValue: sitesVM)
-        _pilotViewModel              = StateObject(wrappedValue: pilotsVM)
-        _stationLatestReadingViewModel = StateObject(wrappedValue: stationsVM)
-        _userSettingsViewModel         = StateObject(wrappedValue: userSettingsVM)
+        _liftParametersViewModel        = StateObject(wrappedValue: liftVM)
+        _sunriseSunsetViewModel         = StateObject(wrappedValue: sunVM)
+        _weatherCodesViewModel          = StateObject(wrappedValue: weatherVM)
+        _siteViewModel                  = StateObject(wrappedValue: siteVM)
+        _pilotViewModel                 = StateObject(wrappedValue: pilotVM)
+        _stationLatestReadingViewModel  = StateObject(wrappedValue: stationVM)
+        _userSettingsViewModel          = StateObject(wrappedValue: userSettingsVM)
+        _pilotTrackViewModel            = StateObject(wrappedValue: PilotTrackViewModel(pilotViewModel: pilotVM))
     }
 
     var body: some Scene {
@@ -72,6 +74,7 @@ struct CloudbaseUtahApp: App {
                 .environmentObject(sunriseSunsetViewModel)
                 .environmentObject(siteViewModel)
                 .environmentObject(pilotViewModel)
+                .environmentObject(pilotTrackViewModel)
                 .environmentObject(stationLatestReadingViewModel)
                 .environmentObject(userSettingsViewModel)
                 .environment(\.colorScheme, .dark)
@@ -99,6 +102,7 @@ struct BaseAppView: View {
     @EnvironmentObject var sunriseSunsetViewModel: SunriseSunsetViewModel
     @EnvironmentObject var weatherCodesViewModel: WeatherCodeViewModel
     @EnvironmentObject var pilotViewModel: PilotViewModel
+    @EnvironmentObject var pilotTrackViewModel: PilotTrackViewModel
     @EnvironmentObject var siteViewModel: SiteViewModel
     @EnvironmentObject var stationLatestReadingViewModel: StationLatestReadingViewModel
 

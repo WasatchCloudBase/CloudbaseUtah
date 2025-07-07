@@ -2,6 +2,9 @@ import SwiftUI
 import Combine
 import MapKit
 
+// Set to true to print performance execution info for getPilotTracks
+let performanceTuningLog: Bool = false
+
 // Pilot live tracking structure
 struct PilotTrack: Identifiable, Equatable, Hashable {
     let id: UUID = UUID()
@@ -105,6 +108,7 @@ class PilotTrackViewModel: ObservableObject {
         selectedPilots: [Pilot],
         completion: @escaping () -> Void
     ) {
+        
         // If the calendar date rolled over, clear entire cache
         let today = Calendar.current.startOfDay(for: Date())
         if today > cacheDate {
@@ -127,9 +131,21 @@ class PilotTrackViewModel: ObservableObject {
                entry.lastDays == days,
                now.timeIntervalSince(entry.lastFetch) < readingsRefreshInterval
             {
+                // PERFORMANCE TUNING
+                if performanceTuningLog {
+                    print("Skipped refresh for pilot: \(pilot.pilotName)")
+                }
+                
                 // still fresh—reuse cached tracks
                 reuseTracks.append(contentsOf: entry.tracks)
+                
             } else {
+                
+                // PERFORMANCE TUNING
+                if performanceTuningLog {
+                    print("Reloading pilot for pilot: \(pilot.pilotName); days: \(days)")
+                }
+                
                 // new pilot, days changed, or stale
                 toFetch.append(pilot)
             }
@@ -137,11 +153,11 @@ class PilotTrackViewModel: ObservableObject {
 
         // Flip loading state
         isLoading = true
-
+        
         // Kick off async work
         Task { [weak self] in
             guard let self = self else { return }
-
+            
             // Fetch fresh tracks only for the pilots that need it
             let freshTracks = await self.fetchAllTracks(
                 pilots: toFetch,
@@ -149,18 +165,28 @@ class PilotTrackViewModel: ObservableObject {
             )
 
             // Update cache entries for those pilots
-            let grouped = Dictionary(
-                grouping: freshTracks,
-                by: \.pilotName
-            )
+            let grouped = Dictionary(grouping: freshTracks, by: \.pilotName)
+            let fetchTime = Date()
+
+            // Cache pilots with tracks
             for (pilotName, tracks) in grouped {
                 self.cache[pilotName] = CacheEntry(
-                    lastFetch: Date(),
+                    lastFetch: fetchTime,
                     lastDays: days,
                     tracks: tracks
                 )
             }
 
+            // Cache pilots with *no* tracks (so we don't keep rechecking them)
+            let fetchedPilotNames = Set(grouped.keys)
+            for pilot in toFetch where !fetchedPilotNames.contains(pilot.pilotName) {
+                self.cache[pilot.pilotName] = CacheEntry(
+                    lastFetch: fetchTime,
+                    lastDays: days,
+                    tracks: []
+                )
+            }
+            
             // Merge reused + fresh, sort, and publish
             let all = reuseTracks + freshTracks
             let sorted = all.sorted { $0.dateTime < $1.dateTime }
@@ -169,6 +195,7 @@ class PilotTrackViewModel: ObservableObject {
             self.isLoading = false
             completion()
         }
+        
     }
 
     // Throttled parallel fetch of multiple pilots
@@ -177,6 +204,9 @@ class PilotTrackViewModel: ObservableObject {
         days: Double
     ) async -> [PilotTrack] {
         let semaphore = AsyncSemaphore(value: maxConcurrentRequests)
+        
+        // PERFORMANCE TUNING
+        let startTime: Date = Date()
 
         return await withTaskGroup(of: [PilotTrack].self) { group in
             for pilot in pilots {
@@ -191,8 +221,17 @@ class PilotTrackViewModel: ObservableObject {
             for await chunk in group {
                 combined.append(contentsOf: chunk)
             }
+            
+            // PERFORMANCE TUNING
+            if performanceTuningLog {
+                let endTime = Date()
+                let duration = (endTime.timeIntervalSince(startTime) * 100).rounded()/100
+                print("Total fetchAllTracks execution time: \(duration) seconds")
+            }
+            
             return combined
         }
+        
     }
 
     // Single-pilot fetch
@@ -206,6 +245,9 @@ class PilotTrackViewModel: ObservableObject {
         ) else {
             return []
         }
+        
+        // PERFORMANCE TUNING
+        let startTime = Date()
 
         var request = URLRequest(url: url)
         request.setValue(
@@ -238,11 +280,20 @@ class PilotTrackViewModel: ObservableObject {
 
         do {
             let (data, _) = try await session.data(for: request)
+            
+            // PERFORMANCE TUNING
+            if performanceTuningLog {
+                let endTime = Date()
+                let duration = (endTime.timeIntervalSince(startTime) * 100).rounded()/100
+                print("Total fetchTracks for \(pilot.pilotName) execution time: \(duration) seconds")
+                
+            }
             return parseKML(pilotName: pilot.pilotName, data: data)
         } catch {
             print("Error fetching tracks for \(pilot.pilotName): \(error)")
             return []
         }
+        
     }
 
     private func constructURL(

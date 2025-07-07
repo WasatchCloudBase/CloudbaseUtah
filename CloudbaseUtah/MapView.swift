@@ -695,11 +695,11 @@ struct MapContainerView: View {
     @EnvironmentObject var weatherCodesViewModel: WeatherCodeViewModel
     @EnvironmentObject var siteViewModel: SiteViewModel
     @EnvironmentObject var pilotViewModel: PilotViewModel
+    @EnvironmentObject var pilotTrackViewModel: PilotTrackViewModel
     @EnvironmentObject var userSettingsViewModel: UserSettingsViewModel
     @Environment(\.scenePhase) private var scenePhase
 
     @StateObject var stationLatestReadingViewModel: StationLatestReadingViewModel
-    @StateObject private var pilotTrackViewModel: PilotTrackViewModel
     @StateObject private var stationAnnotationViewModel: StationAnnotationViewModel
     @StateObject private var rainViewerOverlayViewModel = RainViewerOverlayViewModel()
 
@@ -721,8 +721,6 @@ struct MapContainerView: View {
     
     init(pilotViewModel: PilotViewModel, siteViewModel: SiteViewModel, userSettingsViewModel: UserSettingsViewModel) {
         let stationVM = StationLatestReadingViewModel(siteViewModel: siteViewModel)
-        _pilotTrackViewModel = StateObject(wrappedValue:
-            PilotTrackViewModel(pilotViewModel: pilotViewModel))
         _stationLatestReadingViewModel = StateObject(wrappedValue: stationVM)
         _stationAnnotationViewModel = StateObject(wrappedValue:
             StationAnnotationViewModel(
