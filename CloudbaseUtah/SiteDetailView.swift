@@ -257,6 +257,10 @@ struct SiteDetailView: View {
                     Text("https://open-meteo.com")
                         .font(.caption)
                         .foregroundColor(infoFontColor)
+                        .padding(.bottom, 8)
+                    Text("Station ID: \(site.readingsStation) from \(site.readingsSource) at \(site.readingsAlt) ft")
+                        .font(.caption)
+                        .foregroundColor(infoFontColor)
                 }
             }
             Spacer() // Push the content to the top of the sheet

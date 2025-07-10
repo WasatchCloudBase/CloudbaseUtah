@@ -2,13 +2,10 @@ import SwiftUI
 import Combine
 import MapKit
 
-// Set to true to print performance execution info for getPilotTracks
-let performanceTuningLog: Bool = false
-
 // Pilot live tracking structure
 struct PilotTrack: Identifiable, Equatable, Hashable {
     let id: UUID = UUID()
-    let pilotName: String
+    let pilotName: String   // For consistency, this is set based on pilots.pilotName, not pilot name from InReach data
     let dateTime: Date
     let latitude: Double
     let longitude: Double
@@ -75,17 +72,21 @@ class PilotTrackViewModel: ObservableObject {
 
     private let maxConcurrentRequests = 8
     private let maxConnectionsPerHost = 12
+    
+    // Check for in flight pilot refreshes overlapping with new requests
+    private var inflightTasks: [Task<Void, Never>] = []
 
     // Midnight-of-last-cache build. When the date rolls past this, clear everything.
     private var cacheDate: Date = Calendar.current.startOfDay(for: Date())
 
     // Per-pilot cache entry
     private struct CacheEntry {
+        let urlString: String
         var lastFetch: Date
         var lastDays: Double
         var tracks: [PilotTrack]
     }
-
+    
     // Map from pilotName to cache entry
     private var cache: [String: CacheEntry] = [:]
 
@@ -93,7 +94,8 @@ class PilotTrackViewModel: ObservableObject {
         self.pilotViewModel = pilotViewModel
 
         // Tune URLSession
-        let cfg = URLSessionConfiguration.default
+        let cfg = URLSessionConfiguration.ephemeral
+//        let cfg = URLSessionConfiguration.default
         cfg.httpMaximumConnectionsPerHost = maxConnectionsPerHost
         self.session = URLSession(configuration: cfg)
 
@@ -102,102 +104,47 @@ class PilotTrackViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    // Fetch tracks for the selected pilots, but only refetch what's stale or new.
     func getPilotTracks(
         days: Double,
         selectedPilots: [Pilot],
         completion: @escaping () -> Void
     ) {
-        
-        // If the calendar date rolled over, clear entire cache
+        // Roll‐over cache at midnight
         let today = Calendar.current.startOfDay(for: Date())
         if today > cacheDate {
             cache.removeAll()
             cacheDate = today
         }
 
-        // Determine which pilots to consider
+        // Identify selected pilots (or all)
         let pilotsToConsider = selectedPilots.isEmpty
             ? pilotViewModel.pilots
             : selectedPilots
 
-        // Partition into “reuse” vs “to fetch”
-        var reuseTracks: [PilotTrack] = []
-        var toFetch: [Pilot] = []
-        let now = Date()
-
-        for pilot in pilotsToConsider {
-            if let entry = cache[pilot.pilotName],
-               entry.lastDays == days,
-               now.timeIntervalSince(entry.lastFetch) < readingsRefreshInterval
-            {
-                // PERFORMANCE TUNING
-                if performanceTuningLog {
-                    print("Skipped refresh for pilot: \(pilot.pilotName)")
-                }
-                
-                // still fresh—reuse cached tracks
-                reuseTracks.append(contentsOf: entry.tracks)
-                
-            } else {
-                
-                // PERFORMANCE TUNING
-                if performanceTuningLog {
-                    print("Reloading pilot for pilot: \(pilot.pilotName); days: \(days)")
-                }
-                
-                // new pilot, days changed, or stale
-                toFetch.append(pilot)
-            }
-        }
-
-        // Flip loading state
         isLoading = true
-        
-        // Kick off async work
-        Task { [weak self] in
+        inflightTasks.forEach { $0.cancel() }
+        inflightTasks.removeAll()
+
+        // Kick off a single Task that fetches all selected pilots
+        let task = Task { [weak self] in
             guard let self = self else { return }
-            
-            // Fetch fresh tracks only for the pilots that need it
+
+            // fetchAllTracks will call fetchTracks(for:days:) for each pilot,
+            // and each per-pilot call will consult its own URL-based cache.
             let freshTracks = await self.fetchAllTracks(
-                pilots: toFetch,
+                pilots: pilotsToConsider,
                 days: days
             )
 
-            // Update cache entries for those pilots
-            let grouped = Dictionary(grouping: freshTracks, by: \.pilotName)
-            let fetchTime = Date()
-
-            // Cache pilots with tracks
-            for (pilotName, tracks) in grouped {
-                self.cache[pilotName] = CacheEntry(
-                    lastFetch: fetchTime,
-                    lastDays: days,
-                    tracks: tracks
-                )
-            }
-
-            // Cache pilots with *no* tracks (so we don't keep rechecking them)
-            let fetchedPilotNames = Set(grouped.keys)
-            for pilot in toFetch where !fetchedPilotNames.contains(pilot.pilotName) {
-                self.cache[pilot.pilotName] = CacheEntry(
-                    lastFetch: fetchTime,
-                    lastDays: days,
-                    tracks: []
-                )
-            }
-            
-            // Merge reused + fresh, sort, and publish
-            let all = reuseTracks + freshTracks
-            let sorted = all.sorted { $0.dateTime < $1.dateTime }
-
+            // Sort + publish results
+            let sorted = freshTracks.sorted { $0.dateTime < $1.dateTime }
             self.pilotTracks = sorted
-            self.isLoading = false
+            self.isLoading    = false
             completion()
         }
-        
+        inflightTasks.append(task)
     }
-
+    
     // Throttled parallel fetch of multiple pilots
     private func fetchAllTracks(
         pilots: [Pilot],
@@ -205,7 +152,7 @@ class PilotTrackViewModel: ObservableObject {
     ) async -> [PilotTrack] {
         let semaphore = AsyncSemaphore(value: maxConcurrentRequests)
         
-        // PERFORMANCE TUNING
+        // Log pilot track timings
         let startTime: Date = Date()
 
         return await withTaskGroup(of: [PilotTrack].self) { group in
@@ -222,8 +169,8 @@ class PilotTrackViewModel: ObservableObject {
                 combined.append(contentsOf: chunk)
             }
             
-            // PERFORMANCE TUNING
-            if performanceTuningLog {
+            // Log pilot track timings
+            if printPilotTracksTimings {
                 let endTime = Date()
                 let duration = (endTime.timeIntervalSince(startTime) * 100).rounded()/100
                 print("Total fetchAllTracks execution time: \(duration) seconds")
@@ -239,15 +186,41 @@ class PilotTrackViewModel: ObservableObject {
         for pilot: Pilot,
         days: Double
     ) async -> [PilotTrack] {
-        guard let url = constructURL(
-            trackingURL: pilot.trackingFeedURL,
-            days: days
-        ) else {
+        
+        // Do not get tracks for inactive pilots
+        if pilot.inactive {
             return []
         }
         
-        // PERFORMANCE TUNING
+        // Log pilot track timings
         let startTime = Date()
+        
+        // Build URL for pilot
+        guard let url = constructURL(
+            trackingURL: pilot.trackingFeedURL,
+            days: days,
+        ) else {
+            return []
+        }
+        let urlStr = url.absoluteString
+        
+        // Do not re-fetch if we have a cache entry with the same URL, same days, and it’s been fetched recently
+        if let entry = cache[pilot.pilotName],
+           entry.urlString == urlStr,
+           entry.lastDays   == days,
+           Date().timeIntervalSince(entry.lastFetch) < pilotTrackRefreshInterval
+        {
+            // No network call; just return what was previously parsed:
+            if printPilotTracksTimings {
+                print("Using cached tracks for \(pilot.pilotName)")
+            }
+            return entry.tracks
+        }
+        
+        // Print tracking feed URL for development
+        if printPilotTrackURLs {
+            print("Fetching tracks for \(pilot.pilotName): \(url)")
+        }
 
         var request = URLRequest(url: url)
         request.setValue(
@@ -263,7 +236,8 @@ class PilotTrackViewModel: ObservableObject {
             forHTTPHeaderField: "Accept"
         )
         request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-        request.setValue("keep-alive", forHTTPHeaderField: "Connection")
+        request.setValue("close", forHTTPHeaderField: "Connection")
+//        request.setValue("keep-alive", forHTTPHeaderField: "Connection")
         request.setValue("1", forHTTPHeaderField: "DNT")
         request.setValue("document", forHTTPHeaderField: "Sec-Fetch-Dest")
         request.setValue("navigate", forHTTPHeaderField: "Sec-Fetch-Mode")
@@ -277,18 +251,29 @@ class PilotTrackViewModel: ObservableObject {
         )
         request.setValue("?0", forHTTPHeaderField: "sec-ch-ua-mobile")
         request.setValue("\"macOS\"", forHTTPHeaderField: "sec-ch-ua-platform")
+        
+        request.timeoutInterval = 10
 
         do {
             let (data, _) = try await session.data(for: request)
             
-            // PERFORMANCE TUNING
-            if performanceTuningLog {
+            // Log pilot track timings
+            if printPilotTracksTimings {
                 let endTime = Date()
                 let duration = (endTime.timeIntervalSince(startTime) * 100).rounded()/100
                 print("Total fetchTracks for \(pilot.pilotName) execution time: \(duration) seconds")
                 
             }
-            return parseKML(pilotName: pilot.pilotName, data: data)
+            let parsed = parseKML(pilotName: pilot.pilotName, data: data)
+            // Store into cache
+            cache[pilot.pilotName] = CacheEntry(
+                urlString: urlStr,
+                lastFetch: Date(),
+                lastDays:   days,
+                tracks:     parsed
+            )
+            return parsed
+            
         } catch {
             print("Error fetching tracks for \(pilot.pilotName): \(error)")
             return []
@@ -352,9 +337,12 @@ class PilotTrackViewModel: ObservableObject {
                 return nil
             }
 
-            if name.lowercased() != pilotName.lowercased() {
+            // Ignoring track pilot name and using pilots.pilotName for consistency
+            /*if name.lowercased() != pilotName.lowercased() {
                 name = "\(name) (\(pilotName))"
-            }
+            } */
+            name = pilotName
+            
             let dateTime = formatter.date(from: timeStr) ?? Date()
             let speedKM = extractNumber(
                 from: extractValue(

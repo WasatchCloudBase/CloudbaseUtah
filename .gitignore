@@ -1,5 +1,8 @@
 // Files to ignore on git push to remote repo
 
+# API keys, etc.
+*.xcconfig
+
 # private key info
 service-account.json
 

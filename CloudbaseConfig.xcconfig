@@ -1,0 +1,8 @@
+// Global config keys
+GOOGLE_SHEETS_ID_GLOBAL = "1s72R3YCHxNIJVLVa5nmsTphRpqRsfG2QR2koWxE19ls"
+GOOGLE_API_KEY_GLOBAL = "AIzaSyDSro1lDdAQsNEZq06IxwjOlQQP1tip-fs"
+
+// Utah region config keys
+GOOGLE_SHEETS_ID_UTAH = ""
+GOOGLE_API_KEY_UTAH = ""
+SYNOPTICS_API_TOKEN = "ef3b9f4584b64e6da12d8688f19d9f4a"

@@ -95,7 +95,7 @@ func initializeLoggingFile() {
     deleteLogFile()
 
     // If logging is turned on, write header row for thermal calc troubleshooting
-    if turnOnLogging {
+    if logThermalCalcs {
         logToFile(  "site, " +
                     "date, " +
                     "time," +

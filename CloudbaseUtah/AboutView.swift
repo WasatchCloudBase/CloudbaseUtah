@@ -3,6 +3,9 @@ import SwiftUI
 struct AboutView: View {
     @Binding var refreshMetadata: Bool
     @EnvironmentObject var siteViewModel: SiteViewModel
+    @EnvironmentObject var userSettingsViewModel: UserSettingsViewModel
+    @EnvironmentObject var pilotViewModel: PilotViewModel
+    @EnvironmentObject var pilotTrackViewModel: PilotTrackViewModel
     
     var body: some View {
         backgroundColor.edgesIgnoringSafeArea(.all)
@@ -82,6 +85,20 @@ struct AboutView: View {
                         }
                     }) {
                         Text("Cloudbase Utah metadata")
+                            .font(.subheadline)
+                            .foregroundColor(rowHeaderColor)
+                    }
+                    
+                    // Inactive pilots
+                    NavigationLink(destination: DevInactivePilotsView()) {
+                        Text("Manage inactive pilots")
+                            .font(.subheadline)
+                            .foregroundColor(rowHeaderColor)
+                    }
+                    
+                    // Pilots and tracks
+                    NavigationLink(destination: DevPilotTracksView()) {
+                        Text("Pilots tracks")
                             .font(.subheadline)
                             .foregroundColor(rowHeaderColor)
                     }

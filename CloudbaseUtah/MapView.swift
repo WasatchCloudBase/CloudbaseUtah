@@ -990,20 +990,6 @@ struct MapContainerView: View {
                     isActive = false
                 }
             }
-            
-            if devMenuAvailable {
-                
-                // Pilot track listing
-                NavigationLink(destination:
-                                PilotTrackView()
-                    .environmentObject(pilotViewModel)
-                    .environmentObject(pilotTrackViewModel)) {
-                        Text("Pilot track list")
-                            .font(.subheadline)
-                            .foregroundColor(rowHeaderColor)
-                    }
-                    .padding(.bottom)
-            }
         }
         
        .onDisappear {

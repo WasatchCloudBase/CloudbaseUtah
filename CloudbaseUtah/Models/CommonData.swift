@@ -5,9 +5,11 @@ import MapKit
 
 // Set development build flags
 let devMenuAvailable: Bool = false
-let turnOnLogging: Bool = false
+let logThermalCalcs: Bool = false
 let printReadingsURL: Bool = false
 let printForecastURL: Bool = false
+let printPilotTracksTimings: Bool = false
+let printPilotTrackURLs: Bool = false
 
 // Page navigation values
 enum NavBarSelectedView:Int {
@@ -28,13 +30,14 @@ let sunriseLatitude: Double = 40.7862                   // SLC airport coordinat
 let sunriseLongitude: Double = -111.9801
 let skewTButtonWidth: CGFloat = 100
 let defaultTopOfLiftAltitude = 18000.0                  // Use in lift area graph when top of lift isn't reached in calculations
-let readingsRefreshInterval: TimeInterval = 120             // Time in seconds to refresh wind readings (300 for 5 min)
+let readingsRefreshInterval: TimeInterval = 120         // Time in seconds to refresh wind readings (300 for 5 min)
+let pilotTrackRefreshInterval: TimeInterval = 600      // Setting refresh to 10 min to prevent timeout errors on frequent refreshes
 
 // Map parameters
 let mapInitLatitude: Double = 39.72                     // Center point for map on initial opening
 let mapInitLongitude: Double = -111.45
 let mapInitLatitudeSpan: Double = 7.2                   // Size of map on initial opening
-let mapInitLongitudeSpan: Double = 5.2                  //mapInitLatitudeSpan * 1.5
+let mapInitLongitudeSpan: Double = 5.2                  // mapInitLatitudeSpan * 1.5
 let defaultMapZoomLevel: Double = 6.7
 let mapBatchProcessingInterval: Double = 0.2
 let mapScaleChangeTolerance: Double = 0.01              // Don't refresh annotation filtering for minor scale changes
@@ -110,6 +113,8 @@ let latestReadingsAPITrailer =  "&recent=420&vars=air_temp,altimeter,wind_direct
 // historyReadings API is header + parameters (station) + trailer + token
 let historyReadingsAPIHeader = "https://api.mesowest.net/v2/station/timeseries?"
 let historyReadingsAPITrailer = "&recent=420&vars=air_temp,wind_direction,wind_gust,wind_speed&units=english,speed|mph,temp|F&within=120&obtimezone=local&timeformat=%-I:%M %p"
+
+// NOTE:  THIS HAS A PREFIX....THE XCCONFIG IS ONLY THE TOKEN VALUE!!! //
 let mesowestAPIToken = "&token=ef3b9f4584b64e6da12d8688f19d9f4a"
 
 // Grid structure sizing parameters

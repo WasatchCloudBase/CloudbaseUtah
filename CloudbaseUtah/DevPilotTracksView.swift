@@ -1,10 +1,11 @@
 import SwiftUI
 import Foundation
 
-// Developer view to check on pilot live tracks being created
-struct PilotTrackView: View {
+// Developer view to troubleshoot pilot live tracks
+struct DevPilotTracksView: View {
     @EnvironmentObject var pilotViewModel: PilotViewModel
     @EnvironmentObject var pilotTrackViewModel: PilotTrackViewModel
+    @EnvironmentObject var userSettingsViewModel: UserSettingsViewModel
     
     // for driving the sheet
     @State private var selectedPilotTrack: PilotTrack?
@@ -25,39 +26,59 @@ struct PilotTrackView: View {
 
     var body: some View {
         NavigationView {
+                
             List {
-
-                ForEach(pilotViewModel.pilots) { pilot in
+                
+                Text("Note: Pilots tracks are filtered based user map settings")
+                    .font(.caption)
+                
+                if pilotTrackViewModel.isLoading {
+                    HStack(spacing: 8) {
+                        Spacer()
+                        Text("Loading pilot tracks")
+                            .font(.subheadline)
+                            .foregroundStyle(loadingBarTextColor)
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.75)
+                            .padding(.horizontal, 8)
+                    }
+                    .padding(.vertical, 4)
                     
-                    // Filter tracks by pilot
-                    let tracksForPilot = pilotTrackViewModel.pilotTracks
-                        .filter { $0.pilotName == pilot.pilotName }
+                } else {
                     
-                    // Group tracks by date
-                    let tracksByDay = Dictionary(
-                        grouping: tracksForPilot,
-                        by: { Calendar.current.startOfDay(for: $0.dateTime) }
-                    )
-                    
-                    // Only show a pilot if there are any tracks
-                    if !tracksByDay.isEmpty {
-                        Section(header: Text(pilot.pilotName)) {
-                            // sort the days descending, for example
-                            ForEach(
-                                tracksByDay.keys.sorted(by: >),
-                                id: \.self
-                            ) { day in
-                                Button {
-                                    // Choose the first track point of that day
-                                    selectedPilotTrack = tracksByDay[day]?.first
-                                } label: {
-                                    HStack {
-                                        Text(dayFormatter.string(from: day))
-                                        Spacer()
-                                        // maybe show how many points?
-                                        Text("(\(tracksByDay[day]?.count ?? 0) pts)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                    ForEach(pilotViewModel.pilots) { pilot in
+                        
+                        // Filter tracks by pilot
+                        let tracksForPilot = pilotTrackViewModel.pilotTracks
+                            .filter { $0.pilotName == pilot.pilotName }
+                        
+                        // Group tracks by date
+                        let tracksByDay = Dictionary(
+                            grouping: tracksForPilot,
+                            by: { Calendar.current.startOfDay(for: $0.dateTime) }
+                        )
+                        
+                        // Only show a pilot if there are any tracks
+                        if !tracksByDay.isEmpty {
+                            Section(header: Text(pilot.pilotName)) {
+                                // sort the days descending, for example
+                                ForEach(
+                                    tracksByDay.keys.sorted(by: >),
+                                    id: \.self
+                                ) { day in
+                                    Button {
+                                        // Choose the first track point of that day
+                                        selectedPilotTrack = tracksByDay[day]?.first
+                                    } label: {
+                                        HStack {
+                                            Text(dayFormatter.string(from: day))
+                                                .font(.subheadline)
+                                            Spacer()
+                                            Text("(\(tracksByDay[day]?.count ?? 0) pts)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
                                     }
                                 }
                             }
@@ -65,6 +86,14 @@ struct PilotTrackView: View {
                     }
                 }
             }
+            
+            .onAppear {
+                DispatchQueue.main.async {
+                    pilotTrackViewModel.getPilotTracks(days: userSettingsViewModel.pilotTrackDays,
+                                                       selectedPilots: userSettingsViewModel.selectedPilots) {}
+                }
+            }
+            
             .sheet(item: $selectedPilotTrack) { track in
                 PilotTrackNodeView(originalPilotTrack: track)
             }

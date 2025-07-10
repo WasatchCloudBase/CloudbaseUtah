@@ -39,8 +39,10 @@ struct MapSettingsView: View {
     @State private var showSelectionError = false
     @State private var didSeed = false
 
-    // Trigger add pilot sheet navigation
+    // Trigger add pilot / active pilot sheets navigation
     @State private var addPilot = false
+    @State private var pilotToActivate: Pilot?
+    @State private var activatePilot = false
 
     init(selectedMapType: Binding<CustomMapStyle>,
          pilotTrackDays: Binding<Double>,
@@ -205,10 +207,9 @@ struct MapSettingsView: View {
                                 .frame(width: skewTButtonWidth)
                                 .background(skewTButtonBackgroundColor)
                                 .cornerRadius(8)
+                                .buttonStyle(BorderlessButtonStyle())
                                 Spacer()
                             }
-                            .contentShape(Rectangle()) // Isolate pilot button gesture area
-                            
                             Divider()
 
                             // All / None Buttons
@@ -220,7 +221,6 @@ struct MapSettingsView: View {
                                         .frame(maxWidth: .infinity)
                                 }
                                 .buttonStyle(BorderlessButtonStyle())
-                                .contentShape(Rectangle())
 
                                 Button(action: {
                                     selectedPilotIDs.removeAll()
@@ -229,7 +229,6 @@ struct MapSettingsView: View {
                                         .frame(maxWidth: .infinity)
                                 }
                                 .buttonStyle(BorderlessButtonStyle())
-                                .contentShape(Rectangle())
                             }
 
                             // Pilot checkboxes
@@ -237,27 +236,45 @@ struct MapSettingsView: View {
                                 
                                 // determine if this pilot has any tracks
                                 let hasTrack = pilotTrackViewModel.pilotTracks.contains { $0.pilotName == pilot.pilotName }
-                                                  
-                                Button(action: {
-                                    if selectedPilotIDs.contains(pilot.id) {
-                                        selectedPilotIDs.remove(pilot.id)
+                                
+                                HStack {
+                                    
+                                    // Checkbox (only for active pilots)
+                                    if !pilot.inactive {
+                                        Button(action: {
+                                            if selectedPilotIDs.contains(pilot.id) {
+                                                selectedPilotIDs.remove(pilot.id)
+                                            } else {
+                                                selectedPilotIDs.insert(pilot.id)
+                                            }
+                                        }) {
+                                            Image(systemName: selectedPilotIDs.contains(pilot.id) ? "checkmark.square" : "square")
+                                                .foregroundColor(hasTrack ? pilotActiveFontColor : pilotInactiveFontColor)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
                                     } else {
-                                        selectedPilotIDs.insert(pilot.id)
+                                        
+                                        // Empty spacer to align names
+                                        Image(systemName: "square")
+                                            .opacity(0) // invisible but keeps layout aligned
                                     }
-                                }) {
-                                    HStack {
-                                        Image(systemName: selectedPilotIDs.contains(pilot.id) ? "checkmark.square" : "square")
-                                        // gray out if no track
-                                            .foregroundColor(hasTrack ? pilotActiveFontColor : pilotInactiveFontColor)
-                                        Text(pilot.pilotName)
-                                        // gray out if no track
-                                            .foregroundColor(hasTrack ? pilotActiveFontColor : pilotInactiveFontColor)
 
-                                        Spacer()
+                                    // Pilot name
+                                    Text(pilot.pilotName)
+                                        .foregroundColor(hasTrack ? pilotActiveFontColor : pilotInactiveFontColor)
+                                    // … inside ForEach HStack
+
+                                    Spacer()
+
+                                    if pilot.inactive {
+                                        Button("Activate Pilot") {
+                                            pilotToActivate = pilot
+                                            activatePilot = true
+                                        }
+                                        .font(.caption)
+                                        .buttonStyle(BorderlessButtonStyle())
                                     }
-                                    .contentShape(Rectangle()) // Ensures only the intended area is tappable
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.vertical, 0)
@@ -286,19 +303,8 @@ struct MapSettingsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         
-        .onReceive(pilotViewModel.$pilots) { pilots in
-            // Only seed once, and only when there's at least one pilot
-            guard !didSeed, !pilots.isEmpty else { return }
-            
-            if selectedPilots.isEmpty {
-                // Very first time ever: default to all
-                selectedPilotIDs = Set(pilots.map(\.id))
-            } else {
-                // Restore exactly what the parent last saved
-                selectedPilotIDs = Set(selectedPilots.map(\.id))
-            }
-            
-            didSeed = true
+        .onReceive(pilotViewModel.$pilots) { _ in
+            resyncSelectedPilotIDs()
         }
         
         .onAppear() {
@@ -326,12 +332,32 @@ struct MapSettingsView: View {
         }
         
         .sheet(isPresented: $addPilot, onDismiss: {
-            pilotViewModel.getPilots() {}
+            pilotViewModel.getPilots {
+                resyncSelectedPilotIDs()
+            }
         }) {
             PilotAppendView()
-                .interactiveDismissDisabled(true) // ← disables swipe-to-dismiss
+                .interactiveDismissDisabled(true)
         }
         
+        .sheet(isPresented: $activatePilot, onDismiss: {
+            pilotViewModel.getPilots {
+                resyncSelectedPilotIDs()
+            }
+        }) {
+            PilotActivateView(pilot: pilotToActivate!)
+                .interactiveDismissDisabled(true)
+        }
+    }
+    
+    private func resyncSelectedPilotIDs() {
+      // If the parent binding was empty, default to “all” again:
+      if selectedPilots.isEmpty {
+        selectedPilotIDs = Set(pilotViewModel.pilots.map(\.id))
+      } else {
+        // Otherwise preserve exactly what the parent had chosen
+        selectedPilotIDs = Set(selectedPilots.map(\.id))
+      }
     }
 }
 

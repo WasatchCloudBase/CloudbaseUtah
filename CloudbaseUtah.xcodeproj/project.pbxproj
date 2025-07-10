@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		451418E62D9CD67300F46C8D /* SDWebImage in Frameworks */ = {isa = PBXBuildFile; productRef = 451418E52D9CD67300F46C8D /* SDWebImage */; };
 		451418E82D9CD67300F46C8D /* SDWebImageMapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 451418E72D9CD67300F46C8D /* SDWebImageMapKit */; };
+		4524B73F2E1D86AE005B7836 /* CloudbaseConfig.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 4524B73E2E1D869E005B7836 /* CloudbaseConfig.xcconfig */; };
 		4526B8BE2D9CD8FF001DF2E6 /* SDWebImage in Frameworks */ = {isa = PBXBuildFile; productRef = 4526B8BD2D9CD8FF001DF2E6 /* SDWebImage */; };
 		4526B8C02D9CD8FF001DF2E6 /* SDWebImageMapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4526B8BF2D9CD8FF001DF2E6 /* SDWebImageMapKit */; };
 		453103282D9CDB450014FF75 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 453103272D9CDB450014FF75 /* SDWebImageSwiftUI */; };
@@ -40,6 +41,7 @@
 		1A11BF600A46CB5D2FDDD6C4 /* Pods_CloudbaseUtahTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CloudbaseUtahTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F8D3B4BE52EC7CAB933230A /* Pods-CloudbaseUtahTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtahTests.debug.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtahTests/Pods-CloudbaseUtahTests.debug.xcconfig"; sourceTree = "<group>"; };
 		430C5D8F2041BE5E8731A2EB /* Pods-CloudbaseUtahTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CloudbaseUtahTests.release.xcconfig"; path = "Target Support Files/Pods-CloudbaseUtahTests/Pods-CloudbaseUtahTests.release.xcconfig"; sourceTree = "<group>"; };
+		4524B73E2E1D869E005B7836 /* CloudbaseConfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = CloudbaseConfig.xcconfig; sourceTree = "<group>"; };
 		452964142E00672700F731B4 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		4572B6662D7A8B5200B2723D /* CloudbaseUtah.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudbaseUtah.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4572B67A2D7A8B5300B2723D /* CloudbaseUtahTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CloudbaseUtahTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -133,6 +135,7 @@
 			children = (
 				45A3B9E42E00E4BB0047F7D4 /* service-account.json */,
 				452964142E00672700F731B4 /* .gitignore */,
+				4524B73E2E1D869E005B7836 /* CloudbaseConfig.xcconfig */,
 				4572B6682D7A8B5200B2723D /* CloudbaseUtah */,
 				4572B67D2D7A8B5300B2723D /* CloudbaseUtahTests */,
 				4572B6872D7A8B5300B2723D /* CloudbaseUtahUITests */,
@@ -288,6 +291,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				45A3B9E52E00E4BB0047F7D4 /* service-account.json in Resources */,
+				4524B73F2E1D86AE005B7836 /* CloudbaseConfig.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -440,7 +444,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtah;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -479,7 +483,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = Cloudbase.CloudbaseUtah;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

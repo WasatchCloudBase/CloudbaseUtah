@@ -234,7 +234,7 @@ class SiteForecastViewModel: ObservableObject {
             forecastEndTime = ( Int(sunriseSunset.sunset.split(separator: ":", maxSplits: 1).first ?? "6") ?? 6 ) + 13
         } else {
             print("Sunrise/sunset not available")
-            if turnOnLogging {logToFile("Sunrise/sunset times not available") }
+            if logThermalCalcs {logToFile("Sunrise/sunset times not available") }
         }
         
         let currentDate = Date()
@@ -630,7 +630,7 @@ class SiteForecastViewModel: ObservableObject {
         guard let liftParameters = liftParametersViewModel.liftParameters else {
             // End processing if lift parameters are not available
             print("Error - thermal lift parameters not available")
-            if turnOnLogging {logToFile("Error - thermal lift parameters not available") }
+            if logThermalCalcs {logToFile("Error - thermal lift parameters not available") }
             return ThermalResult(
                 thermalVelocity: thermalVelocity,
                 thermalDPTemp: thermalDPTemp,
@@ -767,7 +767,7 @@ class SiteForecastViewModel: ObservableObject {
         }
         
         // If logging is turned on, write data for thermal calc troubleshooting
-        if turnOnLogging {
+        if logThermalCalcs {
             logToFile(
                 "\(siteName)," +
                 "\(forecastDate)," +
