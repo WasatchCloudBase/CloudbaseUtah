@@ -141,7 +141,7 @@ class StationLatestReadingViewModel: ObservableObject {
         let group = DispatchGroup()
 
         group.enter()
-        let stationParams = sitesOnly ? self.stationParameters : ""
+        let stationParams = sitesOnly ? self.stationParameters : "&state=ut"
         self.getLatestMesonetReadings(stationParameters: stationParams) { mesonetReadings in
             combinedReadings.append(contentsOf: mesonetReadings)
             group.leave()
